@@ -1,0 +1,753 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/locumapp/locum-marketplace/main/schemas/template.schema.json",
+  "title": "Locum marketplace template",
+  "description": "An automation template: a Locum package (the format import_package reads) with the automation assembled and every node visible.",
+  "type": "object",
+  "$ref": "envelope.schema.json",
+  "required": [
+    "package"
+  ],
+  "properties": {
+    "kind": {
+      "const": "template"
+    },
+    "manifest": false,
+    "package": {
+      "$ref": "#/$defs/locumPackage"
+    }
+  },
+  "$defs": {
+    "locumPackage": {
+      "description": "The top of the locum-pacote format, versions 1 to 4. The app checks the inside of steps, triggers and agents again on import.",
+      "type": "object",
+      "required": [
+        "formato",
+        "versao",
+        "automacao",
+        "agents",
+        "requisitos"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "formato": {
+          "const": "locum-pacote"
+        },
+        "versao": {
+          "enum": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        "automacao": {
+          "type": "object",
+          "required": [
+            "id",
+            "spec",
+            "gatilhos"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/packageId"
+            },
+            "spec": {
+              "$ref": "#/$defs/spec"
+            },
+            "gatilhos": {
+              "type": "array",
+              "maxItems": 20,
+              "items": {
+                "$ref": "#/$defs/trigger"
+              }
+            }
+          }
+        },
+        "agents": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "$ref": "#/$defs/agent"
+          }
+        },
+        "requisitos": {
+          "type": "object",
+          "required": [
+            "conexoes",
+            "servidores",
+            "provedores"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "conexoes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "nome"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "nome": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "instancias": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                }
+              }
+            },
+            "servidores": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "nome"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "nome": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "pacote": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "host": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "conexao": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            "provedores": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "provedor",
+                  "modelos"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "provedor": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "modelos": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                }
+              }
+            },
+            "skills": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "nome"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "nome": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "skills": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "required": [
+              "nome",
+              "descricao",
+              "corpo"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "nome": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+              },
+              "descricao": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000,
+                "pattern": "\\S"
+              },
+              "corpo": {
+                "type": "string",
+                "maxLength": 65536
+              }
+            }
+          }
+        },
+        "omitidos": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "codigo",
+              "onde"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "codigo": {
+                "enum": [
+                  "canais",
+                  "gatilho-sem-canal",
+                  "filtros-de-pessoa",
+                  "dono-do-github",
+                  "tracker",
+                  "argumentos",
+                  "texto-limpo",
+                  "url-a-preencher",
+                  "escrita-removida",
+                  "chats-a-escolher",
+                  "destino-a-escolher",
+                  "skill-ausente",
+                  "passo-a-revisar",
+                  "skill-nao-levada",
+                  "instancia-mantida",
+                  "id-do-slack"
+                ]
+              },
+              "onde": {
+                "type": "string",
+                "minLength": 1
+              },
+              "quantos": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "params": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "motivo": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "notas": {
+          "type": "array",
+          "maxItems": 500,
+          "items": {
+            "type": "object",
+            "required": [
+              "scope",
+              "text"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "scope": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              },
+              "originUrl": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "packageId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,62}$"
+    },
+    "spec": {
+      "type": "object",
+      "required": [
+        "name",
+        "steps"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "defaultTools": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "skills": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/step"
+          }
+        },
+        "budget": {
+          "type": "object"
+        },
+        "layout": {
+          "type": "object"
+        }
+      }
+    },
+    "step": {
+      "description": "A step as the package carries it: model, action (without target, which belongs to the machine) or logic. The app checks the inside of each field again on import.",
+      "type": "object",
+      "required": [
+        "type",
+        "key"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "model",
+            "action",
+            "logic"
+          ]
+        },
+        "key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "needs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "model"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "key",
+              "name",
+              "type",
+              "model",
+              "prompt"
+            ],
+            "properties": {
+              "key": true,
+              "name": true,
+              "needs": true,
+              "optional": true,
+              "when": true,
+              "type": true,
+              "model": true,
+              "prompt": true,
+              "tools": true,
+              "requiresServers": true,
+              "outputSchema": true,
+              "maxSteps": true,
+              "profile": true,
+              "onTransientFailure": true,
+              "memory": true
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "action"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "key",
+              "name",
+              "type",
+              "action"
+            ],
+            "properties": {
+              "key": true,
+              "name": true,
+              "needs": true,
+              "optional": true,
+              "when": true,
+              "type": true,
+              "action": true,
+              "mode": true,
+              "input": true,
+              "pendingPerTarget": true,
+              "params": true
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "logic"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "key",
+              "name",
+              "type",
+              "op"
+            ],
+            "properties": {
+              "key": true,
+              "name": true,
+              "needs": true,
+              "optional": true,
+              "when": true,
+              "type": true,
+              "op": true,
+              "value": true,
+              "compare": true,
+              "against": true,
+              "cases": true,
+              "title": true
+            }
+          }
+        }
+      ]
+    },
+    "trigger": {
+      "description": "A trigger without what belongs to the person (channels, chats, owner, authors): they choose it on import.",
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "schedule",
+            "webhook",
+            "cron",
+            "manual",
+            "slack-inbox",
+            "slack-channel",
+            "github-thread-reply",
+            "teams-inbox",
+            "poll",
+            "mcp-poll"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "schedule"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "everyMinutes"
+            ],
+            "properties": {
+              "kind": true,
+              "everyMinutes": true,
+              "workingHours": true
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "webhook"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": true,
+              "path": true
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "cron"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "expression"
+            ],
+            "properties": {
+              "kind": true,
+              "expression": true
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "manual"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": true
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "slack-inbox"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": true,
+              "mentions": true,
+              "dms": true,
+              "searchTool": true,
+              "queryArg": true,
+              "mentionsQuery": true,
+              "dmsQuery": true,
+              "itemsPath": true,
+              "lookbackMinutes": true,
+              "authorPath": true,
+              "pageSize": true,
+              "everyMinutes": true,
+              "workingHours": true
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "slack-channel"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": true,
+              "everyMinutes": true,
+              "workingHours": true
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "github-thread-reply"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": true,
+              "repoMatch": true,
+              "includeResolved": true,
+              "maxRepliesPerThread": true,
+              "maxRepliesPerPr": true,
+              "lookbackMinutes": true,
+              "everyMinutes": true,
+              "workingHours": true
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "teams-inbox"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": true,
+              "mentions": true,
+              "dms": true,
+              "prLinks": true,
+              "agruparPrs": true,
+              "maxPrs": true,
+              "filtroIa": true,
+              "everyMinutes": true,
+              "workingHours": true,
+              "chatsRestritos": true
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "poll"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "source"
+            ],
+            "properties": {
+              "kind": true,
+              "source": true,
+              "repoMatch": true,
+              "authorship": true,
+              "includeDrafts": true,
+              "filters": true,
+              "everyMinutes": true,
+              "workingHours": true
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "mcp-poll"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "server",
+              "tool"
+            ],
+            "properties": {
+              "kind": true,
+              "server": true,
+              "tool": true,
+              "args": true,
+              "everyMinutes": true,
+              "workingHours": true
+            }
+          }
+        }
+      ]
+    },
+    "agent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "model"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/packageId"
+        },
+        "name": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "description": true,
+        "context": true,
+        "instructions": true,
+        "model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "temperature": true,
+        "tools": true,
+        "connections": true,
+        "skills": true,
+        "budget": true,
+        "maxSteps": true
+      }
+    }
+  }
+}

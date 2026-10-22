@@ -1,0 +1,37 @@
+{
+  "kind": "connection",
+  "id": "example-remote",
+  "version": 1,
+  "description": {
+    "en": "Example connection type.",
+    "pt-BR": "Tipo de conexão de exemplo."
+  },
+  "name": {
+    "en": "Example remote",
+    "pt-BR": "Exemplo remoto"
+  },
+  "manifest": {
+    "category": "work",
+    "logo": null,
+    "color": "336699",
+    "methods": [
+      {
+        "type": "oauth",
+        "scopes": [
+          "read",
+          "write"
+        ]
+      }
+    ],
+    "hosts": [
+      "api.example.com"
+    ],
+    "server": {
+      "transport": "http",
+      "url": "https://mcp.example.com/mcp"
+    },
+    "writeTools": [
+      "post_message"
+    ]
+  }
+}

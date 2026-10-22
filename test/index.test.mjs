@@ -1,0 +1,113 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { buildIndex } from "../scripts/lib/build-index.mjs";
+
+const root = fileURLToPath(new URL("..", import.meta.url));
+const COMMIT = "0123456789abcdef0123456789abcdef01234567";
+const AT = { commit: COMMIT, committedAt: 1792000000 };
+
+test("the index is the same, byte for byte, when built twice for the same commit", async () => {
+  assert.equal(await buildIndex(root, AT), await buildIndex(root, AT));
+});
+
+const git = (...args) => spawnSync("git", args, { cwd: root, encoding: "utf8" }).stdout.trim();
+
+test("the CLI writes the same index.json twice in a row, dated by the commit time", () => {
+  const out = mkdtempSync(join(tmpdir(), "index-"));
+  const head = git("rev-parse", "HEAD");
+  const run = () => {
+    const r = spawnSync(process.execPath, ["scripts/build-index.mjs", "--commit", head, "--out", join(out, "index.json")], { cwd: root, encoding: "utf8" });
+    assert.equal(r.status, 0, r.stderr);
+    return readFileSync(join(out, "index.json"));
+  };
+  const first = run();
+  assert.deepEqual(first, run());
+  assert.equal(JSON.parse(first).committedAt, Number(git("show", "-s", "--format=%ct", head)));
+});
+
+test("the CLI refuses a commit this repository does not have", () => {
+  const r = spawnSync(process.execPath, ["scripts/build-index.mjs", "--commit", COMMIT, "--out", join(tmpdir(), "never.json")], { cwd: root, encoding: "utf8" });
+  assert.equal(r.status, 1);
+});
+
+test("the index lists every item sorted, with the hash of the file bytes and the commit", async () => {
+  const index = JSON.parse(await buildIndex(root, AT));
+  assert.equal(index.format, "locum-marketplace-index");
+  assert.equal(index.version, 1);
+  assert.equal(index.commit, COMMIT);
+  assert.equal(index.committedAt, 1792000000);
+  assert.deepEqual(Object.keys(index), ["format", "version", "commit", "committedAt", "items"]);
+  const ids = index.items.map((i) => i.id);
+  assert.deepEqual(ids.slice(0, 3), ["inbox-triage", "morning-briefing", "observability-watch"]);
+  const review = index.items.find((i) => i.id === "pr-review");
+  assert.equal(review.path, "templates/pr-review.json");
+  assert.equal(review.sha256, createHash("sha256").update(readFileSync(join(root, review.path))).digest("hex"));
+  assert.deepEqual(review.name, { en: "PR review", "pt-BR": "Revisão de PR" });
+  assert.deepEqual(review.requires, {
+    connections: ["github"],
+    servers: ["argocd"],
+    providers: [{ provider: "claude-code", models: ["claude-opus-5", "claude-sonnet-5"] }],
+    skills: [],
+    actions: ["github.review_comment"],
+  });
+});
+
+test("connections stay out of the index for now; once open, a connection requires what the install screen shows: server, hosts, methods, scopes and write tools", async () => {
+  const catalog = mkdtempSync(join(tmpdir(), "catalog-"));
+  mkdirSync(join(catalog, "connections"));
+  for (const name of ["example-docker", "example-npm", "example-remote"]) {
+    cpSync(join(root, "test/fixtures/connections", `${name}.json`), join(catalog, "connections", `${name}.json`));
+  }
+  await assert.rejects(buildIndex(catalog, AT), /connection types are not accepted yet/);
+  const index = JSON.parse(await buildIndex(catalog, { ...AT, connections: true }));
+  const requires = Object.fromEntries(index.items.map((i) => [i.id, i.requires]));
+  assert.deepEqual(requires["example-docker"], {
+    server: { transport: "stdio", image: "ghcr.io/example/example-mcp@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" },
+    hosts: [],
+    methods: ["token"],
+    scopes: [],
+    writeTools: ["create_item", "delete_item"],
+  });
+  assert.deepEqual(requires["example-npm"].server, { transport: "stdio", package: "example-mcp@1.2.3" });
+  assert.deepEqual(requires["example-remote"], {
+    server: { transport: "http", url: "https://mcp.example.com/mcp" },
+    hosts: ["api.example.com", "mcp.example.com"],
+    methods: ["oauth"],
+    scopes: ["read", "write"],
+    writeTools: ["post_message"],
+  });
+});
+
+test("an invalid catalog does not become an index", async () => {
+  const catalog = mkdtempSync(join(tmpdir(), "catalog-"));
+  mkdirSync(join(catalog, "connections"));
+  cpSync(join(root, "test/fixtures/connections/grafana.json"), join(catalog, "connections/grafana.json"));
+  await assert.rejects(buildIndex(catalog, { ...AT, connections: true }), /grafana\.json: id/);
+});
+
+test("the commit must be a full sha", async () => {
+  await assert.rejects(buildIndex(root, { commit: "main", committedAt: 1 }), /commit/);
+  await assert.rejects(buildIndex(root, { commit: COMMIT, committedAt: "yesterday" }), /committedAt/);
+});
+
+test("providers sort by code unit, not by locale", async () => {
+  const catalog = mkdtempSync(join(tmpdir(), "catalog-"));
+  mkdirSync(join(catalog, "templates"));
+  const item = JSON.parse(readFileSync(join(root, "templates/slack-reply.json"), "utf8"));
+  item.package.requisitos.provedores = [
+    { provedor: "anthropic", modelos: ["b", "B"] },
+    { provedor: "Zeta", modelos: ["z"] },
+  ];
+  writeFileSync(join(catalog, "templates/slack-reply.json"), JSON.stringify(item));
+  const index = JSON.parse(await buildIndex(catalog, AT));
+  assert.deepEqual(index.items[0].requires.providers, [
+    { provider: "Zeta", models: ["z"] },
+    { provider: "anthropic", models: ["B", "b"] },
+  ]);
+});

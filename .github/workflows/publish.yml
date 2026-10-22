@@ -1,0 +1,83 @@
+name: publish
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-index
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 20
+      - run: npm ci --ignore-scripts
+      - run: npm run validate
+      - run: npm test
+      - name: Build the index
+        run: npm run build-index -- --commit "$GITHUB_SHA"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: index
+          path: index.json
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: assinatura
+    permissions:
+      contents: write
+    steps:
+      # No npm install and no tests here: signing uses only node:crypto, and this job holds the key.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 20
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: index
+          path: .
+      - name: Sign the index
+        env:
+          INDEX_SIGNING_KEY: ${{ secrets.INDEX_SIGNING_KEY }}
+        run: node scripts/sign-index.mjs
+      - name: Verify with the public key of the repository
+        run: node scripts/verify-index.mjs
+      - name: Publish to the index branch
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/index-branch"
+          if git ls-remote --exit-code --heads origin index > /dev/null; then
+            git fetch --quiet origin index
+            git worktree add --quiet "$out" FETCH_HEAD
+            git -C "$out" switch --quiet -C index
+          else
+            git worktree add --quiet --detach "$out"
+            git -C "$out" switch --quiet --orphan index
+          fi
+          git -C "$out" rm -r --quiet --force --ignore-unmatch .
+          cp index.json index.json.sig "$out/"
+          git -C "$out" add index.json index.json.sig
+          git -C "$out" \
+            -c user.name="github-actions[bot]" \
+            -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit --quiet --allow-empty -m "índice de $GITHUB_SHA"
+          git -C "$out" push --quiet origin index

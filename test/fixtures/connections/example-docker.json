@@ -1,0 +1,38 @@
+{
+  "kind": "connection",
+  "id": "example-docker",
+  "version": 1,
+  "description": {
+    "en": "Example connection type.",
+    "pt-BR": "Tipo de conexão de exemplo."
+  },
+  "name": {
+    "en": "Example Docker",
+    "pt-BR": "Exemplo Docker"
+  },
+  "tags": [
+    "example"
+  ],
+  "manifest": {
+    "category": "work",
+    "logo": null,
+    "color": "336699",
+    "methods": [
+      {
+        "type": "token",
+        "env": "EXAMPLE_TOKEN"
+      }
+    ],
+    "server": {
+      "transport": "stdio",
+      "image": "ghcr.io/example/example-mcp@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "env": {
+        "EXAMPLE_TOKEN": "${credential}"
+      }
+    },
+    "writeTools": [
+      "create_item",
+      "delete_item"
+    ]
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "kind": "connection",
+  "id": "npx-without-lockfile",
+  "version": 1,
+  "description": {
+    "en": "Example connection type.",
+    "pt-BR": "Tipo de conexão de exemplo."
+  },
+  "name": {
+    "en": "Npx",
+    "pt-BR": "Npx"
+  },
+  "manifest": {
+    "category": "work",
+    "logo": null,
+    "color": "336699",
+    "methods": [
+      {
+        "type": "token",
+        "env": "EXAMPLE_TOKEN"
+      }
+    ],
+    "server": {
+      "transport": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "example-mcp@1.2.3"
+      ]
+    }
+  }
+}

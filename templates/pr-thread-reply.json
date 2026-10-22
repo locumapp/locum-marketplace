@@ -1,0 +1,214 @@
+{
+  "kind": "template",
+  "id": "pr-thread-reply",
+  "version": 1,
+  "name": {
+    "en": "PR thread reply",
+    "pt-BR": "Resposta em thread de PR"
+  },
+  "description": {
+    "en": "When someone replies in a thread Locum opened: reacts, judges the outcome, queues the reply, resolves the thread only when fixed or accepted, and proposes the team decision to memory, also in the queue.",
+    "pt-BR": "Quando alguém responde numa thread que o Locum abriu: reage, avalia o desfecho, deixa a resposta na fila, resolve a thread só em fixed ou accepted e propõe à memória a decisão do time, também na fila."
+  },
+  "tags": [
+    "code-review",
+    "github",
+    "memory"
+  ],
+  "package": {
+    "formato": "locum-pacote",
+    "versao": 2,
+    "automacao": {
+      "id": "pr-thread-reply",
+      "spec": {
+        "name": "PR Thread Reply",
+        "defaultTools": [],
+        "skills": [],
+        "budget": {
+          "perRunUsd": 0.2,
+          "perDayUsd": 3
+        },
+        "steps": [
+          {
+            "type": "action",
+            "key": "pegou",
+            "name": "Reagir 👀",
+            "needs": [],
+            "optional": false,
+            "action": "github.react",
+            "mode": "auto",
+            "params": {
+              "emoji": "eyes",
+              "operacao": "set"
+            }
+          },
+          {
+            "type": "model",
+            "key": "avaliar",
+            "name": "Avaliar a resposta",
+            "needs": [],
+            "optional": false,
+            "model": "claude-code/claude-opus-5",
+            "maxSteps": 8,
+            "requiresServers": [],
+            "prompt": "Você publicou um comentário de review neste pull request, e outra pessoa respondeu na thread. Leia a thread inteira, o trecho do diff e a resposta nova, e decida o desfecho:\n- fixed: a resposta mostra que o pedido foi corrigido (commit novo, trecho alterado).\n- accepted: a explicação se sustenta e o pedido não se aplica; você consegue conferir o argumento.\n- still-valid: o pedido continua valendo; diga por quê, com evidência.\n- question: a pessoa fez uma pergunta ou falta informação para decidir.\nResposta que só promete corrigir depois não é fixed.\n\nSaída:\n- outcome: fixed, accepted, still-valid ou question.\n- body: a resposta na thread, curta e objetiva, em Markdown. Em question, responda a pergunta ou diga o que falta.\n- note: só em accepted, a decisão do time em uma frase de até 500 caracteres, para as próximas reviews deste repositório e deste autor não repetirem o apontamento. Nos outros desfechos, deixe de fora.\n\nRepositório: {{event.repo}}\nPull request: {{event.title}} ({{event.url}})\nArquivo: {{event.path}}, linha {{event.line}}\n\nTrecho do diff:\n{{event.diffHunk}}\n\nThread:\n{{event.threadText}}\n\nResposta nova, de {{event.commentAuthor}}:\n{{event.commentBody}}",
+            "outputSchema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "outcome",
+                "body"
+              ],
+              "properties": {
+                "outcome": {
+                  "enum": [
+                    "fixed",
+                    "accepted",
+                    "still-valid",
+                    "question"
+                  ]
+                },
+                "body": {
+                  "type": "string"
+                },
+                "note": {
+                  "type": "string",
+                  "maxLength": 500
+                }
+              }
+            }
+          },
+          {
+            "type": "action",
+            "key": "responder",
+            "name": "Responder na thread",
+            "needs": [
+              "avaliar"
+            ],
+            "optional": false,
+            "action": "github.review_reply",
+            "mode": "approve",
+            "input": "avaliar"
+          },
+          {
+            "type": "action",
+            "key": "resultado",
+            "name": "Reagir pelo desfecho",
+            "needs": [
+              "responder"
+            ],
+            "optional": false,
+            "action": "github.react",
+            "mode": "auto",
+            "params": {
+              "tirar": "eyes",
+              "porValor": {
+                "de": "{{steps.avaliar.outcome}}",
+                "mapa": {
+                  "fixed": "rocket",
+                  "accepted": "+1",
+                  "still-valid": "-1",
+                  "question": "confused"
+                },
+                "padrao": "+1"
+              }
+            }
+          },
+          {
+            "type": "logic",
+            "key": "resolve",
+            "name": "Resolve a thread?",
+            "needs": [
+              "avaliar"
+            ],
+            "optional": false,
+            "op": "if",
+            "value": "{{steps.avaliar.outcome}}",
+            "compare": "matches",
+            "against": "^(fixed|accepted)$",
+            "cases": [],
+            "title": ""
+          },
+          {
+            "type": "action",
+            "key": "resolver",
+            "name": "Resolver a thread",
+            "needs": [
+              "resolve",
+              "responder"
+            ],
+            "optional": false,
+            "when": {
+              "step": "resolve",
+              "branch": "true"
+            },
+            "action": "github.resolve_thread",
+            "mode": "approve"
+          },
+          {
+            "type": "logic",
+            "key": "lembra",
+            "name": "Vira nota?",
+            "needs": [
+              "avaliar"
+            ],
+            "optional": false,
+            "op": "if",
+            "value": "{{steps.avaliar.outcome}}",
+            "compare": "equals",
+            "against": "accepted",
+            "cases": [],
+            "title": ""
+          },
+          {
+            "type": "action",
+            "key": "lembrar",
+            "name": "Propor nota na memória",
+            "needs": [
+              "lembra",
+              "responder"
+            ],
+            "optional": false,
+            "when": {
+              "step": "lembra",
+              "branch": "true"
+            },
+            "action": "memory.propose",
+            "mode": "approve",
+            "input": "avaliar",
+            "params": {
+              "keys": [
+                "github.repo",
+                "github.author"
+              ],
+              "originAuthor": "commentAuthor",
+              "originUrl": "commentUrl"
+            }
+          }
+        ]
+      },
+      "gatilhos": []
+    },
+    "agents": [],
+    "requisitos": {
+      "conexoes": [
+        {
+          "id": "github",
+          "nome": "GitHub"
+        }
+      ],
+      "servidores": [],
+      "provedores": [
+        {
+          "provedor": "claude-code",
+          "modelos": [
+            "claude-opus-5"
+          ]
+        }
+      ],
+      "skills": []
+    },
+    "skills": [],
+    "omitidos": []
+  }
+}
