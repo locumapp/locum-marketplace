@@ -1,28 +1,35 @@
 # locum-marketplace
 
-Catálogo público do [Locum](https://locumapp.github.io): tipos de conexão,
-modelos de automação e pacotes que qualquer pessoa pode propor.
+[Português](README.pt-BR.md)
 
-## O que mora aqui
+Public catalog for [Locum](https://locumapp.github.io): connection types,
+automation templates and packages that anyone can propose.
 
-- `conexoes/`: manifestos de tipo de conexão. Cada manifesto é só dado: o
-  servidor MCP com versão fixada (imagem com digest ou pacote com lockfile), os
-  métodos de autenticação, os campos da instância e o que o tipo escreve fora.
-- `modelos/`: modelos de automação, com os nós visíveis.
-- `pacotes/`: pacotes exportados do Locum, já limpos de dado de empresa.
+## What lives here
 
-Nada aqui é código executado pelo app. Um manifesto que peça para rodar script
-baixado é recusado.
+- `connections/`: connection type manifests. Each manifest is data only: the
+  MCP server with a pinned version (image with digest, or package with
+  lockfile), the authentication methods, the instance fields and what the type
+  writes outside the machine.
+- `templates/`: automation templates, with every node visible.
+- `packages/`: packages exported from Locum, already cleaned of company data.
 
-## Como o app usa
+Nothing here is code run by the app. A manifest that asks to run a downloaded
+script is rejected.
 
-O app só aceita o índice assinado por quem mantém este repositório (Ed25519).
-Item instalado fica preso ao commit e ao hash que tinha, e só muda quando a
-pessoa aceita a atualização. A tela de instalação mostra o que o item pede:
-comando ou imagem, hosts, métodos, escopos e ferramentas de escrita.
+User-facing text in every item (names, labels, descriptions) is localized:
+each text field carries one entry per language (`en`, `pt-BR`), and the app
+shows the one that matches the user's language.
 
-## Como propor um item
+## How the app uses it
 
-Abra um PR com o arquivo na pasta certa. A CI confere o esquema e quem mantém
-revisa. O formato de cada pasta está sendo fechado; até lá, abra uma issue
-descrevendo o que quer publicar.
+The app only accepts an index signed by the maintainers of this repository
+(Ed25519). An installed item stays pinned to the commit and hash it had, and
+only changes when the user accepts an update. The install screen shows what
+the item asks for: command or image, hosts, methods, scopes and write tools.
+
+## How to propose an item
+
+Open a PR with the file in the right folder. CI checks the schema and a
+maintainer reviews it. The format of each folder is still being settled; until
+then, open an issue describing what you want to publish.
