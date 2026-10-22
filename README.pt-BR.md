@@ -3,32 +3,57 @@
 [English](README.md)
 
 Catálogo público do [Locum](https://locumapp.github.io): tipos de conexão,
-modelos de automação e pacotes que qualquer pessoa pode propor.
+templates de automação e pacotes que qualquer pessoa pode propor.
 
 ## O que mora aqui
 
 - `connections/`: manifestos de tipo de conexão. Cada manifesto é só dado: o
-  servidor MCP com versão fixada (imagem com digest ou pacote com lockfile), os
-  métodos de autenticação, os campos da instância e o que o tipo escreve fora.
-- `templates/`: modelos de automação, com os nós visíveis.
+  servidor MCP (um endereço https remoto, uma imagem fixada por digest ou um
+  pacote npm fixado pelo lockfile), os métodos de autenticação, os campos da
+  instância e as ferramentas que escrevem fora da máquina.
+- `templates/`: templates de automação, com os nós visíveis.
 - `packages/`: pacotes exportados do Locum, já limpos de dado de empresa.
 
-Nada aqui é código executado pelo app. Um manifesto que peça para rodar script
-baixado é recusado.
+Cada item é um arquivo JSON, `<pasta>/<id>.json`, com um envelope comum:
+`kind`, `id`, `version`, `name`, `description`, `tags` opcionais e o corpo
+(`manifest` para conexão, `package` para template e pacote). Os esquemas
+ficam em [`schemas/`](schemas/), e o [CONTRIBUTING.pt-BR.md](CONTRIBUTING.pt-BR.md)
+explica cada campo.
 
-## Como o app usa
-
-O app só aceita o índice assinado por quem mantém este repositório (Ed25519).
-Item instalado fica preso ao commit e ao hash que tinha, e só muda quando a
-pessoa aceita a atualização. A tela de instalação mostra o que o item pede:
-comando ou imagem, hosts, métodos, escopos e ferramentas de escrita.
-
-## Como propor um item
-
-Abra um PR com o arquivo na pasta certa. A CI confere o esquema e quem mantém
-revisa. O formato de cada pasta está sendo fechado; até lá, abra uma issue
-descrevendo o que quer publicar.
+Nada aqui é código executado pelo app. Item que peça para rodar comando ou
+script baixado é recusado. `npx` e `uvx` nunca são aceitos: servidor local é
+imagem fixada por digest ou pacote npm fixado pelo lockfile.
 
 Todo texto que aparece para a pessoa (nome, rótulo, descrição) é traduzido:
 cada campo de texto traz uma entrada por idioma (`en`, `pt-BR`), e o app mostra
 a do idioma escolhido.
+
+## Como o app usa
+
+A CI publica o `index.json` e a assinatura Ed25519 dele, `index.json.sig`, no
+branch `index` a cada push na `main`:
+
+- índice: `https://raw.githubusercontent.com/locumapp/locum-marketplace/index/index.json`
+- item: `https://raw.githubusercontent.com/locumapp/locum-marketplace/<commit>/<path>`
+
+O índice lista cada item com o commit de onde saiu, a hora do commit
+(`committedAt`, em segundos), o sha256 do arquivo e o que o item pede. O app
+vai guardar uma lista de chaves públicas confiáveis e só aceitar índice
+assinado por uma delas. Hoje a lista tem uma chave (SPKI DER em base64, também
+em [`keys/index-signing.pub`](keys/index-signing.pub)):
+
+```
+MCowBQYDK2VwAyEAkZEZ6pKsyVb9KBFvI56NOo6nsaldB4j3cS/ds9Y/shM=
+```
+
+O app vai recusar índice com `committedAt` menor que o do índice que já tem,
+para que um índice assinado antigo não volte a ser servido. Item instalado vai
+ficar preso ao commit e ao hash que tinha, e só mudar quando a pessoa aceitar a
+atualização. A tela de instalação vai mostrar o que o item pede: servidor ou
+imagem, hosts, métodos, escopos e ferramentas de escrita numa conexão;
+conexões, servidores, provedores e ações num template ou pacote.
+
+## Como propor um item
+
+Abra um PR com o arquivo na pasta certa. A CI roda o validador e quem mantém
+revisa. Veja o [CONTRIBUTING.pt-BR.md](CONTRIBUTING.pt-BR.md).

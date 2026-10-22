@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/locumapp/locum-marketplace/main/schemas/package.schema.json",
+  "title": "Locum marketplace package",
+  "description": "A package someone exported from Locum, already cleaned. Same format as a template.",
+  "type": "object",
+  "$ref": "envelope.schema.json",
+  "required": ["package"],
+  "properties": {
+    "kind": { "const": "package" },
+    "manifest": false,
+    "package": { "$ref": "template.schema.json#/$defs/locumPackage" }
+  }
+}

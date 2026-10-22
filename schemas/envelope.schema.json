@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/locumapp/locum-marketplace/main/schemas/envelope.schema.json",
+  "title": "Locum marketplace item",
+  "description": "The envelope every item shares. The body is `manifest` for a connection and `package` for a template or a package; the schema of each kind says which.",
+  "type": "object",
+  "required": ["kind", "id", "version", "name", "description"],
+  "additionalProperties": false,
+  "properties": {
+    "kind": { "enum": ["connection", "template", "package"] },
+    "id": {
+      "description": "Kebab-case, equal to the file name without .json, unique in the catalog.",
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "maxLength": 63
+    },
+    "version": { "description": "Goes up by one on every change to the item.", "type": "integer", "minimum": 1 },
+    "name": { "$ref": "#/$defs/localizedName" },
+    "description": { "$ref": "#/$defs/localizedDescription" },
+    "tags": {
+      "type": "array",
+      "maxItems": 10,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "maxLength": 32 }
+    },
+    "manifest": true,
+    "package": true
+  },
+  "$defs": {
+    "localizedName": {
+      "type": "object",
+      "required": ["en", "pt-BR"],
+      "additionalProperties": false,
+      "properties": {
+        "en": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "pt-BR": { "type": "string", "minLength": 1, "maxLength": 80 }
+      }
+    },
+    "localizedDescription": {
+      "type": "object",
+      "required": ["en", "pt-BR"],
+      "additionalProperties": false,
+      "properties": {
+        "en": { "type": "string", "minLength": 1, "maxLength": 600 },
+        "pt-BR": { "type": "string", "minLength": 1, "maxLength": 600 }
+      }
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "kind": "connection",
+  "id": "image-without-digest",
+  "version": 1,
+  "description": {
+    "en": "Example connection type.",
+    "pt-BR": "Tipo de conexão de exemplo."
+  },
+  "name": {
+    "en": "Tag only",
+    "pt-BR": "Só tag"
+  },
+  "manifest": {
+    "category": "work",
+    "logo": null,
+    "color": "336699",
+    "methods": [
+      {
+        "type": "token",
+        "env": "EXAMPLE_TOKEN"
+      }
+    ],
+    "server": {
+      "transport": "stdio",
+      "image": "ghcr.io/example/example-mcp:1.0.0"
+    }
+  }
+}

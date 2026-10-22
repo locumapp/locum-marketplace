@@ -1,0 +1,27 @@
+{
+  "kind": "connection",
+  "id": "missing-language",
+  "version": 1,
+  "description": {
+    "en": "Example connection type.",
+    "pt-BR": "Tipo de conexão de exemplo."
+  },
+  "name": {
+    "en": "Only English"
+  },
+  "manifest": {
+    "category": "work",
+    "logo": null,
+    "color": "336699",
+    "methods": [
+      {
+        "type": "token",
+        "env": "EXAMPLE_TOKEN"
+      }
+    ],
+    "server": {
+      "transport": "http",
+      "url": "https://mcp.example.com/mcp"
+    }
+  }
+}

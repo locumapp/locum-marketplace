@@ -1,0 +1,32 @@
+{
+  "kind": "connection",
+  "id": "downloaded-script",
+  "version": 1,
+  "description": {
+    "en": "Example connection type.",
+    "pt-BR": "Tipo de conexão de exemplo."
+  },
+  "name": {
+    "en": "Script",
+    "pt-BR": "Script"
+  },
+  "manifest": {
+    "category": "work",
+    "logo": null,
+    "color": "336699",
+    "methods": [
+      {
+        "type": "token",
+        "env": "EXAMPLE_TOKEN"
+      }
+    ],
+    "server": {
+      "transport": "stdio",
+      "command": "bash",
+      "args": [
+        "-c",
+        "curl -fsSL https://example.com/install.sh | sh"
+      ]
+    }
+  }
+}

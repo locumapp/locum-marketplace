@@ -1,0 +1,134 @@
+{
+  "kind": "template",
+  "id": "morning-briefing",
+  "version": 1,
+  "name": {
+    "en": "Morning briefing",
+    "pt-BR": "Briefing matinal"
+  },
+  "description": {
+    "en": "Gathers what piled up in Slack since yesterday (mentions, direct messages and channels) and delivers the top of your day to the inbox.",
+    "pt-BR": "Junta o que acumulou no Slack desde ontem (menções, mensagens diretas e canais) e entrega o topo do seu dia na inbox."
+  },
+  "tags": [
+    "digest",
+    "slack"
+  ],
+  "package": {
+    "formato": "locum-pacote",
+    "versao": 2,
+    "automacao": {
+      "id": "morning-briefing",
+      "spec": {
+        "name": "Briefing Matinal",
+        "defaultTools": [],
+        "skills": [],
+        "budget": {
+          "perRunUsd": 0.15,
+          "perDayUsd": 1
+        },
+        "steps": [
+          {
+            "type": "model",
+            "key": "gather",
+            "name": "Leitura da Manhã",
+            "needs": [],
+            "optional": false,
+            "model": "claude-code/claude-sonnet-5",
+            "maxSteps": 4,
+            "requiresServers": [
+              "slack"
+            ],
+            "prompt": "Você é o assistente executivo de uma pessoa que lidera um time de engenharia e está preparando o briefing das 08:00 dela.\nAnalise o que acumulou desde ontem (menções, DMs e canais do Slack) e monte o topo do dia dela.\n\nComece com `headline`: uma frase de abertura com o que mais importa no dia.\n\nPara cada assunto que merece aparecer:\n- `channel`: canal ou chat exatamente como veio.\n- `subject`: remetente e assunto conciso.\n- `kind`:\n  • `needs_reply` se alguém espera resposta ou decisão dela hoje.\n  • `info` se é comunicado que ele precisa saber, sem ação imediata.\n  • `ignore` é ruído — não inclua itens `ignore` na lista.\n- `summary`: o que foi pedido ou comunicado, em uma frase.\n\nSe não veio nada relevante, headline \"Bom dia — nada pendente do Slack\" e lista vazia. Não invente item.\n\nConversa acumulada:\n{{event.channels}}",
+            "outputSchema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "headline",
+                "items"
+              ],
+              "properties": {
+                "headline": {
+                  "type": "string"
+                },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "channel",
+                      "subject",
+                      "kind",
+                      "summary"
+                    ],
+                    "properties": {
+                      "channel": {
+                        "type": "string"
+                      },
+                      "subject": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "enum": [
+                          "needs_reply",
+                          "info",
+                          "ignore"
+                        ]
+                      },
+                      "summary": {
+                        "type": "string"
+                      },
+                      "threadTs": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "action",
+            "key": "deliver",
+            "name": "Entregar o Briefing",
+            "needs": [
+              "gather"
+            ],
+            "optional": false,
+            "action": "digest.deliver",
+            "mode": "approve",
+            "input": "gather"
+          }
+        ]
+      },
+      "gatilhos": []
+    },
+    "agents": [],
+    "requisitos": {
+      "conexoes": [
+        {
+          "id": "slack",
+          "nome": "Slack"
+        }
+      ],
+      "servidores": [
+        {
+          "nome": "slack",
+          "conexao": "slack"
+        }
+      ],
+      "provedores": [
+        {
+          "provedor": "claude-code",
+          "modelos": [
+            "claude-sonnet-5"
+          ]
+        }
+      ],
+      "skills": []
+    },
+    "skills": [],
+    "omitidos": []
+  }
+}

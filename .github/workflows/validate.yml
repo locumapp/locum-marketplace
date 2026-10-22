@@ -1,0 +1,29 @@
+name: validate
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 20
+      - run: npm ci --ignore-scripts
+      - run: npm run validate
+      - run: npm test
+      - name: Changed items go up in version
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: npm run check-versions -- --base "origin/$BASE_REF"
+      - name: Build the index without signing
+        run: npm run build-index -- --commit "$(git rev-parse HEAD)"

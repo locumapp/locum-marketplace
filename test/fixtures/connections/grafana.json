@@ -1,0 +1,28 @@
+{
+  "kind": "connection",
+  "id": "grafana",
+  "version": 1,
+  "description": {
+    "en": "Example connection type.",
+    "pt-BR": "Tipo de conexão de exemplo."
+  },
+  "name": {
+    "en": "Grafana",
+    "pt-BR": "Grafana"
+  },
+  "manifest": {
+    "category": "work",
+    "logo": null,
+    "color": "336699",
+    "methods": [
+      {
+        "type": "token",
+        "env": "EXAMPLE_TOKEN"
+      }
+    ],
+    "server": {
+      "transport": "stdio",
+      "image": "ghcr.io/example/grafana-mcp@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    }
+  }
+}

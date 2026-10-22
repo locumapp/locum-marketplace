@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/locumapp/locum-marketplace/main/schemas/connection.schema.json",
+  "title": "Locum marketplace connection type",
+  "description": "A connection type manifest, data only. The app takes the type id and name from the envelope.",
+  "type": "object",
+  "$ref": "envelope.schema.json",
+  "required": ["manifest"],
+  "properties": {
+    "kind": { "const": "connection" },
+    "package": false,
+    "manifest": { "$ref": "#/$defs/manifest" }
+  },
+  "$defs": {
+    "text": {
+      "type": "object",
+      "required": ["en", "pt-BR"],
+      "additionalProperties": false,
+      "properties": {
+        "en": { "type": "string", "minLength": 1 },
+        "pt-BR": { "type": "string", "minLength": 1 }
+      }
+    },
+    "host": { "type": "string", "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$" },
+    "envName": { "type": "string", "pattern": "^[A-Z_][A-Z0-9_]*$" },
+    "manifest": {
+      "type": "object",
+      "required": ["category", "logo", "color", "methods", "server"],
+      "additionalProperties": false,
+      "properties": {
+        "category": { "enum": ["dev", "communication", "work", "observability", "data", "home"] },
+        "logo": { "description": "Logo key known to the app, or null for the generic icon.", "type": ["string", "null"], "minLength": 1 },
+        "color": { "description": "Brand color without #, for the generic icon.", "type": "string", "pattern": "^[0-9A-Fa-f]{6}$" },
+        "credentialOptional": { "const": true },
+        "hosts": { "description": "Hosts that also identify the type.", "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/host" } },
+        "aliases": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" } },
+        "packages": {
+          "description": "Package names (without version) of stdio servers that belong to the type.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^(@[a-z0-9][a-z0-9._~-]*/)?[a-z0-9][a-z0-9._~-]*$" }
+        },
+        "methods": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/method" } },
+        "fields": { "type": "array", "items": { "$ref": "#/$defs/field" } },
+        "scopeKeys": { "type": "array", "items": { "$ref": "#/$defs/scopeKey" } },
+        "server": { "$ref": "#/$defs/server" },
+        "writeTools": {
+          "description": "MCP tools of the server that write outside the machine. The install screen lists them.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "method": {
+      "type": "object",
+      "required": ["type"],
+      "properties": { "type": { "enum": ["oauth", "token", "none"] } },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "oauth" } } },
+          "then": {
+            "additionalProperties": false,
+            "properties": { "type": true, "scopes": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } } }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "token" } } },
+          "then": {
+            "additionalProperties": false,
+            "properties": {
+              "type": true,
+              "header": { "description": "Header that carries the credential on a remote server.", "type": "string", "pattern": "^[A-Za-z0-9-]+$" },
+              "env": { "description": "Environment variable that carries the credential on a local server.", "$ref": "#/$defs/envName" }
+            }
+          }
+        },
+        { "if": { "properties": { "type": { "const": "none" } } }, "then": { "additionalProperties": false, "properties": { "type": true } } }
+      ]
+    },
+    "field": {
+      "type": "object",
+      "required": ["key", "label", "format", "required"],
+      "additionalProperties": false,
+      "properties": {
+        "key": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9]*$" },
+        "label": { "$ref": "#/$defs/text" },
+        "format": { "enum": ["url", "text"] },
+        "required": { "type": "boolean" }
+      }
+    },
+    "scopeKey": {
+      "type": "object",
+      "required": ["key", "description", "normalize"],
+      "additionalProperties": false,
+      "properties": {
+        "key": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*\\.[a-z][a-zA-Z0-9]*$" },
+        "description": { "$ref": "#/$defs/text" },
+        "normalize": { "enum": ["lower", "exact"] }
+      }
+    },
+    "server": {
+      "description": "Where the MCP server is: a remote https endpoint, an image pinned by digest, or an npm package pinned by its lockfile. Never a command.",
+      "type": "object",
+      "required": ["transport"],
+      "properties": { "transport": { "enum": ["http", "stdio"] } },
+      "if": { "properties": { "transport": { "const": "http" } } },
+      "then": { "$ref": "#/$defs/remoteServer" },
+      "else": { "$ref": "#/$defs/localServer" }
+    },
+    "remoteServer": {
+      "type": "object",
+      "required": ["transport", "url"],
+      "additionalProperties": false,
+      "properties": {
+        "transport": { "const": "http" },
+        "url": { "type": "string", "pattern": "^https://[^\\s]+$" },
+        "headers": { "type": "object", "additionalProperties": { "type": "string" } }
+      }
+    },
+    "localServer": {
+      "type": "object",
+      "required": ["transport"],
+      "additionalProperties": false,
+      "oneOf": [{ "required": ["image"] }, { "required": ["package"] }],
+      "properties": {
+        "transport": { "const": "stdio" },
+        "image": {
+          "description": "Container image pinned by digest.",
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._/:-]*@sha256:[a-f0-9]{64}$"
+        },
+        "package": { "$ref": "#/$defs/npmPackage" },
+        "args": { "description": "Arguments for the server. Never the credential.", "type": "array", "items": { "type": "string" } },
+        "env": { "type": "object", "propertyNames": { "$ref": "#/$defs/envName" }, "additionalProperties": { "type": "string" } }
+      }
+    },
+    "npmPackage": {
+      "description": "An npm package that Locum installs in its own folder from the lockfile, with integrity for every entry.",
+      "type": "object",
+      "required": ["registry", "name", "version", "lockfile"],
+      "additionalProperties": false,
+      "properties": {
+        "registry": { "const": "npm" },
+        "name": { "type": "string", "pattern": "^(@[a-z0-9][a-z0-9._~-]*/)?[a-z0-9][a-z0-9._~-]*$" },
+        "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?$" },
+        "bin": { "type": "string", "minLength": 1 },
+        "lockfile": {
+          "description": "The package-lock.json (version 2 or 3) of a project whose only dependency is name@version.",
+          "type": "object",
+          "required": ["lockfileVersion", "packages"],
+          "properties": { "lockfileVersion": { "enum": [2, 3] }, "packages": { "type": "object" } }
+        }
+      }
+    }
+  }
+}
