@@ -19,7 +19,7 @@ test("the catalog in the repository is valid, with the migrated templates", asyn
   assert.deepEqual(errors, []);
   const templates = items.filter((i) => i.kind === "template").map((i) => i.id);
   assert.ok(templates.includes("pr-review"));
-  assert.equal(templates.length, 10);
+  assert.equal(templates.length, 8);
 });
 
 test("good connection fixtures pass: image with digest, npm package with lockfile, remote server", async () => {
@@ -91,9 +91,9 @@ test("a symlink in the catalog is refused, even when it points to a valid item",
   assert.match(errors[0].message, /regular file/);
 });
 
-/** A copy of the slack-reply template with a change, written to a temporary catalog folder. */
-function variant(change, folder = "templates") {
-  const item = JSON.parse(readFileSync(join(root, "templates/slack-reply.json"), "utf8"));
+/** A copy of a template in the repository with a change, written to a temporary catalog folder. */
+function variant(change, folder = "templates", from = "slack-reply") {
+  const item = JSON.parse(readFileSync(join(root, `templates/${from}.json`), "utf8"));
   change(item);
   const file = join(tempCatalog(folder), folder, `${item.id}.json`);
   writeFileSync(file, JSON.stringify(item));
@@ -146,4 +146,54 @@ test("a trigger whose connection and server are in the requirements passes", asy
     item.package.requisitos.servidores = [{ nome: "tickets" }];
   });
   assert.deepEqual(await validateFile(file), []);
+});
+
+async function errorAt(file, field) {
+  const errors = await validateFile(file);
+  const hit = errors.find((e) => e.field === field);
+  assert.ok(hit, `expected an error at ${field}, got ${JSON.stringify(fieldsOf(errors))}`);
+  return hit;
+}
+
+test("a template that reads the event and only has clock triggers fails at the step that reads it", async () => {
+  const file = variant((item) => (item.package.automacao.gatilhos = [{ kind: "cron", expression: "0 9 * * 1-5" }]));
+  const hit = await errorAt(file, "package.automacao.spec.steps.0.prompt");
+  assert.match(hit.message, /\{\{event\.\}\}|event/);
+  assert.match(hit.message, /no trigger of this template brings an event/);
+});
+
+test("a template that reads the event passes when one of its triggers brings one", async () => {
+  const file = variant((item) => item.package.automacao.gatilhos.push({ kind: "cron", expression: "0 9 * * 1-5" }));
+  assert.deepEqual(await validateFile(file), []);
+});
+
+test("a template that leaves the GitHub owner out without the omitted entry fails at the owner", async () => {
+  const file = variant((item) => (item.package.omitidos = []), "templates", "pr-review");
+  const hit = await errorAt(file, "package.automacao.gatilhos.0.owner");
+  assert.match(hit.message, /"dono-do-github"/);
+});
+
+test("a template that leaves the repositories of a thread reply trigger out without the omitted entry fails at repoMatch", async () => {
+  const file = variant((item) => (item.package.omitidos = item.package.omitidos.filter((o) => o.codigo !== "argumentos")), "templates", "pr-thread-reply");
+  const hit = await errorAt(file, "package.automacao.gatilhos.0.repoMatch");
+  assert.match(hit.message, /"argumentos"/);
+});
+
+test("a template with a Teams inbox trigger that does not hold the chats for the person fails at chatsRestritos", async () => {
+  const file = variant((item) => delete item.package.automacao.gatilhos[0].chatsRestritos, "templates", "teams-reply");
+  const hit = await errorAt(file, "package.automacao.gatilhos.0.chatsRestritos");
+  assert.match(hit.message, /chats/);
+});
+
+test("every trigger kind in the schema says what the person chooses, and how a template leaves each field out", () => {
+  const schema = JSON.parse(readFileSync(join(root, "schemas/template.schema.json"), "utf8"));
+  for (const branch of schema.$defs.trigger.allOf) {
+    const kind = branch.if.properties.kind.const;
+    const chooses = branch.then["x-person-chooses"];
+    assert.ok(Array.isArray(chooses), kind);
+    // Each field is left out in exactly one way: the app needs it to create the trigger, an omitted entry, or a field that holds the trigger.
+    const ways = [branch.then["x-required-to-run"] ?? [], Object.keys(branch.then["x-omitted-code"] ?? {}), Object.keys(branch.then["x-held-by"] ?? {})];
+    for (const f of chooses) assert.equal(ways.filter((w) => w.includes(f)).length, 1, `${kind}.${f}`);
+    assert.deepEqual(ways.flat().sort(), [...chooses].sort(), kind);
+  }
 });

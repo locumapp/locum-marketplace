@@ -76,11 +76,23 @@ automação montada e os nós à vista; pacote é o que alguém exportou do Locu
 Exporte pelo app, para sair já limpo, e cole em `package`.
 
 Template traz ao menos um gatilho em `automacao.gatilhos`, sem o que é da
-pessoa: dono, repositório, canais, chats. O app pede isso na instalação. O que
-o gatilho lê precisa estar em `requisitos`: a conexão do tipo dele
-(`x-reads-connection` em `$defs.trigger` de `schemas/template.schema.json`) em
-`conexoes`, e o `server` de um `mcp-poll` em `servidores`. Pacote pode vir sem
-gatilho.
+pessoa: dono, repositórios, canais, chats. O app pede isso na instalação. O
+`$defs.trigger` de `schemas/template.schema.json` diz, por tipo, o que a pessoa
+escolhe (`x-person-chooses`) e como o template deixa cada campo de fora: o app
+precisa dele para criar o gatilho (`x-required-to-run`, nada a acrescentar),
+uma entrada em `omitidos` com o código de `x-omitted-code` e
+`onde: "gatilho:<posição>"` (em `argumentos`, com o campo em `params`), ou o
+campo de `x-held-by` preenchido, que segura o gatilho até a pessoa escolher
+(`chatsRestritos` no `teams-inbox`). Nenhum template varre todos os
+repositórios ou todos os chats por deixar o campo vazio.
+
+O que o gatilho lê precisa estar em `requisitos`: a conexão do tipo dele
+(`x-reads-connection`) em `conexoes`, e o `server` de um `mcp-poll` em
+`servidores`. Template só lê em `{{event.*}}` o que algum gatilho entrega:
+`cron`, `schedule` e `manual` não trazem evento, e o template só com eles busca
+pelas ferramentas dos passos. Template que precisaria de um evento que nenhum
+gatilho entrega fica fora do catálogo até o app ter esse gatilho. Pacote pode
+vir sem gatilho.
 
 Antes de abrir o PR, confira que não sobrou dado de empresa: nomes de pessoas,
 times, canais, hosts e repositórios precisam ser genéricos.

@@ -463,7 +463,7 @@
       ]
     },
     "trigger": {
-      "description": "A trigger without what belongs to the person (channels, chats, owner, authors): they choose it on import. Each kind says the connection or the server it reads (x-reads-connection, x-reads-server, the field that names the server) and the fields the person picks when installing (x-person-chooses), which a template leaves out.",
+      "description": "A trigger without what belongs to the person (channels, chats, owner, authors): they choose it on import. Each kind says what it reads (x-reads-connection; x-reads-server, the field that names the server), whether it brings no event (x-no-event), and the fields the person picks when installing (x-person-chooses). A template leaves each of those out in one way: the app needs the field to create the trigger (x-required-to-run), an entry in omitidos with the code in x-omitted-code at gatilho:<position>, or the field in x-held-by that holds the trigger until the person chooses.",
       "type": "object",
       "required": [
         "kind"
@@ -504,7 +504,8 @@
               "everyMinutes": true,
               "workingHours": true
             },
-            "x-person-chooses": []
+            "x-person-chooses": [],
+            "x-no-event": true
           }
         },
         {
@@ -525,6 +526,9 @@
               "path": true
             },
             "x-person-chooses": [
+              "path"
+            ],
+            "x-required-to-run": [
               "path"
             ]
           }
@@ -547,7 +551,8 @@
               "kind": true,
               "expression": true
             },
-            "x-person-chooses": []
+            "x-person-chooses": [],
+            "x-no-event": true
           }
         },
         {
@@ -566,7 +571,8 @@
             "properties": {
               "kind": true
             },
-            "x-person-chooses": []
+            "x-person-chooses": [],
+            "x-no-event": true
           }
         },
         {
@@ -600,7 +606,10 @@
             "x-reads-connection": "slack",
             "x-person-chooses": [
               "myUserId"
-            ]
+            ],
+            "x-omitted-code": {
+              "myUserId": "id-do-slack"
+            }
           }
         },
         {
@@ -623,6 +632,9 @@
             },
             "x-reads-connection": "slack",
             "x-person-chooses": [
+              "channels"
+            ],
+            "x-required-to-run": [
               "channels"
             ]
           }
@@ -652,8 +664,13 @@
             },
             "x-reads-connection": "github",
             "x-person-chooses": [
-              "owner"
-            ]
+              "owner",
+              "repoMatch"
+            ],
+            "x-omitted-code": {
+              "owner": "dono-do-github",
+              "repoMatch": "argumentos"
+            }
           }
         },
         {
@@ -682,7 +699,12 @@
               "chatsRestritos": true
             },
             "x-reads-connection": "teams",
-            "x-person-chooses": []
+            "x-person-chooses": [
+              "chats"
+            ],
+            "x-held-by": {
+              "chats": "chatsRestritos"
+            }
           }
         },
         {
@@ -712,6 +734,12 @@
             "x-reads-connection": "github",
             "x-person-chooses": [
               "owner",
+              "repoMatch"
+            ],
+            "x-omitted-code": {
+              "owner": "dono-do-github"
+            },
+            "x-required-to-run": [
               "repoMatch"
             ]
           }

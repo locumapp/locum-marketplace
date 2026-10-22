@@ -77,11 +77,23 @@ exported from Locum. Export it from the app, so it comes out already cleaned,
 and paste it under `package`.
 
 A template brings at least one trigger in `automacao.gatilhos`, without what
-belongs to the person: owner, repository, channels, chats. The app asks for
-those on install. Whatever a trigger reads must be in `requisitos`: the
-connection of its kind (`x-reads-connection` in `$defs.trigger` of
-`schemas/template.schema.json`) in `conexoes`, and the `server` of an
-`mcp-poll` in `servidores`. A package may come without a trigger.
+belongs to the person: owner, repositories, channels, chats. The app asks for
+those on install. `$defs.trigger` in `schemas/template.schema.json` says, for
+each kind, what the person chooses (`x-person-chooses`) and how the template
+leaves each field out: the app needs it to create the trigger
+(`x-required-to-run`, nothing to add), an entry in `omitidos` with the code in
+`x-omitted-code` and `onde: "gatilho:<position>"` (for `argumentos`, with the
+field in `params`), or the field in `x-held-by` set, which holds the trigger
+until the person chooses (`chatsRestritos` in `teams-inbox`). No template
+watches every repository or every chat by leaving the field empty.
+
+Whatever a trigger reads must be in `requisitos`: the connection of its kind
+(`x-reads-connection`) in `conexoes`, and the `server` of an `mcp-poll` in
+`servidores`. A template can only read `{{event.*}}` what some trigger
+delivers: `cron`, `schedule` and `manual` bring no event, so a template with
+only those fetches with the tools of its steps. A template that would need an
+event no trigger delivers stays out of the catalog until the app has that
+trigger. A package may come without a trigger.
 
 Before opening the PR, check that no company data is left: names of people,
 teams, channels, hosts and repositories must be generic.

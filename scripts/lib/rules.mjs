@@ -41,13 +41,20 @@ const INTEGRITY = /^sha(256|384|512)-[A-Za-z0-9+/]+={0,2}$/;
 const CREDENTIAL = "${credential}";
 
 /** Annotations the schema keeps on each trigger kind, read by the rules and the index. */
-export const TRIGGER_ANNOTATIONS = ["x-reads-connection", "x-reads-server", "x-person-chooses"];
+export const TRIGGER_ANNOTATIONS = ["x-reads-connection", "x-reads-server", "x-no-event", "x-person-chooses", "x-required-to-run", "x-omitted-code", "x-held-by"];
 
 /** What each trigger kind reads and what the person picks on install, from `$defs.trigger` in the template schema. */
 export const TRIGGER_KINDS = new Map(
   JSON.parse(readFileSync(new URL("../../schemas/template.schema.json", import.meta.url), "utf8")).$defs.trigger.allOf.map((branch) => [
     branch.if.properties.kind.const,
-    { connection: branch.then["x-reads-connection"], serverField: branch.then["x-reads-server"], chooses: branch.then["x-person-chooses"] },
+    {
+      connection: branch.then["x-reads-connection"],
+      serverField: branch.then["x-reads-server"],
+      noEvent: branch.then["x-no-event"] === true,
+      chooses: branch.then["x-person-chooses"],
+      omittedCode: branch.then["x-omitted-code"] ?? {},
+      heldBy: branch.then["x-held-by"] ?? {},
+    },
   ]),
 );
 
@@ -239,8 +246,45 @@ function triggerRules(pkg, kind) {
     if (typeof server === "string" && !servers.has(server)) {
       errors.push({ field: field(at, reads.serverField), message: `a "${trigger.kind}" trigger reads the server "${server}", which is not in package.requisitos.servidores` });
     }
+    if (kind === "template") errors.push(...leftOutRules(pkg, trigger, i, reads));
   });
+  if (kind === "template" && triggers.length > 0 && triggers.every((t) => isObject(t) && TRIGGER_KINDS.get(t.kind)?.noEvent)) {
+    const steps = Array.isArray(pkg.automacao?.spec?.steps) ? pkg.automacao.spec.steps : [];
+    steps.forEach((step, i) => {
+      for (const path of eventReads(step, ["package.automacao.spec.steps", i])) {
+        errors.push({ field: path, message: `reads {{event.*}}, but no trigger of this template brings an event (${triggers.map((t) => t.kind).join(", ")}): fetch with the step tools instead` });
+      }
+    });
+  }
   return errors;
+}
+
+/** A template leaves what the person chooses out in the way its kind says, so the install asks for it. */
+function leftOutRules(pkg, trigger, i, reads) {
+  const errors = [];
+  const at = field("package.automacao.gatilhos", i);
+  const omitted = (Array.isArray(pkg.omitidos) ? pkg.omitidos : []).filter((o) => isObject(o) && (o.onde === `gatilho:${i}` || o.onde === trigger.kind));
+  for (const f of reads.chooses) {
+    if (trigger[f] !== undefined) continue;
+    const code = reads.omittedCode[f];
+    // A code that names its fields (argumentos) needs the field in params; the others reach the field through the app marking.
+    if (code !== undefined && !omitted.some((o) => o.codigo === code && (Array.isArray(o.params) ? o.params.includes(f) : code !== "argumentos"))) {
+      const params = code === "argumentos" ? `, "params": ["${f}"]` : "";
+      errors.push({ field: field(at, f), message: `the person chooses ${f} on install: add { "codigo": "${code}", "onde": "gatilho:${i}"${params} } to package.omitidos` });
+    }
+    const holder = reads.heldBy[f];
+    if (holder !== undefined && trigger[holder] === undefined) {
+      errors.push({ field: field(at, holder), message: `the person chooses the ${f} on install: set ${holder} so the app holds the trigger until they do` });
+    }
+  }
+  return errors;
+}
+
+/** Paths of strings in a step that read the event. */
+function eventReads(value, path) {
+  if (typeof value === "string") return /\{\{\s*event\./.test(value) ? [path.join(".")] : [];
+  if (!isObject(value) && !Array.isArray(value)) return [];
+  return Object.entries(value).flatMap(([key, child]) => eventReads(child, [...path, key]));
 }
 
 /** The first cycle in the needs between steps, as a list of keys that starts and ends on the same step. */

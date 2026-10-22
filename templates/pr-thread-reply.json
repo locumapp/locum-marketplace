@@ -222,6 +222,13 @@
       {
         "codigo": "dono-do-github",
         "onde": "gatilho:0"
+      },
+      {
+        "codigo": "argumentos",
+        "onde": "gatilho:0",
+        "params": [
+          "repoMatch"
+        ]
       }
     ]
   }

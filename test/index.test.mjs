@@ -44,7 +44,7 @@ test("the index lists every item sorted, with the hash of the file bytes and the
   assert.equal(index.committedAt, 1792000000);
   assert.deepEqual(Object.keys(index), ["format", "version", "commit", "committedAt", "items"]);
   const ids = index.items.map((i) => i.id);
-  assert.deepEqual(ids.slice(0, 3), ["inbox-triage", "morning-briefing", "observability-watch"]);
+  assert.deepEqual(ids.slice(0, 3), ["morning-briefing", "observability-watch", "pr-rereview"]);
   const review = index.items.find((i) => i.id === "pr-review");
   assert.equal(review.path, "templates/pr-review.json");
   assert.equal(review.sha256, createHash("sha256").update(readFileSync(join(root, review.path))).digest("hex"));
@@ -62,13 +62,11 @@ test("the index lists every item sorted, with the hash of the file bytes and the
 test("every template says in requires the triggers it brings, in order, with what the person picks", async () => {
   const index = JSON.parse(await buildIndex(root, AT));
   const triggers = Object.fromEntries(index.items.filter((i) => i.kind === "template").map((i) => [i.id, i.requires.triggers]));
-  assert.equal(Object.keys(triggers).length, 10);
+  assert.equal(Object.keys(triggers).length, 8);
   for (const [id, list] of Object.entries(triggers)) assert.ok(list.length > 0, id);
   assert.deepEqual(triggers["support-desk"], [{ kind: "cron", choose: [] }]);
-  assert.deepEqual(triggers["inbox-triage"], [
-    { kind: "slack-inbox", choose: ["myUserId"] },
-    { kind: "teams-inbox", choose: [] },
-  ]);
+  assert.deepEqual(triggers["teams-reply"], [{ kind: "teams-inbox", choose: ["chats"] }]);
+  assert.deepEqual(triggers["pr-thread-reply"], [{ kind: "github-thread-reply", choose: ["owner", "repoMatch"] }]);
 });
 
 test("connections stay out of the index for now; once open, a connection requires what the install screen shows: server, hosts, methods, scopes and write tools", async () => {

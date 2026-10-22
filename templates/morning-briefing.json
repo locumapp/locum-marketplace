@@ -35,11 +35,11 @@
             "needs": [],
             "optional": false,
             "model": "claude-code/claude-sonnet-5",
-            "maxSteps": 4,
+            "maxSteps": 20,
             "requiresServers": [
               "slack"
             ],
-            "prompt": "Você é o assistente executivo de uma pessoa que lidera um time de engenharia e está preparando o briefing das 08:00 dela.\nAnalise o que acumulou desde ontem (menções, DMs e canais do Slack) e monte o topo do dia dela.\n\nComece com `headline`: uma frase de abertura com o que mais importa no dia.\n\nPara cada assunto que merece aparecer:\n- `channel`: canal ou chat exatamente como veio.\n- `subject`: remetente e assunto conciso.\n- `kind`:\n  • `needs_reply` se alguém espera resposta ou decisão dela hoje.\n  • `info` se é comunicado que ele precisa saber, sem ação imediata.\n  • `ignore` é ruído — não inclua itens `ignore` na lista.\n- `summary`: o que foi pedido ou comunicado, em uma frase.\n\nSe não veio nada relevante, headline \"Bom dia — nada pendente do Slack\" e lista vazia. Não invente item.\n\nConversa acumulada:\n{{event.channels}}",
+            "prompt": "Você é o assistente executivo de uma pessoa que lidera um time de engenharia e está preparando o briefing das 08:00 dela.\nBusque no Slack o que acumulou desde a manhã do último dia útil: as menções a ela, as mensagens diretas e os canais em que ela conversa. Use as ferramentas de leitura do Slack e leia a thread quando a mensagem sozinha não disser o que foi pedido. Você só lê: nada é enviado.\nCom isso, monte o topo do dia dela.\n\nComece com `headline`: uma frase de abertura com o que mais importa no dia.\n\nPara cada assunto que merece aparecer:\n- `channel`: canal ou chat exatamente como veio.\n- `subject`: remetente e assunto conciso.\n- `kind`:\n  • `needs_reply` se alguém espera resposta ou decisão dela hoje.\n  • `info` se é comunicado que ele precisa saber, sem ação imediata.\n  • `ignore` é ruído — não inclua itens `ignore` na lista.\n- `summary`: o que foi pedido ou comunicado, em uma frase.\n\nSe não achou nada relevante, headline \"Bom dia — nada pendente do Slack\" e lista vazia. Não invente item.",
             "outputSchema": {
               "type": "object",
               "additionalProperties": false,
@@ -86,7 +86,24 @@
                   }
                 }
               }
-            }
+            },
+            "tools": [
+              {
+                "server": "slack",
+                "tool": "slack_search_messages",
+                "class": "read"
+              },
+              {
+                "server": "slack",
+                "tool": "slack_read_channel",
+                "class": "read"
+              },
+              {
+                "server": "slack",
+                "tool": "slack_read_thread",
+                "class": "read"
+              }
+            ]
           },
           {
             "type": "action",

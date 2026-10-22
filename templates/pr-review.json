@@ -228,6 +228,11 @@
           "source": "github",
           "authorship": "others",
           "includeDrafts": false,
+          "filters": {
+            "myReview": {
+              "state": "none"
+            }
+          },
           "everyMinutes": 15
         }
       ]

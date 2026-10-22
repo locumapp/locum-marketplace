@@ -69,7 +69,8 @@
           "kind": "teams-inbox",
           "mentions": true,
           "dms": true,
-          "everyMinutes": 5
+          "everyMinutes": 5,
+          "chatsRestritos": 1
         }
       ]
     },
