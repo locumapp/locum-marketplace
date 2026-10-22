@@ -1,0 +1,392 @@
+{
+  "format": "locum-marketplace-index",
+  "version": 1,
+  "commit": "0f14e0a0b6256cf77ad467cbcf382f9c8f51797b",
+  "committedAt": 1792683951,
+  "items": [
+    {
+      "kind": "template",
+      "id": "inbox-triage",
+      "version": 1,
+      "path": "templates/inbox-triage.json",
+      "sha256": "5634159d99dc341f1ec010e6d340280059c61183b005e300b9c06c809d3240ae",
+      "name": {
+        "en": "Inbox triage",
+        "pt-BR": "Triagem da caixa de entrada"
+      },
+      "description": {
+        "en": "Reads the Slack or Teams conversations and mentions you received and delivers to the inbox only what needs your attention.",
+        "pt-BR": "Lê as conversas e menções que chegaram no Slack ou no Teams e entrega na inbox só o que pede a sua atenção."
+      },
+      "tags": [
+        "digest",
+        "slack",
+        "teams"
+      ],
+      "requires": {
+        "connections": [],
+        "servers": [],
+        "providers": [
+          {
+            "provider": "claude-code",
+            "models": [
+              "claude-sonnet-5"
+            ]
+          }
+        ],
+        "skills": [],
+        "actions": [
+          "digest.deliver"
+        ]
+      }
+    },
+    {
+      "kind": "template",
+      "id": "morning-briefing",
+      "version": 1,
+      "path": "templates/morning-briefing.json",
+      "sha256": "3ecea50711bbea946216ff602f94ffe10a92d3bde63001abb5edfa5ca25f31cb",
+      "name": {
+        "en": "Morning briefing",
+        "pt-BR": "Briefing matinal"
+      },
+      "description": {
+        "en": "Gathers what piled up in Slack since yesterday (mentions, direct messages and channels) and delivers the top of your day to the inbox.",
+        "pt-BR": "Junta o que acumulou no Slack desde ontem (menções, mensagens diretas e canais) e entrega o topo do seu dia na inbox."
+      },
+      "tags": [
+        "digest",
+        "slack"
+      ],
+      "requires": {
+        "connections": [
+          "slack"
+        ],
+        "servers": [
+          "slack"
+        ],
+        "providers": [
+          {
+            "provider": "claude-code",
+            "models": [
+              "claude-sonnet-5"
+            ]
+          }
+        ],
+        "skills": [],
+        "actions": [
+          "digest.deliver"
+        ]
+      }
+    },
+    {
+      "kind": "template",
+      "id": "observability-watch",
+      "version": 1,
+      "path": "templates/observability-watch.json",
+      "sha256": "7259c51f3d50ce373554225444b6e67ce47221c39b37c37789f2818b7fde90b6",
+      "name": {
+        "en": "Observability watch",
+        "pt-BR": "Vigia de observabilidade"
+      },
+      "description": {
+        "en": "Reads the active Grafana incidents and delivers to the inbox the ones that need you now.",
+        "pt-BR": "Lê os incidentes ativos do Grafana e entrega na inbox os que precisam de você agora."
+      },
+      "tags": [
+        "digest",
+        "grafana",
+        "observability"
+      ],
+      "requires": {
+        "connections": [
+          "grafana"
+        ],
+        "servers": [
+          "grafana"
+        ],
+        "providers": [
+          {
+            "provider": "claude-code",
+            "models": [
+              "claude-sonnet-5"
+            ]
+          }
+        ],
+        "skills": [],
+        "actions": [
+          "digest.deliver"
+        ]
+      }
+    },
+    {
+      "kind": "template",
+      "id": "pr-rereview",
+      "version": 1,
+      "path": "templates/pr-rereview.json",
+      "sha256": "d4636201ee23f6fbd87d7b77e164c1903c5dcb7f9039835d620abe930ccd16b4",
+      "name": {
+        "en": "PR re-review",
+        "pt-BR": "Nova revisão de PR"
+      },
+      "description": {
+        "en": "Checks the requests from your last review against the diff since then and the thread replies, points out new defects and prepares the review, held in the queue.",
+        "pt-BR": "Confere os pedidos da sua última review contra o diff desde ela e as respostas nas threads, aponta defeito novo e prepara a review, parada na fila."
+      },
+      "tags": [
+        "code-review",
+        "github"
+      ],
+      "requires": {
+        "connections": [
+          "github"
+        ],
+        "servers": [],
+        "providers": [
+          {
+            "provider": "claude-code",
+            "models": [
+              "claude-opus-5"
+            ]
+          }
+        ],
+        "skills": [],
+        "actions": [
+          "github.review_comment"
+        ]
+      }
+    },
+    {
+      "kind": "template",
+      "id": "pr-review",
+      "version": 1,
+      "path": "templates/pr-review.json",
+      "sha256": "1367710dc3957b1da90d294c86ac2715314c73bbae6ef40c6e9c0468c8d02544",
+      "name": {
+        "en": "PR review",
+        "pt-BR": "Revisão de PR"
+      },
+      "description": {
+        "en": "Triage, audit with a verdict, optional deploy context (asks for an MCP server named argocd) and the review on the pull request, held in the queue for approval.",
+        "pt-BR": "Triagem, auditoria com veredito, contexto de deploy opcional (pede um servidor MCP chamado argocd) e a review no pull request, parada na fila para aprovação."
+      },
+      "tags": [
+        "code-review",
+        "github"
+      ],
+      "requires": {
+        "connections": [
+          "github"
+        ],
+        "servers": [
+          "argocd"
+        ],
+        "providers": [
+          {
+            "provider": "claude-code",
+            "models": [
+              "claude-opus-5",
+              "claude-sonnet-5"
+            ]
+          }
+        ],
+        "skills": [],
+        "actions": [
+          "github.review_comment"
+        ]
+      }
+    },
+    {
+      "kind": "template",
+      "id": "pr-thread-reply",
+      "version": 1,
+      "path": "templates/pr-thread-reply.json",
+      "sha256": "d8774d5facb29e52bf1ab93c49e89ca378c4186bcb8000737d5893ae53487c9b",
+      "name": {
+        "en": "PR thread reply",
+        "pt-BR": "Resposta em thread de PR"
+      },
+      "description": {
+        "en": "When someone replies in a thread Locum opened: reacts, judges the outcome, queues the reply, resolves the thread only when fixed or accepted, and proposes the team decision to memory, also in the queue.",
+        "pt-BR": "Quando alguém responde numa thread que o Locum abriu: reage, avalia o desfecho, deixa a resposta na fila, resolve a thread só em fixed ou accepted e propõe à memória a decisão do time, também na fila."
+      },
+      "tags": [
+        "code-review",
+        "github",
+        "memory"
+      ],
+      "requires": {
+        "connections": [
+          "github"
+        ],
+        "servers": [],
+        "providers": [
+          {
+            "provider": "claude-code",
+            "models": [
+              "claude-opus-5"
+            ]
+          }
+        ],
+        "skills": [],
+        "actions": [
+          "github.react",
+          "github.resolve_thread",
+          "github.review_reply",
+          "memory.propose"
+        ]
+      }
+    },
+    {
+      "kind": "template",
+      "id": "slack-digest",
+      "version": 1,
+      "path": "templates/slack-digest.json",
+      "sha256": "fd8f68dd8f35da8eace1360c7f3c0d5ad4eea36e025d66cd5406fc4d468d22d2",
+      "name": {
+        "en": "Slack digest",
+        "pt-BR": "Digest do Slack"
+      },
+      "description": {
+        "en": "Reads the watched Slack channels and builds a digest that arrives in the inbox as reading.",
+        "pt-BR": "Lê os canais observados do Slack e monta um digest, que chega na inbox como leitura."
+      },
+      "tags": [
+        "digest",
+        "slack"
+      ],
+      "requires": {
+        "connections": [],
+        "servers": [],
+        "providers": [
+          {
+            "provider": "claude-code",
+            "models": [
+              "claude-sonnet-5"
+            ]
+          }
+        ],
+        "skills": [],
+        "actions": [
+          "digest.deliver"
+        ]
+      }
+    },
+    {
+      "kind": "template",
+      "id": "slack-reply",
+      "version": 1,
+      "path": "templates/slack-reply.json",
+      "sha256": "d594e26fdabd8416905b3edfc2743b646a9a6f43ab59a3f5bbcdba9e37a3a6f2",
+      "name": {
+        "en": "Slack reply",
+        "pt-BR": "Resposta no Slack"
+      },
+      "description": {
+        "en": "Writes the reply to a Slack message and stops in the queue before posting.",
+        "pt-BR": "Escreve a resposta a uma mensagem do Slack e para na fila antes de postar."
+      },
+      "tags": [
+        "slack"
+      ],
+      "requires": {
+        "connections": [
+          "slack"
+        ],
+        "servers": [],
+        "providers": [
+          {
+            "provider": "claude-code",
+            "models": [
+              "claude-sonnet-5"
+            ]
+          }
+        ],
+        "skills": [],
+        "actions": [
+          "slack.post"
+        ]
+      }
+    },
+    {
+      "kind": "template",
+      "id": "support-desk",
+      "version": 1,
+      "path": "templates/support-desk.json",
+      "sha256": "483fc930022a10633cde30ce47cf37225d7c955a6a38246ba32ecf974cfdd314",
+      "name": {
+        "en": "Support desk",
+        "pt-BR": "Central de chamados"
+      },
+      "description": {
+        "en": "Reads the conversations from the initiative sources, counts business hours with the business_hours tool, classifies each request and delivers the board to the inbox, investigating the critical ones.",
+        "pt-BR": "Lê as conversas das fontes da iniciativa, conta horas úteis pela ferramenta business_hours, classifica cada chamado e entrega o quadro na inbox, com investigação dos críticos."
+      },
+      "tags": [
+        "digest",
+        "slack",
+        "support",
+        "teams"
+      ],
+      "requires": {
+        "connections": [
+          "slack",
+          "teams"
+        ],
+        "servers": [
+          "ms365",
+          "slack"
+        ],
+        "providers": [
+          {
+            "provider": "claude-code",
+            "models": [
+              "haiku",
+              "sonnet"
+            ]
+          }
+        ],
+        "skills": [],
+        "actions": [
+          "digest.deliver"
+        ]
+      }
+    },
+    {
+      "kind": "template",
+      "id": "teams-reply",
+      "version": 1,
+      "path": "templates/teams-reply.json",
+      "sha256": "576e9f18bb16db53bfc1f035d822dec79a9d74df2d8ff57de0ea07f2e9148265",
+      "name": {
+        "en": "Teams reply",
+        "pt-BR": "Resposta no Teams"
+      },
+      "description": {
+        "en": "Writes the reply to a Teams message and stops in the queue before sending.",
+        "pt-BR": "Escreve a resposta à mensagem do Teams e para na fila antes de mandar."
+      },
+      "tags": [
+        "teams"
+      ],
+      "requires": {
+        "connections": [
+          "teams"
+        ],
+        "servers": [],
+        "providers": [
+          {
+            "provider": "claude-code",
+            "models": [
+              "claude-sonnet-5"
+            ]
+          }
+        ],
+        "skills": [],
+        "actions": [
+          "teams.post"
+        ]
+      }
+    }
+  ]
+}
