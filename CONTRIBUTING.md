@@ -76,5 +76,12 @@ the automation assembled and every node visible; a package is what someone
 exported from Locum. Export it from the app, so it comes out already cleaned,
 and paste it under `package`.
 
+A template brings at least one trigger in `automacao.gatilhos`, without what
+belongs to the person: owner, repository, channels, chats. The app asks for
+those on install. Whatever a trigger reads must be in `requisitos`: the
+connection of its kind (`x-reads-connection` in `$defs.trigger` of
+`schemas/template.schema.json`) in `conexoes`, and the `server` of an
+`mcp-poll` in `servidores`. A package may come without a trigger.
+
 Before opening the PR, check that no company data is left: names of people,
 teams, channels, hosts and repositories must be generic.

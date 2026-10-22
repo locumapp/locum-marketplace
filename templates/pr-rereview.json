@@ -1,7 +1,7 @@
 {
   "kind": "template",
   "id": "pr-rereview",
-  "version": 1,
+  "version": 2,
   "name": {
     "en": "PR re-review",
     "pt-BR": "Nova revisão de PR"
@@ -124,7 +124,21 @@
           }
         ]
       },
-      "gatilhos": []
+      "gatilhos": [
+        {
+          "kind": "poll",
+          "source": "github",
+          "authorship": "others",
+          "includeDrafts": false,
+          "filters": {
+            "myReview": {
+              "state": "changes_requested",
+              "newCommitsSince": true
+            }
+          },
+          "everyMinutes": 15
+        }
+      ]
     },
     "agents": [],
     "requisitos": {
@@ -146,6 +160,11 @@
       "skills": []
     },
     "skills": [],
-    "omitidos": []
+    "omitidos": [
+      {
+        "codigo": "dono-do-github",
+        "onde": "gatilho:0"
+      }
+    ]
   }
 }

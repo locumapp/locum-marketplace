@@ -55,7 +55,20 @@ test("the index lists every item sorted, with the hash of the file bytes and the
     providers: [{ provider: "claude-code", models: ["claude-opus-5", "claude-sonnet-5"] }],
     skills: [],
     actions: ["github.review_comment"],
+    triggers: [{ kind: "poll", choose: ["owner", "repoMatch"] }],
   });
+});
+
+test("every template says in requires the triggers it brings, in order, with what the person picks", async () => {
+  const index = JSON.parse(await buildIndex(root, AT));
+  const triggers = Object.fromEntries(index.items.filter((i) => i.kind === "template").map((i) => [i.id, i.requires.triggers]));
+  assert.equal(Object.keys(triggers).length, 10);
+  for (const [id, list] of Object.entries(triggers)) assert.ok(list.length > 0, id);
+  assert.deepEqual(triggers["support-desk"], [{ kind: "cron", choose: [] }]);
+  assert.deepEqual(triggers["inbox-triage"], [
+    { kind: "slack-inbox", choose: ["myUserId"] },
+    { kind: "teams-inbox", choose: [] },
+  ]);
 });
 
 test("connections stay out of the index for now; once open, a connection requires what the install screen shows: server, hosts, methods, scopes and write tools", async () => {

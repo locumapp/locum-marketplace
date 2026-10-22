@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { relative } from "node:path";
+import { TRIGGER_KINDS } from "./rules.mjs";
 import { validateCatalog } from "./validate.mjs";
 
 export const INDEX_FORMAT = "locum-marketplace-index";
@@ -37,6 +38,8 @@ function packageRequires(pkg) {
       .map((p) => ({ provider: p.provedor, models: sorted(p.modelos) })),
     skills: sorted((req.skills ?? []).map((s) => s.nome)),
     actions: sorted(pkg.automacao.spec.steps.filter((s) => s.type === "action").map((s) => s.action)),
+    // In the package order: what the person picks is what the kind leaves to them and the trigger does not bring.
+    triggers: pkg.automacao.gatilhos.map((g) => ({ kind: g.kind, choose: TRIGGER_KINDS.get(g.kind).chooses.filter((f) => g[f] === undefined) })),
   };
 }
 

@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { mkdirSync, mkdtempSync, copyFileSync, symlinkSync } from "node:fs";
+import { mkdirSync, mkdtempSync, copyFileSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { validateCatalog, validateFile } from "../scripts/lib/validate.mjs";
@@ -89,4 +89,61 @@ test("a symlink in the catalog is refused, even when it points to a valid item",
   const { items, errors } = await validateCatalog(catalog);
   assert.deepEqual(items, []);
   assert.match(errors[0].message, /regular file/);
+});
+
+/** A copy of the slack-reply template with a change, written to a temporary catalog folder. */
+function variant(change, folder = "templates") {
+  const item = JSON.parse(readFileSync(join(root, "templates/slack-reply.json"), "utf8"));
+  change(item);
+  const file = join(tempCatalog(folder), folder, `${item.id}.json`);
+  writeFileSync(file, JSON.stringify(item));
+  return file;
+}
+
+test("a template without a trigger fails at the trigger list", async () => {
+  const errors = await validateFile(variant((item) => (item.package.automacao.gatilhos = [])));
+  const hit = errors.find((e) => e.field === "package.automacao.gatilhos");
+  assert.ok(hit, JSON.stringify(fieldsOf(errors)));
+  assert.match(hit.message, /at least one trigger/);
+});
+
+test("a package may come without a trigger", async () => {
+  const file = variant((item) => {
+    item.kind = "package";
+    item.package.automacao.gatilhos = [];
+  }, "packages");
+  assert.deepEqual(await validateFile(file), []);
+});
+
+test("a trigger that reads a connection missing from the requirements fails at its kind", async () => {
+  const errors = await validateFile(
+    variant((item) => {
+      item.package.automacao.gatilhos = [{ kind: "poll", source: "github" }];
+      item.package.requisitos.conexoes = [{ id: "slack", nome: "Slack" }];
+    }),
+  );
+  const hit = errors.find((e) => e.field === "package.automacao.gatilhos.0.kind");
+  assert.ok(hit, JSON.stringify(fieldsOf(errors)));
+  assert.match(hit.message, /"poll" trigger reads the "github" connection/);
+});
+
+test("an mcp-poll trigger whose server is missing from the requirements fails at its server", async () => {
+  const errors = await validateFile(
+    variant((item) => {
+      item.package.automacao.gatilhos.push({ kind: "mcp-poll", server: "tickets", tool: "list_open" });
+      item.package.requisitos.servidores = [];
+    }),
+  );
+  const hit = errors.find((e) => e.field === "package.automacao.gatilhos.1.server");
+  assert.ok(hit, JSON.stringify(fieldsOf(errors)));
+  assert.match(hit.message, /server "tickets"/);
+});
+
+test("a trigger whose connection and server are in the requirements passes", async () => {
+  const file = variant((item) => {
+    item.package.automacao.gatilhos = [{ kind: "mcp-poll", server: "tickets", tool: "list_open" }, { kind: "cron", expression: "0 9 * * 1-5" }];
+    item.package.requisitos.conexoes = [];
+    item.package.requisitos.servidores = [{ nome: "tickets" }];
+  });
+  assert.deepEqual(await validateFile(file), []);
 });

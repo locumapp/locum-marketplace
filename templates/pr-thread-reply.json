@@ -1,7 +1,7 @@
 {
   "kind": "template",
   "id": "pr-thread-reply",
-  "version": 1,
+  "version": 2,
   "name": {
     "en": "PR thread reply",
     "pt-BR": "Resposta em thread de PR"
@@ -187,7 +187,16 @@
           }
         ]
       },
-      "gatilhos": []
+      "gatilhos": [
+        {
+          "kind": "github-thread-reply",
+          "includeResolved": false,
+          "maxRepliesPerThread": 3,
+          "maxRepliesPerPr": 10,
+          "lookbackMinutes": 60,
+          "everyMinutes": 5
+        }
+      ]
     },
     "agents": [],
     "requisitos": {
@@ -209,6 +218,11 @@
       "skills": []
     },
     "skills": [],
-    "omitidos": []
+    "omitidos": [
+      {
+        "codigo": "dono-do-github",
+        "onde": "gatilho:0"
+      }
+    ]
   }
 }

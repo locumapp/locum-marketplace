@@ -2,7 +2,7 @@ import { lstat, readFile, readdir } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import Ajv2020Module from "ajv/dist/2020.js";
-import { itemRules } from "./rules.mjs";
+import { TRIGGER_ANNOTATIONS, itemRules } from "./rules.mjs";
 
 const Ajv2020 = Ajv2020Module.default ?? Ajv2020Module;
 const schemasDir = fileURLToPath(new URL("../../schemas/", import.meta.url));
@@ -15,6 +15,7 @@ let compiled;
 async function schemas() {
   if (compiled !== undefined) return compiled;
   const ajv = new Ajv2020({ allErrors: true, strict: true, strictTypes: false, strictRequired: false });
+  ajv.addVocabulary(TRIGGER_ANNOTATIONS);
   const byName = {};
   for (const name of ["envelope", "connection", "template", "package"]) {
     const schema = JSON.parse(await readFile(join(schemasDir, `${name}.schema.json`), "utf8"));

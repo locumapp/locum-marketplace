@@ -1,7 +1,7 @@
 {
   "kind": "template",
   "id": "support-desk",
-  "version": 1,
+  "version": 2,
   "name": {
     "en": "Support desk",
     "pt-BR": "Central de chamados"
@@ -293,7 +293,12 @@
           }
         ]
       },
-      "gatilhos": []
+      "gatilhos": [
+        {
+          "kind": "cron",
+          "expression": "0 9,15 * * 1-5"
+        }
+      ]
     },
     "agents": [],
     "requisitos": {

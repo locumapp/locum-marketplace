@@ -1,4 +1,5 @@
 // The rules a JSON Schema cannot say: nothing here runs code, and local servers are pinned.
+import { readFileSync } from "node:fs";
 
 /**
  * Connection types that ship with the app (its `embutidos.json`), Argo CD, and the ids
@@ -39,6 +40,17 @@ const IMAGE_WITH_DIGEST = /^[a-z0-9][a-z0-9._/:-]*@sha256:[a-f0-9]{64}$/;
 const INTEGRITY = /^sha(256|384|512)-[A-Za-z0-9+/]+={0,2}$/;
 const CREDENTIAL = "${credential}";
 
+/** Annotations the schema keeps on each trigger kind, read by the rules and the index. */
+export const TRIGGER_ANNOTATIONS = ["x-reads-connection", "x-reads-server", "x-person-chooses"];
+
+/** What each trigger kind reads and what the person picks on install, from `$defs.trigger` in the template schema. */
+export const TRIGGER_KINDS = new Map(
+  JSON.parse(readFileSync(new URL("../../schemas/template.schema.json", import.meta.url), "utf8")).$defs.trigger.allOf.map((branch) => [
+    branch.if.properties.kind.const,
+    { connection: branch.then["x-reads-connection"], serverField: branch.then["x-reads-server"], chooses: branch.then["x-person-chooses"] },
+  ]),
+);
+
 const isObject = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
 const field = (...parts) => parts.join(".");
 
@@ -59,7 +71,7 @@ export function itemRules(item, expected) {
     if (isObject(item.manifest)) errors.push(...connectionRules(item.manifest));
   }
   if ((item.kind === "template" || item.kind === "package") && isObject(item.package)) {
-    errors.push(...packageRules(item.package));
+    errors.push(...packageRules(item.package, item.kind));
   }
   return errors;
 }
@@ -165,8 +177,11 @@ function lockfileRules(pkg) {
   return errors;
 }
 
-/** What the import checks beyond the schema: agent ids, the agent a step uses, step keys and needs, and version 4 features. */
-function packageRules(pkg) {
+/**
+ * What the import checks beyond the schema: agent ids, the agent a step uses, step keys and needs, and version 4 features.
+ * Also what the install needs: a template has a trigger, and what each trigger reads is in the requirements.
+ */
+function packageRules(pkg, kind) {
   const errors = [];
   const agents = Array.isArray(pkg.agents) ? pkg.agents : [];
   const agentIds = new Set();
@@ -200,6 +215,31 @@ function packageRules(pkg) {
   if (typeof pkg.versao === "number" && pkg.versao < 4 && pkg.notas !== undefined) {
     errors.push({ field: "package.notas", message: "memory notes need version 4 of the package format" });
   }
+  errors.push(...triggerRules(pkg, kind));
+  return errors;
+}
+
+function triggerRules(pkg, kind) {
+  const errors = [];
+  const triggers = Array.isArray(pkg.automacao?.gatilhos) ? pkg.automacao.gatilhos : [];
+  if (kind === "template" && triggers.length === 0) {
+    errors.push({ field: "package.automacao.gatilhos", message: "a template needs at least one trigger, assembled and visible, for the install to fill in" });
+  }
+  const names = (list, key) => new Set((Array.isArray(list) ? list : []).filter(isObject).map((entry) => entry[key]));
+  const connections = names(pkg.requisitos?.conexoes, "id");
+  const servers = names(pkg.requisitos?.servidores, "nome");
+  triggers.forEach((trigger, i) => {
+    const reads = isObject(trigger) ? TRIGGER_KINDS.get(trigger.kind) : undefined;
+    if (reads === undefined) return;
+    const at = field("package.automacao.gatilhos", i);
+    if (reads.connection !== undefined && !connections.has(reads.connection)) {
+      errors.push({ field: field(at, "kind"), message: `a "${trigger.kind}" trigger reads the "${reads.connection}" connection, which is not in package.requisitos.conexoes` });
+    }
+    const server = reads.serverField === undefined ? undefined : trigger[reads.serverField];
+    if (typeof server === "string" && !servers.has(server)) {
+      errors.push({ field: field(at, reads.serverField), message: `a "${trigger.kind}" trigger reads the server "${server}", which is not in package.requisitos.servidores` });
+    }
+  });
   return errors;
 }
 

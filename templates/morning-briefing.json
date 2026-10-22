@@ -1,7 +1,7 @@
 {
   "kind": "template",
   "id": "morning-briefing",
-  "version": 1,
+  "version": 2,
   "name": {
     "en": "Morning briefing",
     "pt-BR": "Briefing matinal"
@@ -102,7 +102,12 @@
           }
         ]
       },
-      "gatilhos": []
+      "gatilhos": [
+        {
+          "kind": "cron",
+          "expression": "0 8 * * 1-5"
+        }
+      ]
     },
     "agents": [],
     "requisitos": {

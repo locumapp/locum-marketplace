@@ -1,7 +1,7 @@
 {
   "kind": "template",
   "id": "slack-digest",
-  "version": 1,
+  "version": 2,
   "name": {
     "en": "Slack digest",
     "pt-BR": "Digest do Slack"
@@ -100,11 +100,21 @@
           }
         ]
       },
-      "gatilhos": []
+      "gatilhos": [
+        {
+          "kind": "slack-channel",
+          "everyMinutes": 5
+        }
+      ]
     },
     "agents": [],
     "requisitos": {
-      "conexoes": [],
+      "conexoes": [
+        {
+          "id": "slack",
+          "nome": "Slack"
+        }
+      ],
       "servidores": [],
       "provedores": [
         {

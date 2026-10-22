@@ -1,7 +1,7 @@
 {
   "kind": "template",
   "id": "inbox-triage",
-  "version": 1,
+  "version": 2,
   "name": {
     "en": "Inbox triage",
     "pt-BR": "Triagem da caixa de entrada"
@@ -101,11 +101,33 @@
           }
         ]
       },
-      "gatilhos": []
+      "gatilhos": [
+        {
+          "kind": "slack-inbox",
+          "mentions": true,
+          "dms": true,
+          "everyMinutes": 5
+        },
+        {
+          "kind": "teams-inbox",
+          "mentions": true,
+          "dms": true,
+          "everyMinutes": 5
+        }
+      ]
     },
     "agents": [],
     "requisitos": {
-      "conexoes": [],
+      "conexoes": [
+        {
+          "id": "slack",
+          "nome": "Slack"
+        },
+        {
+          "id": "teams",
+          "nome": "Microsoft Teams"
+        }
+      ],
       "servidores": [],
       "provedores": [
         {
@@ -118,6 +140,11 @@
       "skills": []
     },
     "skills": [],
-    "omitidos": []
+    "omitidos": [
+      {
+        "codigo": "id-do-slack",
+        "onde": "gatilho:0"
+      }
+    ]
   }
 }

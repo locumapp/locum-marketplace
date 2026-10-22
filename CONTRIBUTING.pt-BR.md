@@ -75,5 +75,12 @@ sem digest; e os ids dos tipos embutidos no app (`github`, `slack`, `teams`,
 automação montada e os nós à vista; pacote é o que alguém exportou do Locum.
 Exporte pelo app, para sair já limpo, e cole em `package`.
 
+Template traz ao menos um gatilho em `automacao.gatilhos`, sem o que é da
+pessoa: dono, repositório, canais, chats. O app pede isso na instalação. O que
+o gatilho lê precisa estar em `requisitos`: a conexão do tipo dele
+(`x-reads-connection` em `$defs.trigger` de `schemas/template.schema.json`) em
+`conexoes`, e o `server` de um `mcp-poll` em `servidores`. Pacote pode vir sem
+gatilho.
+
 Antes de abrir o PR, confira que não sobrou dado de empresa: nomes de pessoas,
 times, canais, hosts e repositórios precisam ser genéricos.
