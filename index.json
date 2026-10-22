@@ -1,51 +1,15 @@
 {
   "format": "locum-marketplace-index",
   "version": 1,
-  "commit": "0f14e0a0b6256cf77ad467cbcf382f9c8f51797b",
-  "committedAt": 1792683951,
+  "commit": "3d38c7eefdabbf9fe2b9c8949b8c231ce23751cf",
+  "committedAt": 1792688324,
   "items": [
     {
       "kind": "template",
-      "id": "inbox-triage",
-      "version": 1,
-      "path": "templates/inbox-triage.json",
-      "sha256": "5634159d99dc341f1ec010e6d340280059c61183b005e300b9c06c809d3240ae",
-      "name": {
-        "en": "Inbox triage",
-        "pt-BR": "Triagem da caixa de entrada"
-      },
-      "description": {
-        "en": "Reads the Slack or Teams conversations and mentions you received and delivers to the inbox only what needs your attention.",
-        "pt-BR": "Lê as conversas e menções que chegaram no Slack ou no Teams e entrega na inbox só o que pede a sua atenção."
-      },
-      "tags": [
-        "digest",
-        "slack",
-        "teams"
-      ],
-      "requires": {
-        "connections": [],
-        "servers": [],
-        "providers": [
-          {
-            "provider": "claude-code",
-            "models": [
-              "claude-sonnet-5"
-            ]
-          }
-        ],
-        "skills": [],
-        "actions": [
-          "digest.deliver"
-        ]
-      }
-    },
-    {
-      "kind": "template",
       "id": "morning-briefing",
-      "version": 1,
+      "version": 3,
       "path": "templates/morning-briefing.json",
-      "sha256": "3ecea50711bbea946216ff602f94ffe10a92d3bde63001abb5edfa5ca25f31cb",
+      "sha256": "8d8114182d5bb1b98e0e15d540a24f6bba4808ec7789fad0fa61fb4524608f29",
       "name": {
         "en": "Morning briefing",
         "pt-BR": "Briefing matinal"
@@ -76,22 +40,28 @@
         "skills": [],
         "actions": [
           "digest.deliver"
+        ],
+        "triggers": [
+          {
+            "kind": "cron",
+            "choose": []
+          }
         ]
       }
     },
     {
       "kind": "template",
       "id": "observability-watch",
-      "version": 1,
+      "version": 3,
       "path": "templates/observability-watch.json",
-      "sha256": "7259c51f3d50ce373554225444b6e67ce47221c39b37c37789f2818b7fde90b6",
+      "sha256": "3f8badd50184f52cde2f3a19e1b14a562700f20f110aaa0f6b1cf8b2d91260d3",
       "name": {
         "en": "Observability watch",
         "pt-BR": "Vigia de observabilidade"
       },
       "description": {
-        "en": "Reads the active Grafana incidents and delivers to the inbox the ones that need you now.",
-        "pt-BR": "Lê os incidentes ativos do Grafana e entrega na inbox os que precisam de você agora."
+        "en": "Reads the active incidents from Grafana Incident (IRM) and delivers to the inbox the ones that need you now. Needs Grafana Incident enabled in the Grafana you connect.",
+        "pt-BR": "Lê os incidentes ativos do Grafana Incident (IRM) e entrega na inbox os que precisam de você agora. Precisa do Grafana Incident ligado no Grafana que você conectar."
       },
       "tags": [
         "digest",
@@ -116,15 +86,21 @@
         "skills": [],
         "actions": [
           "digest.deliver"
+        ],
+        "triggers": [
+          {
+            "kind": "schedule",
+            "choose": []
+          }
         ]
       }
     },
     {
       "kind": "template",
       "id": "pr-rereview",
-      "version": 1,
+      "version": 2,
       "path": "templates/pr-rereview.json",
-      "sha256": "d4636201ee23f6fbd87d7b77e164c1903c5dcb7f9039835d620abe930ccd16b4",
+      "sha256": "425e440b2fe268acf1992606c537597dfb892019ae3f45a1cf054f0e3b589dd0",
       "name": {
         "en": "PR re-review",
         "pt-BR": "Nova revisão de PR"
@@ -153,15 +129,24 @@
         "skills": [],
         "actions": [
           "github.review_comment"
+        ],
+        "triggers": [
+          {
+            "kind": "poll",
+            "choose": [
+              "owner",
+              "repoMatch"
+            ]
+          }
         ]
       }
     },
     {
       "kind": "template",
       "id": "pr-review",
-      "version": 1,
+      "version": 2,
       "path": "templates/pr-review.json",
-      "sha256": "1367710dc3957b1da90d294c86ac2715314c73bbae6ef40c6e9c0468c8d02544",
+      "sha256": "7f50e7d4890f889b83b4ea298c1c1e4fe1c6dc7c9b8751c364b19723fc0ec884",
       "name": {
         "en": "PR review",
         "pt-BR": "Revisão de PR"
@@ -193,15 +178,24 @@
         "skills": [],
         "actions": [
           "github.review_comment"
+        ],
+        "triggers": [
+          {
+            "kind": "poll",
+            "choose": [
+              "owner",
+              "repoMatch"
+            ]
+          }
         ]
       }
     },
     {
       "kind": "template",
       "id": "pr-thread-reply",
-      "version": 1,
+      "version": 2,
       "path": "templates/pr-thread-reply.json",
-      "sha256": "d8774d5facb29e52bf1ab93c49e89ca378c4186bcb8000737d5893ae53487c9b",
+      "sha256": "ebd0f1235670f46382bed10a1943f560e9a631f3cc34ecb67ba1e3724af725cf",
       "name": {
         "en": "PR thread reply",
         "pt-BR": "Resposta em thread de PR"
@@ -234,50 +228,24 @@
           "github.resolve_thread",
           "github.review_reply",
           "memory.propose"
-        ]
-      }
-    },
-    {
-      "kind": "template",
-      "id": "slack-digest",
-      "version": 1,
-      "path": "templates/slack-digest.json",
-      "sha256": "fd8f68dd8f35da8eace1360c7f3c0d5ad4eea36e025d66cd5406fc4d468d22d2",
-      "name": {
-        "en": "Slack digest",
-        "pt-BR": "Digest do Slack"
-      },
-      "description": {
-        "en": "Reads the watched Slack channels and builds a digest that arrives in the inbox as reading.",
-        "pt-BR": "Lê os canais observados do Slack e monta um digest, que chega na inbox como leitura."
-      },
-      "tags": [
-        "digest",
-        "slack"
-      ],
-      "requires": {
-        "connections": [],
-        "servers": [],
-        "providers": [
+        ],
+        "triggers": [
           {
-            "provider": "claude-code",
-            "models": [
-              "claude-sonnet-5"
+            "kind": "github-thread-reply",
+            "choose": [
+              "owner",
+              "repoMatch"
             ]
           }
-        ],
-        "skills": [],
-        "actions": [
-          "digest.deliver"
         ]
       }
     },
     {
       "kind": "template",
       "id": "slack-reply",
-      "version": 1,
+      "version": 2,
       "path": "templates/slack-reply.json",
-      "sha256": "d594e26fdabd8416905b3edfc2743b646a9a6f43ab59a3f5bbcdba9e37a3a6f2",
+      "sha256": "b5a2dcf26adbf7fcf24806dfdd5f0e72f2b202471597fd04a31d87335fb88131",
       "name": {
         "en": "Slack reply",
         "pt-BR": "Resposta no Slack"
@@ -305,22 +273,30 @@
         "skills": [],
         "actions": [
           "slack.post"
+        ],
+        "triggers": [
+          {
+            "kind": "slack-inbox",
+            "choose": [
+              "myUserId"
+            ]
+          }
         ]
       }
     },
     {
       "kind": "template",
       "id": "support-desk",
-      "version": 1,
+      "version": 3,
       "path": "templates/support-desk.json",
-      "sha256": "483fc930022a10633cde30ce47cf37225d7c955a6a38246ba32ecf974cfdd314",
+      "sha256": "9fe2ad62ce14082953b10a376b98f94791d4d6a4d173eff0321e92c6235a92da",
       "name": {
         "en": "Support desk",
         "pt-BR": "Central de chamados"
       },
       "description": {
-        "en": "Reads the conversations from the initiative sources, counts business hours with the business_hours tool, classifies each request and delivers the board to the inbox, investigating the critical ones.",
-        "pt-BR": "Lê as conversas das fontes da iniciativa, conta horas úteis pela ferramenta business_hours, classifica cada chamado e entrega o quadro na inbox, com investigação dos críticos."
+        "en": "Reads the conversations from the sources listed in the initiative context, counts business hours with the business_hours tool, classifies each request and delivers the board to the inbox, investigating the critical ones. Needs to be linked to an initiative.",
+        "pt-BR": "Lê as conversas das fontes listadas no contexto da iniciativa, conta horas úteis pela ferramenta business_hours, classifica cada chamado e entrega o quadro na inbox, com investigação dos críticos. Precisa estar ligado a uma iniciativa."
       },
       "tags": [
         "digest",
@@ -349,15 +325,21 @@
         "skills": [],
         "actions": [
           "digest.deliver"
+        ],
+        "triggers": [
+          {
+            "kind": "cron",
+            "choose": []
+          }
         ]
       }
     },
     {
       "kind": "template",
       "id": "teams-reply",
-      "version": 1,
+      "version": 2,
       "path": "templates/teams-reply.json",
-      "sha256": "576e9f18bb16db53bfc1f035d822dec79a9d74df2d8ff57de0ea07f2e9148265",
+      "sha256": "457a49b2a64d51753ab36845cf4e83316e017a9361756eda8aac3fcbc4105d87",
       "name": {
         "en": "Teams reply",
         "pt-BR": "Resposta no Teams"
@@ -385,6 +367,14 @@
         "skills": [],
         "actions": [
           "teams.post"
+        ],
+        "triggers": [
+          {
+            "kind": "teams-inbox",
+            "choose": [
+              "chats"
+            ]
+          }
         ]
       }
     }
