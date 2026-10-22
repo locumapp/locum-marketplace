@@ -1,7 +1,7 @@
 {
   "kind": "template",
   "id": "slack-reply",
-  "version": 1,
+  "version": 2,
   "name": {
     "en": "Slack reply",
     "pt-BR": "Resposta no Slack"
@@ -64,7 +64,14 @@
           }
         ]
       },
-      "gatilhos": []
+      "gatilhos": [
+        {
+          "kind": "slack-inbox",
+          "mentions": true,
+          "dms": true,
+          "everyMinutes": 5
+        }
+      ]
     },
     "agents": [],
     "requisitos": {
@@ -86,6 +93,11 @@
       "skills": []
     },
     "skills": [],
-    "omitidos": []
+    "omitidos": [
+      {
+        "codigo": "id-do-slack",
+        "onde": "gatilho:0"
+      }
+    ]
   }
 }

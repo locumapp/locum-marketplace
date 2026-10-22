@@ -1,7 +1,7 @@
 {
   "kind": "template",
   "id": "pr-review",
-  "version": 1,
+  "version": 2,
   "name": {
     "en": "PR review",
     "pt-BR": "Revisão de PR"
@@ -222,7 +222,20 @@
           }
         ]
       },
-      "gatilhos": []
+      "gatilhos": [
+        {
+          "kind": "poll",
+          "source": "github",
+          "authorship": "others",
+          "includeDrafts": false,
+          "filters": {
+            "myReview": {
+              "state": "none"
+            }
+          },
+          "everyMinutes": 15
+        }
+      ]
     },
     "agents": [],
     "requisitos": {
@@ -249,6 +262,11 @@
       "skills": []
     },
     "skills": [],
-    "omitidos": []
+    "omitidos": [
+      {
+        "codigo": "dono-do-github",
+        "onde": "gatilho:0"
+      }
+    ]
   }
 }

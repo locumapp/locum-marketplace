@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { mkdirSync, mkdtempSync, copyFileSync, symlinkSync } from "node:fs";
+import { mkdirSync, mkdtempSync, copyFileSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { validateCatalog, validateFile } from "../scripts/lib/validate.mjs";
@@ -19,7 +19,7 @@ test("the catalog in the repository is valid, with the migrated templates", asyn
   assert.deepEqual(errors, []);
   const templates = items.filter((i) => i.kind === "template").map((i) => i.id);
   assert.ok(templates.includes("pr-review"));
-  assert.equal(templates.length, 10);
+  assert.equal(templates.length, 8);
 });
 
 test("good connection fixtures pass: image with digest, npm package with lockfile, remote server", async () => {
@@ -89,4 +89,167 @@ test("a symlink in the catalog is refused, even when it points to a valid item",
   const { items, errors } = await validateCatalog(catalog);
   assert.deepEqual(items, []);
   assert.match(errors[0].message, /regular file/);
+});
+
+/** A copy of a template in the repository with a change, written to a temporary catalog folder. */
+function variant(change, folder = "templates", from = "slack-reply") {
+  const item = JSON.parse(readFileSync(join(root, `templates/${from}.json`), "utf8"));
+  change(item);
+  const file = join(tempCatalog(folder), folder, `${item.id}.json`);
+  writeFileSync(file, JSON.stringify(item));
+  return file;
+}
+
+test("a template without a trigger fails at the trigger list", async () => {
+  const errors = await validateFile(variant((item) => (item.package.automacao.gatilhos = [])));
+  const hit = errors.find((e) => e.field === "package.automacao.gatilhos");
+  assert.ok(hit, JSON.stringify(fieldsOf(errors)));
+  assert.match(hit.message, /at least one trigger/);
+});
+
+test("a package may come without a trigger", async () => {
+  const file = variant((item) => {
+    item.kind = "package";
+    item.package.automacao.gatilhos = [];
+  }, "packages");
+  assert.deepEqual(await validateFile(file), []);
+});
+
+test("a trigger that reads a connection missing from the requirements fails at its kind", async () => {
+  const errors = await validateFile(
+    variant((item) => {
+      item.package.automacao.gatilhos = [{ kind: "poll", source: "github" }];
+      item.package.requisitos.conexoes = [{ id: "slack", nome: "Slack" }];
+    }),
+  );
+  const hit = errors.find((e) => e.field === "package.automacao.gatilhos.0.kind");
+  assert.ok(hit, JSON.stringify(fieldsOf(errors)));
+  assert.match(hit.message, /"poll" trigger reads the "github" connection/);
+});
+
+test("an mcp-poll trigger whose server is missing from the requirements fails at its server", async () => {
+  const errors = await validateFile(
+    variant((item) => {
+      item.package.automacao.gatilhos.push({ kind: "mcp-poll", server: "tickets", tool: "list_open" });
+      item.package.requisitos.servidores = [];
+    }),
+  );
+  const hit = errors.find((e) => e.field === "package.automacao.gatilhos.1.server");
+  assert.ok(hit, JSON.stringify(fieldsOf(errors)));
+  assert.match(hit.message, /server "tickets"/);
+});
+
+test("a trigger whose connection and server are in the requirements passes", async () => {
+  const file = variant((item) => {
+    item.package.automacao.gatilhos = [{ kind: "mcp-poll", server: "tickets", tool: "list_open" }];
+    item.package.requisitos.conexoes = [];
+    item.package.requisitos.servidores = [{ nome: "tickets" }];
+  });
+  assert.deepEqual(await validateFile(file), []);
+});
+
+async function errorAt(file, field) {
+  const errors = await validateFile(file);
+  const hit = errors.find((e) => e.field === field);
+  assert.ok(hit, `expected an error at ${field}, got ${JSON.stringify(fieldsOf(errors))}`);
+  return hit;
+}
+
+test("a template that reads the event and only has clock triggers fails at the step that reads it", async () => {
+  const file = variant((item) => (item.package.automacao.gatilhos = [{ kind: "cron", expression: "0 9 * * 1-5" }]));
+  const hit = await errorAt(file, "package.automacao.spec.steps.0.prompt");
+  assert.match(hit.message, /reads \{\{event\.channel\}\}/);
+  assert.match(hit.message, /"cron" brings no event/);
+});
+
+const reading = (text) => (item) => {
+  item.package.automacao.gatilhos = [{ kind: "cron", expression: "0 9 * * 1-5" }];
+  item.package.automacao.spec.steps[0].prompt = `Resumo do dia.\n${text}`;
+};
+
+test("the event read with spaces inside the braces counts", async () => {
+  const hit = await errorAt(variant(reading("{{ event.text }}")), "package.automacao.spec.steps.0.prompt");
+  assert.match(hit.message, /reads \{\{event\.text\}\}/);
+});
+
+test("the whole event read counts", async () => {
+  const hit = await errorAt(variant(reading("{{event}}")), "package.automacao.spec.steps.0.prompt");
+  assert.match(hit.message, /reads \{\{event\}\}/);
+});
+
+test("a template with a trigger that brings an event and one that does not fails when it reads the event", async () => {
+  const file = variant((item) => item.package.automacao.gatilhos.push({ kind: "cron", expression: "0 9 * * 1-5" }));
+  const hit = await errorAt(file, "package.automacao.spec.steps.0.prompt");
+  assert.match(hit.message, /"cron" brings no event/);
+});
+
+test("a webhook trigger brings no event, and a manual one does", async () => {
+  const webhook = variant((item) => {
+    item.package.automacao.gatilhos = [{ kind: "webhook" }];
+    item.package.omitidos = [{ codigo: "argumentos", onde: "gatilho:0", params: ["path"] }];
+  });
+  assert.match((await errorAt(webhook, "package.automacao.spec.steps.0.prompt")).message, /"webhook" brings no event/);
+  const manual = variant((item) => (item.package.automacao.gatilhos = [{ kind: "manual" }]));
+  assert.deepEqual(await validateFile(manual), []);
+});
+
+test("the event in fields the app does not render, like the name, does not count", async () => {
+  const file = variant((item) => {
+    reading("sem evento")(item);
+    item.package.automacao.spec.steps[0].name = "Responder {{event.author}}";
+    item.package.automacao.spec.steps[1].params = {};
+  });
+  assert.deepEqual(await validateFile(file), []);
+});
+
+test("a webhook trigger without its path and without the omitted entry fails at the path", async () => {
+  const file = variant((item) => item.package.automacao.gatilhos.push({ kind: "webhook" }));
+  const hit = await errorAt(file, "package.automacao.gatilhos.1.path");
+  assert.match(hit.message, /"codigo": "argumentos", "onde": "gatilho:1", "params": \["path"\]/);
+});
+
+test("a repository expression that matches everything counts as not chosen", async () => {
+  const thread = variant((item) => {
+    item.package.automacao.gatilhos[0].repoMatch = ".*";
+    item.package.omitidos = item.package.omitidos.filter((o) => o.codigo !== "argumentos");
+  }, "templates", "pr-thread-reply");
+  assert.match((await errorAt(thread, "package.automacao.gatilhos.0.repoMatch")).message, /"argumentos"/);
+  const poll = variant((item) => (item.package.automacao.gatilhos[0].repoMatch = "^.*$"), "templates", "pr-review");
+  assert.match((await errorAt(poll, "package.automacao.gatilhos.0.repoMatch")).message, /matches every repository|leave .* out/);
+});
+
+test("a template that reads the event passes when every trigger brings one", async () => {
+  const file = variant((item) => item.package.automacao.gatilhos.push({ kind: "manual" }));
+  assert.deepEqual(await validateFile(file), []);
+});
+
+test("a template that leaves the GitHub owner out without the omitted entry fails at the owner", async () => {
+  const file = variant((item) => (item.package.omitidos = []), "templates", "pr-review");
+  const hit = await errorAt(file, "package.automacao.gatilhos.0.owner");
+  assert.match(hit.message, /"dono-do-github"/);
+});
+
+test("a template that leaves the repositories of a thread reply trigger out without the omitted entry fails at repoMatch", async () => {
+  const file = variant((item) => (item.package.omitidos = item.package.omitidos.filter((o) => o.codigo !== "argumentos")), "templates", "pr-thread-reply");
+  const hit = await errorAt(file, "package.automacao.gatilhos.0.repoMatch");
+  assert.match(hit.message, /"argumentos"/);
+});
+
+test("a template with a Teams inbox trigger that does not hold the chats for the person fails at chatsRestritos", async () => {
+  const file = variant((item) => delete item.package.automacao.gatilhos[0].chatsRestritos, "templates", "teams-reply");
+  const hit = await errorAt(file, "package.automacao.gatilhos.0.chatsRestritos");
+  assert.match(hit.message, /chats/);
+});
+
+test("every trigger kind in the schema says what the person chooses, and how a template leaves each field out", () => {
+  const schema = JSON.parse(readFileSync(join(root, "schemas/template.schema.json"), "utf8"));
+  for (const branch of schema.$defs.trigger.allOf) {
+    const kind = branch.if.properties.kind.const;
+    const chooses = branch.then["x-person-chooses"];
+    assert.ok(Array.isArray(chooses), kind);
+    // Each field is left out in exactly one way: the app needs it to create the trigger, an omitted entry, or a field that holds the trigger.
+    const ways = [branch.then["x-required-to-run"] ?? [], Object.keys(branch.then["x-omitted-code"] ?? {}), Object.keys(branch.then["x-held-by"] ?? {})];
+    for (const f of chooses) assert.equal(ways.filter((w) => w.includes(f)).length, 1, `${kind}.${f}`);
+    assert.deepEqual(ways.flat().sort(), [...chooses].sort(), kind);
+  }
 });

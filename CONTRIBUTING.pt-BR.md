@@ -75,5 +75,32 @@ sem digest; e os ids dos tipos embutidos no app (`github`, `slack`, `teams`,
 automação montada e os nós à vista; pacote é o que alguém exportou do Locum.
 Exporte pelo app, para sair já limpo, e cole em `package`.
 
+Template traz ao menos um gatilho em `automacao.gatilhos`, sem o que é da
+pessoa: dono, repositórios, canais, chats. O app pede isso na instalação. O
+`$defs.trigger` de `schemas/template.schema.json` diz, por tipo, o que a pessoa
+escolhe (`x-person-chooses`) e como o template deixa cada campo de fora: o app
+precisa dele para criar o gatilho (`x-required-to-run`, nada a acrescentar),
+uma entrada em `omitidos` com o código de `x-omitted-code` e
+`onde: "gatilho:<posição>"` (em `argumentos`, com o campo em `params`), ou o
+campo de `x-held-by` preenchido, que segura o gatilho até a pessoa escolher
+(`chatsRestritos` no `teams-inbox`). Nenhum template varre todos os
+repositórios ou todos os chats por deixar o campo vazio, e valor que pega tudo
+(`x-catch-all`, como `repoMatch: ".*"`) conta como não escolhido.
+
+Limite conhecido: o `myUserId` do `slack-inbox` só é preciso quando o Slack é
+lido por um servidor MCP, e não pela conexão oficial. O esquema não tem como
+dizer isso, então todo template com `slack-inbox` o deixa a escolher.
+
+O que o gatilho lê precisa estar em `requisitos`: a conexão do tipo dele
+(`x-reads-connection`) em `conexoes`, e o `server` de um `mcp-poll` em
+`servidores`. Template só lê em `{{event.*}}` o que algum gatilho entrega,
+nos campos que o app renderiza (o prompt, os `params` da ação e `value`,
+`against` e `title` do passo lógico). `cron`, `schedule` e `webhook` não trazem
+evento (`x-no-event`), e o run que um deles dispara roda sem evento, mesmo que
+outro gatilho do template traga: template com algum deles busca pelas
+ferramentas dos passos. Template que precisaria de um evento que nenhum
+gatilho entrega fica fora do catálogo até o app ter esse gatilho. Pacote pode
+vir sem gatilho.
+
 Antes de abrir o PR, confira que não sobrou dado de empresa: nomes de pessoas,
 times, canais, hosts e repositórios precisam ser genéricos.

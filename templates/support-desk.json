@@ -1,14 +1,14 @@
 {
   "kind": "template",
   "id": "support-desk",
-  "version": 1,
+  "version": 3,
   "name": {
     "en": "Support desk",
     "pt-BR": "Central de chamados"
   },
   "description": {
-    "en": "Reads the conversations from the initiative sources, counts business hours with the business_hours tool, classifies each request and delivers the board to the inbox, investigating the critical ones.",
-    "pt-BR": "Lê as conversas das fontes da iniciativa, conta horas úteis pela ferramenta business_hours, classifica cada chamado e entrega o quadro na inbox, com investigação dos críticos."
+    "en": "Reads the conversations from the sources listed in the initiative context, counts business hours with the business_hours tool, classifies each request and delivers the board to the inbox, investigating the critical ones. Needs to be linked to an initiative.",
+    "pt-BR": "Lê as conversas das fontes listadas no contexto da iniciativa, conta horas úteis pela ferramenta business_hours, classifica cada chamado e entrega o quadro na inbox, com investigação dos críticos. Precisa estar ligado a uma iniciativa."
   },
   "tags": [
     "digest",
@@ -56,6 +56,11 @@
               {
                 "server": "ms365",
                 "tool": "list-chats",
+                "class": "read"
+              },
+              {
+                "server": "ms365",
+                "tool": "list-chat-messages",
                 "class": "read"
               },
               {
@@ -199,6 +204,11 @@
               },
               {
                 "server": "ms365",
+                "tool": "list-chat-messages",
+                "class": "read"
+              },
+              {
+                "server": "ms365",
                 "tool": "list-channel-messages",
                 "class": "read"
               },
@@ -293,7 +303,12 @@
           }
         ]
       },
-      "gatilhos": []
+      "gatilhos": [
+        {
+          "kind": "cron",
+          "expression": "0 9,15 * * 1-5"
+        }
+      ]
     },
     "agents": [],
     "requisitos": {

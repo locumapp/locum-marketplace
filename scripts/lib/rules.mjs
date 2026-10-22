@@ -1,4 +1,5 @@
 // The rules a JSON Schema cannot say: nothing here runs code, and local servers are pinned.
+import { readFileSync } from "node:fs";
 
 /**
  * Connection types that ship with the app (its `embutidos.json`), Argo CD, and the ids
@@ -39,6 +40,26 @@ const IMAGE_WITH_DIGEST = /^[a-z0-9][a-z0-9._/:-]*@sha256:[a-f0-9]{64}$/;
 const INTEGRITY = /^sha(256|384|512)-[A-Za-z0-9+/]+={0,2}$/;
 const CREDENTIAL = "${credential}";
 
+/** Annotations the schema keeps on each trigger kind, read by the rules and the index. */
+export const TRIGGER_ANNOTATIONS = ["x-reads-connection", "x-reads-server", "x-no-event", "x-person-chooses", "x-required-to-run", "x-omitted-code", "x-held-by", "x-catch-all"];
+
+/** What each trigger kind reads and what the person picks on install, from `$defs.trigger` in the template schema. */
+export const TRIGGER_KINDS = new Map(
+  JSON.parse(readFileSync(new URL("../../schemas/template.schema.json", import.meta.url), "utf8")).$defs.trigger.allOf.map((branch) => [
+    branch.if.properties.kind.const,
+    {
+      connection: branch.then["x-reads-connection"],
+      serverField: branch.then["x-reads-server"],
+      noEvent: branch.then["x-no-event"] === true,
+      chooses: branch.then["x-person-chooses"],
+      requiredToRun: branch.then["x-required-to-run"] ?? [],
+      catchAll: branch.then["x-catch-all"] ?? {},
+      omittedCode: branch.then["x-omitted-code"] ?? {},
+      heldBy: branch.then["x-held-by"] ?? {},
+    },
+  ]),
+);
+
 const isObject = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
 const field = (...parts) => parts.join(".");
 
@@ -59,7 +80,7 @@ export function itemRules(item, expected) {
     if (isObject(item.manifest)) errors.push(...connectionRules(item.manifest));
   }
   if ((item.kind === "template" || item.kind === "package") && isObject(item.package)) {
-    errors.push(...packageRules(item.package));
+    errors.push(...packageRules(item.package, item.kind));
   }
   return errors;
 }
@@ -165,8 +186,11 @@ function lockfileRules(pkg) {
   return errors;
 }
 
-/** What the import checks beyond the schema: agent ids, the agent a step uses, step keys and needs, and version 4 features. */
-function packageRules(pkg) {
+/**
+ * What the import checks beyond the schema: agent ids, the agent a step uses, step keys and needs, and version 4 features.
+ * Also what the install needs: a template has a trigger, and what each trigger reads is in the requirements.
+ */
+function packageRules(pkg, kind) {
   const errors = [];
   const agents = Array.isArray(pkg.agents) ? pkg.agents : [];
   const agentIds = new Set();
@@ -200,7 +224,88 @@ function packageRules(pkg) {
   if (typeof pkg.versao === "number" && pkg.versao < 4 && pkg.notas !== undefined) {
     errors.push({ field: "package.notas", message: "memory notes need version 4 of the package format" });
   }
+  errors.push(...triggerRules(pkg, kind));
   return errors;
+}
+
+function triggerRules(pkg, kind) {
+  const errors = [];
+  const triggers = Array.isArray(pkg.automacao?.gatilhos) ? pkg.automacao.gatilhos : [];
+  if (kind === "template" && triggers.length === 0) {
+    errors.push({ field: "package.automacao.gatilhos", message: "a template needs at least one trigger, assembled and visible, for the install to fill in" });
+  }
+  const names = (list, key) => new Set((Array.isArray(list) ? list : []).filter(isObject).map((entry) => entry[key]));
+  const connections = names(pkg.requisitos?.conexoes, "id");
+  const servers = names(pkg.requisitos?.servidores, "nome");
+  triggers.forEach((trigger, i) => {
+    const reads = isObject(trigger) ? TRIGGER_KINDS.get(trigger.kind) : undefined;
+    if (reads === undefined) return;
+    const at = field("package.automacao.gatilhos", i);
+    if (reads.connection !== undefined && !connections.has(reads.connection)) {
+      errors.push({ field: field(at, "kind"), message: `a "${trigger.kind}" trigger reads the "${reads.connection}" connection, which is not in package.requisitos.conexoes` });
+    }
+    const server = reads.serverField === undefined ? undefined : trigger[reads.serverField];
+    if (typeof server === "string" && !servers.has(server)) {
+      errors.push({ field: field(at, reads.serverField), message: `a "${trigger.kind}" trigger reads the server "${server}", which is not in package.requisitos.servidores` });
+    }
+    if (kind === "template") errors.push(...leftOutRules(pkg, trigger, i, reads));
+  });
+  const silent = [...new Set(triggers.filter((t) => isObject(t) && TRIGGER_KINDS.get(t.kind)?.noEvent).map((t) => `"${t.kind}"`))];
+  if (kind === "template" && silent.length > 0) {
+    // A run from any of these has no event, and the app renders the marker as nothing.
+    const steps = Array.isArray(pkg.automacao?.spec?.steps) ? pkg.automacao.spec.steps : [];
+    steps.forEach((step, i) => {
+      for (const { path, marker } of eventReads(step, field("package.automacao.spec.steps", i))) {
+        errors.push({ field: path, message: `reads ${marker}, but ${silent.join(", ")} ${silent.length === 1 ? "brings" : "bring"} no event: fetch with the step tools instead` });
+      }
+    });
+  }
+  return errors;
+}
+
+/** A template leaves what the person chooses out in the way its kind says, so the install asks for it. */
+function leftOutRules(pkg, trigger, i, reads) {
+  const errors = [];
+  const at = field("package.automacao.gatilhos", i);
+  const omitted = (Array.isArray(pkg.omitidos) ? pkg.omitidos : []).filter((o) => isObject(o) && (o.onde === `gatilho:${i}` || o.onde === trigger.kind));
+  for (const f of reads.chooses) {
+    const value = trigger[f];
+    const catchAll = value !== undefined && (reads.catchAll[f] ?? []).includes(value);
+    if (value !== undefined && !catchAll) continue;
+    if (catchAll && reads.requiredToRun.includes(f)) {
+      errors.push({ field: field(at, f), message: `${f} "${value}" matches everything: leave it out so the person chooses on install` });
+    }
+    const code = reads.omittedCode[f];
+    // A code that names its fields (argumentos) needs the field in params; the others reach the field through the app marking.
+    if (code !== undefined && !omitted.some((o) => o.codigo === code && (Array.isArray(o.params) ? o.params.includes(f) : code !== "argumentos"))) {
+      const params = code === "argumentos" ? `, "params": ["${f}"]` : "";
+      errors.push({ field: field(at, f), message: `the person chooses ${f} on install: add { "codigo": "${code}", "onde": "gatilho:${i}"${params} } to package.omitidos` });
+    }
+    const holder = reads.heldBy[f];
+    if (holder !== undefined && trigger[holder] === undefined) {
+      errors.push({ field: field(at, holder), message: `the person chooses the ${f} on install: set ${holder} so the app holds the trigger until they do` });
+    }
+  }
+  return errors;
+}
+
+/** What the app renders with the event, by step type (`camposRenderizados` in the app executor); name, key and the rest are not. */
+const RENDERED = { model: ["prompt"], action: ["params"], logic: ["value", "against", "title"] };
+const EVENT_MARKER = /\{\{\s*(event(?:\.[\w.]+)?)\s*\}\}/;
+
+/** Where a step reads the event, with the marker as the app names it. */
+function eventReads(step, at) {
+  if (!isObject(step)) return [];
+  return (RENDERED[step.type] ?? []).flatMap((key) => markers(step[key], field(at, key)));
+}
+
+function markers(value, path) {
+  if (typeof value === "string") {
+    const found = EVENT_MARKER.exec(value);
+    return found === null ? [] : [{ path, marker: `{{${found[1]}}}` }];
+  }
+  if (!isObject(value) && !Array.isArray(value)) return [];
+  return Object.entries(value).flatMap(([key, child]) => markers(child, field(path, key)));
 }
 
 /** The first cycle in the needs between steps, as a list of keys that starts and ends on the same step. */

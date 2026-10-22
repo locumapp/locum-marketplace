@@ -1,7 +1,7 @@
 {
   "kind": "template",
   "id": "teams-reply",
-  "version": 1,
+  "version": 2,
   "name": {
     "en": "Teams reply",
     "pt-BR": "Resposta no Teams"
@@ -64,7 +64,15 @@
           }
         ]
       },
-      "gatilhos": []
+      "gatilhos": [
+        {
+          "kind": "teams-inbox",
+          "mentions": true,
+          "dms": true,
+          "everyMinutes": 5,
+          "chatsRestritos": 1
+        }
+      ]
     },
     "agents": [],
     "requisitos": {

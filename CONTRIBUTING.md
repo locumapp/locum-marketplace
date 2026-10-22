@@ -76,5 +76,33 @@ the automation assembled and every node visible; a package is what someone
 exported from Locum. Export it from the app, so it comes out already cleaned,
 and paste it under `package`.
 
+A template brings at least one trigger in `automacao.gatilhos`, without what
+belongs to the person: owner, repositories, channels, chats. The app asks for
+those on install. `$defs.trigger` in `schemas/template.schema.json` says, for
+each kind, what the person chooses (`x-person-chooses`) and how the template
+leaves each field out: the app needs it to create the trigger
+(`x-required-to-run`, nothing to add), an entry in `omitidos` with the code in
+`x-omitted-code` and `onde: "gatilho:<position>"` (for `argumentos`, with the
+field in `params`), or the field in `x-held-by` set, which holds the trigger
+until the person chooses (`chatsRestritos` in `teams-inbox`). No template
+watches every repository or every chat by leaving the field empty, and a
+value that takes everything (`x-catch-all`, like `repoMatch: ".*"`) counts as
+not chosen.
+
+Known limit: `myUserId` in `slack-inbox` is only needed when Slack is read
+through an MCP server and not the official connection. The schema cannot say
+that, so every template with `slack-inbox` leaves it to choose.
+
+Whatever a trigger reads must be in `requisitos`: the connection of its kind
+(`x-reads-connection`) in `conexoes`, and the `server` of an `mcp-poll` in
+`servidores`. A template can only read `{{event.*}}` what some trigger
+delivers, in the fields the app renders (the prompt, the action `params`, and
+`value`, `against` and `title` of a logic step). `cron`, `schedule` and
+`webhook` bring no event (`x-no-event`), and a run started by one of them has
+none, even when another trigger of the template brings one: a template with
+any of them fetches with the tools of its steps. A template that would need an
+event no trigger delivers stays out of the catalog until the app has that
+trigger. A package may come without a trigger.
+
 Before opening the PR, check that no company data is left: names of people,
 teams, channels, hosts and repositories must be generic.
