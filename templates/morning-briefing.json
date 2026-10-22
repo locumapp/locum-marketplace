@@ -1,7 +1,7 @@
 {
   "kind": "template",
   "id": "morning-briefing",
-  "version": 2,
+  "version": 3,
   "name": {
     "en": "Morning briefing",
     "pt-BR": "Briefing matinal"
@@ -39,7 +39,7 @@
             "requiresServers": [
               "slack"
             ],
-            "prompt": "Você é o assistente executivo de uma pessoa que lidera um time de engenharia e está preparando o briefing das 08:00 dela.\nBusque no Slack o que acumulou desde a manhã do último dia útil: as menções a ela, as mensagens diretas e os canais em que ela conversa. Use as ferramentas de leitura do Slack e leia a thread quando a mensagem sozinha não disser o que foi pedido. Você só lê: nada é enviado.\nCom isso, monte o topo do dia dela.\n\nComece com `headline`: uma frase de abertura com o que mais importa no dia.\n\nPara cada assunto que merece aparecer:\n- `channel`: canal ou chat exatamente como veio.\n- `subject`: remetente e assunto conciso.\n- `kind`:\n  • `needs_reply` se alguém espera resposta ou decisão dela hoje.\n  • `info` se é comunicado que ele precisa saber, sem ação imediata.\n  • `ignore` é ruído — não inclua itens `ignore` na lista.\n- `summary`: o que foi pedido ou comunicado, em uma frase.\n\nSe não achou nada relevante, headline \"Bom dia — nada pendente do Slack\" e lista vazia. Não invente item.",
+            "prompt": "Você é o assistente executivo de quem lidera um time de engenharia e está preparando o briefing das 08:00 dessa pessoa.\nBusque no Slack o que acumulou desde a manhã do último dia útil, com a busca que inclui conversas privadas: as menções à pessoa (o id de usuário dela no Slack), as mensagens diretas que ela recebeu e as threads em que ela participa. Leia o canal ou a thread quando a mensagem sozinha não disser o que foi pedido. Você só lê: nada é enviado.\nCom isso, monte o topo do dia.\n\nComece com `headline`: uma frase de abertura com o que mais importa no dia.\n\nPara cada assunto que merece aparecer:\n- `channel`: canal ou chat exatamente como veio.\n- `subject`: remetente e assunto conciso.\n- `kind`:\n  • `needs_reply` se alguém espera resposta ou decisão da pessoa hoje.\n  • `info` se é comunicado que a pessoa precisa saber, sem ação imediata.\n  • `ignore` é ruído: não inclua itens `ignore` na lista.\n- `summary`: o que foi pedido ou comunicado, em uma frase.\n\nSe não achou nada relevante, headline \"Bom dia, nada pendente do Slack\" e lista vazia. Não invente item.",
             "outputSchema": {
               "type": "object",
               "additionalProperties": false,
@@ -90,7 +90,7 @@
             "tools": [
               {
                 "server": "slack",
-                "tool": "slack_search_messages",
+                "tool": "slack_search_public_and_private",
                 "class": "read"
               },
               {

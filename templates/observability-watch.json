@@ -1,14 +1,14 @@
 {
   "kind": "template",
   "id": "observability-watch",
-  "version": 2,
+  "version": 3,
   "name": {
     "en": "Observability watch",
     "pt-BR": "Vigia de observabilidade"
   },
   "description": {
-    "en": "Reads the active Grafana incidents and delivers to the inbox the ones that need you now.",
-    "pt-BR": "Lê os incidentes ativos do Grafana e entrega na inbox os que precisam de você agora."
+    "en": "Reads the active incidents from Grafana Incident (IRM) and delivers to the inbox the ones that need you now. Needs Grafana Incident enabled in the Grafana you connect.",
+    "pt-BR": "Lê os incidentes ativos do Grafana Incident (IRM) e entrega na inbox os que precisam de você agora. Precisa do Grafana Incident ligado no Grafana que você conectar."
   },
   "tags": [
     "digest",

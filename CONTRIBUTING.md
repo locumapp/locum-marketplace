@@ -85,13 +85,22 @@ leaves each field out: the app needs it to create the trigger
 `x-omitted-code` and `onde: "gatilho:<position>"` (for `argumentos`, with the
 field in `params`), or the field in `x-held-by` set, which holds the trigger
 until the person chooses (`chatsRestritos` in `teams-inbox`). No template
-watches every repository or every chat by leaving the field empty.
+watches every repository or every chat by leaving the field empty, and a
+value that takes everything (`x-catch-all`, like `repoMatch: ".*"`) counts as
+not chosen.
+
+Known limit: `myUserId` in `slack-inbox` is only needed when Slack is read
+through an MCP server and not the official connection. The schema cannot say
+that, so every template with `slack-inbox` leaves it to choose.
 
 Whatever a trigger reads must be in `requisitos`: the connection of its kind
 (`x-reads-connection`) in `conexoes`, and the `server` of an `mcp-poll` in
 `servidores`. A template can only read `{{event.*}}` what some trigger
-delivers: `cron`, `schedule` and `manual` bring no event, so a template with
-only those fetches with the tools of its steps. A template that would need an
+delivers, in the fields the app renders (the prompt, the action `params`, and
+`value`, `against` and `title` of a logic step). `cron`, `schedule` and
+`webhook` bring no event (`x-no-event`), and a run started by one of them has
+none, even when another trigger of the template brings one: a template with
+any of them fetches with the tools of its steps. A template that would need an
 event no trigger delivers stays out of the catalog until the app has that
 trigger. A package may come without a trigger.
 

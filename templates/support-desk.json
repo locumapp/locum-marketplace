@@ -1,7 +1,7 @@
 {
   "kind": "template",
   "id": "support-desk",
-  "version": 2,
+  "version": 3,
   "name": {
     "en": "Support desk",
     "pt-BR": "Central de chamados"
@@ -56,6 +56,11 @@
               {
                 "server": "ms365",
                 "tool": "list-chats",
+                "class": "read"
+              },
+              {
+                "server": "ms365",
+                "tool": "list-chat-messages",
                 "class": "read"
               },
               {
@@ -195,6 +200,11 @@
               {
                 "server": "ms365",
                 "tool": "list-chats",
+                "class": "read"
+              },
+              {
+                "server": "ms365",
+                "tool": "list-chat-messages",
                 "class": "read"
               },
               {

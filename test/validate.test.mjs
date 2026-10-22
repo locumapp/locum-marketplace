@@ -141,7 +141,7 @@ test("an mcp-poll trigger whose server is missing from the requirements fails at
 
 test("a trigger whose connection and server are in the requirements passes", async () => {
   const file = variant((item) => {
-    item.package.automacao.gatilhos = [{ kind: "mcp-poll", server: "tickets", tool: "list_open" }, { kind: "cron", expression: "0 9 * * 1-5" }];
+    item.package.automacao.gatilhos = [{ kind: "mcp-poll", server: "tickets", tool: "list_open" }];
     item.package.requisitos.conexoes = [];
     item.package.requisitos.servidores = [{ nome: "tickets" }];
   });
@@ -158,12 +158,68 @@ async function errorAt(file, field) {
 test("a template that reads the event and only has clock triggers fails at the step that reads it", async () => {
   const file = variant((item) => (item.package.automacao.gatilhos = [{ kind: "cron", expression: "0 9 * * 1-5" }]));
   const hit = await errorAt(file, "package.automacao.spec.steps.0.prompt");
-  assert.match(hit.message, /\{\{event\.\}\}|event/);
-  assert.match(hit.message, /no trigger of this template brings an event/);
+  assert.match(hit.message, /reads \{\{event\.channel\}\}/);
+  assert.match(hit.message, /"cron" brings no event/);
 });
 
-test("a template that reads the event passes when one of its triggers brings one", async () => {
+const reading = (text) => (item) => {
+  item.package.automacao.gatilhos = [{ kind: "cron", expression: "0 9 * * 1-5" }];
+  item.package.automacao.spec.steps[0].prompt = `Resumo do dia.\n${text}`;
+};
+
+test("the event read with spaces inside the braces counts", async () => {
+  const hit = await errorAt(variant(reading("{{ event.text }}")), "package.automacao.spec.steps.0.prompt");
+  assert.match(hit.message, /reads \{\{event\.text\}\}/);
+});
+
+test("the whole event read counts", async () => {
+  const hit = await errorAt(variant(reading("{{event}}")), "package.automacao.spec.steps.0.prompt");
+  assert.match(hit.message, /reads \{\{event\}\}/);
+});
+
+test("a template with a trigger that brings an event and one that does not fails when it reads the event", async () => {
   const file = variant((item) => item.package.automacao.gatilhos.push({ kind: "cron", expression: "0 9 * * 1-5" }));
+  const hit = await errorAt(file, "package.automacao.spec.steps.0.prompt");
+  assert.match(hit.message, /"cron" brings no event/);
+});
+
+test("a webhook trigger brings no event, and a manual one does", async () => {
+  const webhook = variant((item) => {
+    item.package.automacao.gatilhos = [{ kind: "webhook" }];
+    item.package.omitidos = [{ codigo: "argumentos", onde: "gatilho:0", params: ["path"] }];
+  });
+  assert.match((await errorAt(webhook, "package.automacao.spec.steps.0.prompt")).message, /"webhook" brings no event/);
+  const manual = variant((item) => (item.package.automacao.gatilhos = [{ kind: "manual" }]));
+  assert.deepEqual(await validateFile(manual), []);
+});
+
+test("the event in fields the app does not render, like the name, does not count", async () => {
+  const file = variant((item) => {
+    reading("sem evento")(item);
+    item.package.automacao.spec.steps[0].name = "Responder {{event.author}}";
+    item.package.automacao.spec.steps[1].params = {};
+  });
+  assert.deepEqual(await validateFile(file), []);
+});
+
+test("a webhook trigger without its path and without the omitted entry fails at the path", async () => {
+  const file = variant((item) => item.package.automacao.gatilhos.push({ kind: "webhook" }));
+  const hit = await errorAt(file, "package.automacao.gatilhos.1.path");
+  assert.match(hit.message, /"codigo": "argumentos", "onde": "gatilho:1", "params": \["path"\]/);
+});
+
+test("a repository expression that matches everything counts as not chosen", async () => {
+  const thread = variant((item) => {
+    item.package.automacao.gatilhos[0].repoMatch = ".*";
+    item.package.omitidos = item.package.omitidos.filter((o) => o.codigo !== "argumentos");
+  }, "templates", "pr-thread-reply");
+  assert.match((await errorAt(thread, "package.automacao.gatilhos.0.repoMatch")).message, /"argumentos"/);
+  const poll = variant((item) => (item.package.automacao.gatilhos[0].repoMatch = "^.*$"), "templates", "pr-review");
+  assert.match((await errorAt(poll, "package.automacao.gatilhos.0.repoMatch")).message, /matches every repository|leave .* out/);
+});
+
+test("a template that reads the event passes when every trigger brings one", async () => {
+  const file = variant((item) => item.package.automacao.gatilhos.push({ kind: "manual" }));
   assert.deepEqual(await validateFile(file), []);
 });
 

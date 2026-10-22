@@ -41,7 +41,7 @@ const INTEGRITY = /^sha(256|384|512)-[A-Za-z0-9+/]+={0,2}$/;
 const CREDENTIAL = "${credential}";
 
 /** Annotations the schema keeps on each trigger kind, read by the rules and the index. */
-export const TRIGGER_ANNOTATIONS = ["x-reads-connection", "x-reads-server", "x-no-event", "x-person-chooses", "x-required-to-run", "x-omitted-code", "x-held-by"];
+export const TRIGGER_ANNOTATIONS = ["x-reads-connection", "x-reads-server", "x-no-event", "x-person-chooses", "x-required-to-run", "x-omitted-code", "x-held-by", "x-catch-all"];
 
 /** What each trigger kind reads and what the person picks on install, from `$defs.trigger` in the template schema. */
 export const TRIGGER_KINDS = new Map(
@@ -52,6 +52,8 @@ export const TRIGGER_KINDS = new Map(
       serverField: branch.then["x-reads-server"],
       noEvent: branch.then["x-no-event"] === true,
       chooses: branch.then["x-person-chooses"],
+      requiredToRun: branch.then["x-required-to-run"] ?? [],
+      catchAll: branch.then["x-catch-all"] ?? {},
       omittedCode: branch.then["x-omitted-code"] ?? {},
       heldBy: branch.then["x-held-by"] ?? {},
     },
@@ -248,11 +250,13 @@ function triggerRules(pkg, kind) {
     }
     if (kind === "template") errors.push(...leftOutRules(pkg, trigger, i, reads));
   });
-  if (kind === "template" && triggers.length > 0 && triggers.every((t) => isObject(t) && TRIGGER_KINDS.get(t.kind)?.noEvent)) {
+  const silent = [...new Set(triggers.filter((t) => isObject(t) && TRIGGER_KINDS.get(t.kind)?.noEvent).map((t) => `"${t.kind}"`))];
+  if (kind === "template" && silent.length > 0) {
+    // A run from any of these has no event, and the app renders the marker as nothing.
     const steps = Array.isArray(pkg.automacao?.spec?.steps) ? pkg.automacao.spec.steps : [];
     steps.forEach((step, i) => {
-      for (const path of eventReads(step, ["package.automacao.spec.steps", i])) {
-        errors.push({ field: path, message: `reads {{event.*}}, but no trigger of this template brings an event (${triggers.map((t) => t.kind).join(", ")}): fetch with the step tools instead` });
+      for (const { path, marker } of eventReads(step, field("package.automacao.spec.steps", i))) {
+        errors.push({ field: path, message: `reads ${marker}, but ${silent.join(", ")} ${silent.length === 1 ? "brings" : "bring"} no event: fetch with the step tools instead` });
       }
     });
   }
@@ -265,7 +269,12 @@ function leftOutRules(pkg, trigger, i, reads) {
   const at = field("package.automacao.gatilhos", i);
   const omitted = (Array.isArray(pkg.omitidos) ? pkg.omitidos : []).filter((o) => isObject(o) && (o.onde === `gatilho:${i}` || o.onde === trigger.kind));
   for (const f of reads.chooses) {
-    if (trigger[f] !== undefined) continue;
+    const value = trigger[f];
+    const catchAll = value !== undefined && (reads.catchAll[f] ?? []).includes(value);
+    if (value !== undefined && !catchAll) continue;
+    if (catchAll && reads.requiredToRun.includes(f)) {
+      errors.push({ field: field(at, f), message: `${f} "${value}" matches everything: leave it out so the person chooses on install` });
+    }
     const code = reads.omittedCode[f];
     // A code that names its fields (argumentos) needs the field in params; the others reach the field through the app marking.
     if (code !== undefined && !omitted.some((o) => o.codigo === code && (Array.isArray(o.params) ? o.params.includes(f) : code !== "argumentos"))) {
@@ -280,11 +289,23 @@ function leftOutRules(pkg, trigger, i, reads) {
   return errors;
 }
 
-/** Paths of strings in a step that read the event. */
-function eventReads(value, path) {
-  if (typeof value === "string") return /\{\{\s*event\./.test(value) ? [path.join(".")] : [];
+/** What the app renders with the event, by step type (`camposRenderizados` in the app executor); name, key and the rest are not. */
+const RENDERED = { model: ["prompt"], action: ["params"], logic: ["value", "against", "title"] };
+const EVENT_MARKER = /\{\{\s*(event(?:\.[\w.]+)?)\s*\}\}/;
+
+/** Where a step reads the event, with the marker as the app names it. */
+function eventReads(step, at) {
+  if (!isObject(step)) return [];
+  return (RENDERED[step.type] ?? []).flatMap((key) => markers(step[key], field(at, key)));
+}
+
+function markers(value, path) {
+  if (typeof value === "string") {
+    const found = EVENT_MARKER.exec(value);
+    return found === null ? [] : [{ path, marker: `{{${found[1]}}}` }];
+  }
   if (!isObject(value) && !Array.isArray(value)) return [];
-  return Object.entries(value).flatMap(([key, child]) => eventReads(child, [...path, key]));
+  return Object.entries(value).flatMap(([key, child]) => markers(child, field(path, key)));
 }
 
 /** The first cycle in the needs between steps, as a list of keys that starts and ends on the same step. */

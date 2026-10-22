@@ -463,7 +463,7 @@
       ]
     },
     "trigger": {
-      "description": "A trigger without what belongs to the person (channels, chats, owner, authors): they choose it on import. Each kind says what it reads (x-reads-connection; x-reads-server, the field that names the server), whether it brings no event (x-no-event), and the fields the person picks when installing (x-person-chooses). A template leaves each of those out in one way: the app needs the field to create the trigger (x-required-to-run), an entry in omitidos with the code in x-omitted-code at gatilho:<position>, or the field in x-held-by that holds the trigger until the person chooses.",
+      "description": "A trigger without what belongs to the person (channels, chats, owner, authors): they choose it on import. Each kind says what it reads (x-reads-connection; x-reads-server, the field that names the server), whether it brings no event (x-no-event), and the fields the person picks when installing (x-person-chooses), with the values that would take everything and so count as not chosen (x-catch-all). A template leaves each of those out in one way: the app needs the field to create the trigger (x-required-to-run), an entry in omitidos with the code in x-omitted-code at gatilho:<position>, or the field in x-held-by that holds the trigger until the person chooses.",
       "type": "object",
       "required": [
         "kind"
@@ -528,9 +528,10 @@
             "x-person-chooses": [
               "path"
             ],
-            "x-required-to-run": [
-              "path"
-            ]
+            "x-no-event": true,
+            "x-omitted-code": {
+              "path": "argumentos"
+            }
           }
         },
         {
@@ -571,8 +572,7 @@
             "properties": {
               "kind": true
             },
-            "x-person-chooses": [],
-            "x-no-event": true
+            "x-person-chooses": []
           }
         },
         {
@@ -670,6 +670,15 @@
             "x-omitted-code": {
               "owner": "dono-do-github",
               "repoMatch": "argumentos"
+            },
+            "x-catch-all": {
+              "repoMatch": [
+                ".*",
+                "^.*$",
+                ".+",
+                "^.+$",
+                ""
+              ]
             }
           }
         },
@@ -741,7 +750,16 @@
             },
             "x-required-to-run": [
               "repoMatch"
-            ]
+            ],
+            "x-catch-all": {
+              "repoMatch": [
+                ".*",
+                "^.*$",
+                ".+",
+                "^.+$",
+                ""
+              ]
+            }
           }
         },
         {

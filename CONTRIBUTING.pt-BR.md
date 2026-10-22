@@ -84,13 +84,21 @@ uma entrada em `omitidos` com o código de `x-omitted-code` e
 `onde: "gatilho:<posição>"` (em `argumentos`, com o campo em `params`), ou o
 campo de `x-held-by` preenchido, que segura o gatilho até a pessoa escolher
 (`chatsRestritos` no `teams-inbox`). Nenhum template varre todos os
-repositórios ou todos os chats por deixar o campo vazio.
+repositórios ou todos os chats por deixar o campo vazio, e valor que pega tudo
+(`x-catch-all`, como `repoMatch: ".*"`) conta como não escolhido.
+
+Limite conhecido: o `myUserId` do `slack-inbox` só é preciso quando o Slack é
+lido por um servidor MCP, e não pela conexão oficial. O esquema não tem como
+dizer isso, então todo template com `slack-inbox` o deixa a escolher.
 
 O que o gatilho lê precisa estar em `requisitos`: a conexão do tipo dele
 (`x-reads-connection`) em `conexoes`, e o `server` de um `mcp-poll` em
-`servidores`. Template só lê em `{{event.*}}` o que algum gatilho entrega:
-`cron`, `schedule` e `manual` não trazem evento, e o template só com eles busca
-pelas ferramentas dos passos. Template que precisaria de um evento que nenhum
+`servidores`. Template só lê em `{{event.*}}` o que algum gatilho entrega,
+nos campos que o app renderiza (o prompt, os `params` da ação e `value`,
+`against` e `title` do passo lógico). `cron`, `schedule` e `webhook` não trazem
+evento (`x-no-event`), e o run que um deles dispara roda sem evento, mesmo que
+outro gatilho do template traga: template com algum deles busca pelas
+ferramentas dos passos. Template que precisaria de um evento que nenhum
 gatilho entrega fica fora do catálogo até o app ter esse gatilho. Pacote pode
 vir sem gatilho.
 
