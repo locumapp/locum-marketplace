@@ -23,6 +23,15 @@ Each item is one JSON file, `<folder>/<id>.json`, with a shared envelope:
 schemas are in [`schemas/`](schemas/), and [CONTRIBUTING.md](CONTRIBUTING.md)
 explains each field.
 
+A template may also declare `minAppVersion`, the oldest Locum version that
+installs it, as `x.y.z` (numbers only, like `0.2.0`). Declare it when the
+template uses something that only exists from a given app version on: a new
+node, a new field in a node, a new trigger kind. Leave it out when the template
+uses only what every app reading the index already knows. The index carries the
+field as it is; an app older than the version lists the template marked as
+needing an update and refuses to install it. Versions of the app from before
+the field ignore it, so declaring it does not hide the template from them.
+
 Nothing here is code run by the app. An item that asks to run a command or a
 downloaded script is rejected. `npx` and `uvx` are never accepted: a local
 server is an image pinned by digest or an npm package pinned by its lockfile.

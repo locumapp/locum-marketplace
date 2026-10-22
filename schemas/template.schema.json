@@ -12,6 +12,11 @@
     "kind": {
       "const": "template"
     },
+    "minAppVersion": {
+      "description": "The oldest Locum version that installs this template, as x.y.z. Declare it when the template uses a node, a field or a trigger that older versions do not know; an older app lists the template marked and refuses to install it.",
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
     "manifest": false,
     "package": {
       "$ref": "#/$defs/locumPackage"

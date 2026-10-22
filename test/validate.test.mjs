@@ -253,3 +253,16 @@ test("every trigger kind in the schema says what the person chooses, and how a t
     assert.deepEqual(ways.flat().sort(), [...chooses].sort(), kind);
   }
 });
+
+test("a template may declare the minimum app version as x.y.z", async () => {
+  assert.deepEqual(await validateFile(variant((item) => (item.minAppVersion = "0.1.10"))), []);
+});
+
+for (const bad of ["0.2", "v0.2.0", "0.2.0-beta", "01.2.0", "0.2.0.1", 2]) {
+  test(`a template with minAppVersion ${JSON.stringify(bad)} fails at minAppVersion`, async () => {
+    const errors = await validateFile(variant((item) => (item.minAppVersion = bad)));
+    const hit = errors.find((e) => e.field === "minAppVersion");
+    assert.ok(hit, JSON.stringify(fieldsOf(errors)));
+    assert.match(hit.message, /x\.y\.z/);
+  });
+}

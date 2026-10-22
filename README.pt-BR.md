@@ -20,6 +20,15 @@ Cada item é um arquivo JSON, `<pasta>/<id>.json`, com um envelope comum:
 ficam em [`schemas/`](schemas/), e o [CONTRIBUTING.pt-BR.md](CONTRIBUTING.pt-BR.md)
 explica cada campo.
 
+O template pode declarar também `minAppVersion`, a versão mais antiga do Locum
+que o instala, como `x.y.z` (só números, como `0.2.0`). Declare quando o
+template usa algo que só existe a partir de uma versão do app: um nó novo, um
+campo novo num nó, um tipo de gatilho novo. Deixe de fora quando o template só
+usa o que todo app que lê o índice já conhece. O índice leva o campo como veio;
+o app mais velho que a versão lista o template marcado como "precisa atualizar"
+e recusa a instalação. Versões do app anteriores ao campo o ignoram, então
+declarar não esconde o template delas.
+
 Nada aqui é código executado pelo app. Item que peça para rodar comando ou
 script baixado é recusado. `npx` e `uvx` nunca são aceitos: servidor local é
 imagem fixada por digest ou pacote npm fixado pelo lockfile.

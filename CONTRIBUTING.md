@@ -38,6 +38,7 @@ Every item is `<folder>/<id>.json`:
 | `version` | integer, starts at 1 and goes up on every change; CI checks it against the base of the PR |
 | `name`, `description` | `{"en": "...", "pt-BR": "..."}`, both languages required |
 | `tags` | optional, kebab-case |
+| `minAppVersion` | template only, optional: the oldest Locum version that installs it, `x.y.z`; see the README for when to declare it |
 | `manifest` or `package` | the body, below |
 
 The schemas are in [`schemas/`](schemas/): `envelope.schema.json` and one per
