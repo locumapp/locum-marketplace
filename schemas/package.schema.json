@@ -8,6 +8,7 @@
   "required": ["package"],
   "properties": {
     "kind": { "const": "package" },
+    "minAppVersion": false,
     "manifest": false,
     "package": { "$ref": "template.schema.json#/$defs/locumPackage" }
   }

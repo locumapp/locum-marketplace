@@ -61,6 +61,8 @@ export async function buildIndex(root, { commit, committedAt, connections = fals
       kind,
       id,
       version: item.version,
+      // Only when declared: an item without it keeps the bytes it had in the index.
+      ...(item.minAppVersion !== undefined ? { minAppVersion: item.minAppVersion } : {}),
       path,
       sha256: createHash("sha256").update(bytes).digest("hex"),
       name: item.name,

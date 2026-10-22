@@ -122,3 +122,17 @@ test("providers sort by code unit, not by locale", async () => {
     { provider: "anthropic", models: ["B", "b"] },
   ]);
 });
+
+test("the index carries minAppVersion when the item declares it, right after version, and leaves it out otherwise", async () => {
+  const catalog = mkdtempSync(join(tmpdir(), "catalog-"));
+  mkdirSync(join(catalog, "templates"));
+  for (const [id, minAppVersion] of [["slack-reply", "0.1.10"], ["teams-reply", undefined]]) {
+    const item = JSON.parse(readFileSync(join(root, `templates/${id}.json`), "utf8"));
+    if (minAppVersion !== undefined) item.minAppVersion = minAppVersion;
+    writeFileSync(join(catalog, `templates/${id}.json`), JSON.stringify(item));
+  }
+  const byId = Object.fromEntries(JSON.parse(await buildIndex(catalog, AT)).items.map((i) => [i.id, i]));
+  assert.equal(byId["slack-reply"].minAppVersion, "0.1.10");
+  assert.deepEqual(Object.keys(byId["slack-reply"]).slice(0, 4), ["kind", "id", "version", "minAppVersion"]);
+  assert.equal("minAppVersion" in byId["teams-reply"], false);
+});

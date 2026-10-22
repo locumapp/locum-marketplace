@@ -38,6 +38,7 @@ Todo item é `<pasta>/<id>.json`:
 | `version` | inteiro, começa em 1 e sobe a cada mudança; a CI confere contra a base do PR |
 | `name`, `description` | `{"en": "...", "pt-BR": "..."}`, os dois idiomas obrigatórios |
 | `tags` | opcional, kebab-case |
+| `minAppVersion` | só em template, opcional: a versão mais antiga do Locum que o instala, `x.y.z`; o README diz quando declarar |
 | `manifest` ou `package` | o corpo, abaixo |
 
 Os esquemas estão em [`schemas/`](schemas/): `envelope.schema.json` e um por

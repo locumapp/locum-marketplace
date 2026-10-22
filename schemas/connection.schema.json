@@ -8,6 +8,7 @@
   "required": ["manifest"],
   "properties": {
     "kind": { "const": "connection" },
+    "minAppVersion": false,
     "package": false,
     "manifest": { "$ref": "#/$defs/manifest" }
   },

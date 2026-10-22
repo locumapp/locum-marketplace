@@ -45,6 +45,7 @@ function schemaErrors(validate) {
       if (e.keyword === "additionalProperties") return { field: join(e.params.additionalProperty), message: "unknown field" };
       if (e.keyword === "const") return { field: at, message: `must be ${JSON.stringify(e.params.allowedValue)}` };
       if (e.keyword === "oneOf" && at === "manifest.server") return { field: at, message: "needs exactly one of image or package" };
+      if (at === "minAppVersion" && (e.keyword === "pattern" || e.keyword === "type")) return { field: at, message: "must be a version x.y.z, numbers only, like 0.2.0" };
       if (e.keyword === "enum") return { field: at, message: `must be one of ${e.params.allowedValues.map((v) => JSON.stringify(v)).join(", ")}` };
       return { field: at, message: e.message };
     });
