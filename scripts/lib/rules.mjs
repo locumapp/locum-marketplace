@@ -636,7 +636,13 @@ function triggerRules(pkg, kind) {
     const at = field("package.automacao.gatilhos", i);
     if (trigger.batch !== undefined && !reads.takesBatch) {
       errors.push({ field: field(at, "batch"), message: `a "${trigger.kind}" trigger has no filter, so it has no batch either: the app joins only the events that pass a trigger filter` });
+    } else if (trigger.batch !== undefined) {
+      const waiting = reads.requiredToRun.filter((f) => trigger[f] === undefined);
+      if (waiting.length > 0) {
+        errors.push({ field: field(at, "batch"), message: `a "${trigger.kind}" trigger without ${waiting.join(", ")} is not created on install: the app drops the whole trigger, batch included, until the person chooses, and the one they make by hand has no batch` });
+      }
     }
+    if (reads.takesBatch && Array.isArray(trigger.filter)) errors.push(...filterRules(trigger.filter, field(at, "filter")));
     if (reads.connection !== undefined && !connections.has(reads.connection)) {
       errors.push({ field: field(at, "kind"), message: `a "${trigger.kind}" trigger reads the "${reads.connection}" connection, which is not in package.requisitos.conexoes` });
     }
@@ -658,6 +664,14 @@ function triggerRules(pkg, kind) {
   }
   const batched = [...new Set(triggers.filter((t) => isObject(t) && t.batch !== undefined && TRIGGER_KINDS.get(t.kind)?.takesBatch).map((t) => `"${t.kind}"`))];
   if (kind === "template" && batched.length > 0) {
+    // A run of each reads a different event: the list of the batch or a single one.
+    triggers.forEach((t, i) => {
+      const reads = isObject(t) ? TRIGGER_KINDS.get(t.kind) : undefined;
+      if (reads === undefined || reads.noEvent || t.batch !== undefined) return;
+      errors.push({ field: field("package.automacao.gatilhos", i, "batch"), message: `a "${t.kind}" trigger brings a single event, and ${batched.join(", ")} ${batched.length === 1 ? "has" : "have"} batch: a run of each reads a different event, and no prompt serves both. Batch all the triggers that bring an event, or none` });
+    });
+  }
+  if (kind === "template" && batched.length > 0) {
     // The run of a batch gets the batch event, and a field of a single event renders as nothing.
     const single = (marker) => marker.split(".").length > 1 && !BATCH_EVENT_FIELDS.includes(marker.split(".")[1]);
     const steps = Array.isArray(pkg.automacao?.spec?.steps) ? pkg.automacao.spec.steps : [];
@@ -668,6 +682,32 @@ function triggerRules(pkg, kind) {
     });
   }
   return errors;
+}
+
+/** What the schema cannot say about a filter condition, checked as the app does (TriggerFilterCondition). */
+function filterRules(filter, at) {
+  const errors = [];
+  filter.forEach((condition, j) => {
+    const against = isObject(condition) ? condition.against : undefined;
+    if (typeof against !== "string") return;
+    const where = field(at, j, "against");
+    const foreign = [...against.matchAll(/\{\{[^}]*\}\}/g)].map((m) => m[0]).find((m) => !/^\{\{\s*event\.[\w-]+(?:\.[\w-]+)*\s*\}\}$/.test(m));
+    if (foreign !== undefined) {
+      errors.push({ field: where, message: `${foreign}: against takes only event markers, like {{event.author.login}}; steps, memory and the others do not exist yet when the filter runs` });
+    } else if (condition.compare === "matches" && !against.includes("{{") && !validRegex(against)) {
+      errors.push({ field: where, message: "not a valid regular expression" });
+    }
+  });
+  return errors;
+}
+
+function validRegex(value) {
+  try {
+    new RegExp(value, "i");
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** A template leaves what the person chooses out in the way its kind says, so the install asks for it. */

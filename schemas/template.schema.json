@@ -605,7 +605,9 @@
               "lookbackMinutes": true,
               "authorPath": true,
               "pageSize": true,
-              "filter": true,
+              "filter": {
+                "$ref": "#/$defs/filter"
+              },
               "batch": {
                 "$ref": "#/$defs/batch"
               },
@@ -636,7 +638,9 @@
             ],
             "properties": {
               "kind": true,
-              "filter": true,
+              "filter": {
+                "$ref": "#/$defs/filter"
+              },
               "batch": {
                 "$ref": "#/$defs/batch"
               },
@@ -673,7 +677,9 @@
               "maxRepliesPerPr": true,
               "lookbackMinutes": true,
               "excerptLines": true,
-              "filter": true,
+              "filter": {
+                "$ref": "#/$defs/filter"
+              },
               "batch": {
                 "$ref": "#/$defs/batch"
               },
@@ -721,7 +727,9 @@
               "agruparPrs": true,
               "maxPrs": true,
               "filtroIa": true,
-              "filter": true,
+              "filter": {
+                "$ref": "#/$defs/filter"
+              },
               "batch": {
                 "$ref": "#/$defs/batch"
               },
@@ -763,7 +771,9 @@
               "onLabels": true,
               "checksGreen": true,
               "checksGreenMaxRevisits": true,
-              "filter": true,
+              "filter": {
+                "$ref": "#/$defs/filter"
+              },
               "batch": {
                 "$ref": "#/$defs/batch"
               },
@@ -812,7 +822,9 @@
               "server": true,
               "tool": true,
               "args": true,
-              "filter": true,
+              "filter": {
+                "$ref": "#/$defs/filter"
+              },
               "batch": {
                 "$ref": "#/$defs/batch"
               },
@@ -824,6 +836,42 @@
           }
         }
       ]
+    },
+    "filter": {
+      "description": "Filter of the trigger, as the app reads it (TriggerFilter): the event only becomes a run when it passes every condition, with the comparisons of the if step. Absent or empty, every event passes. against takes only event markers, and with matches and no marker it is a regular expression; the validator checks both.",
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "path": {
+            "description": "The path in the event, as in {{event.<path>}} without event.",
+            "type": "string",
+            "pattern": "^[\\w-]+(\\.[\\w-]+)*$"
+          },
+          "compare": {
+            "enum": [
+              "equals",
+              "not_equals",
+              "contains",
+              "not_contains",
+              "greater",
+              "less",
+              "exists",
+              "empty",
+              "matches"
+            ]
+          },
+          "against": {
+            "type": "string",
+            "maxLength": 500
+          }
+        }
+      }
     },
     "batch": {
       "description": "Batch of the trigger, as the app reads it (TriggerBatch): the events that pass the filter join for windowMinutes and become one run, with at most max of them. Absent, each event is one run. The run of a batch reads the batch event, with the fields in x-event-fields, and not the fields of a single event.",
