@@ -2,11 +2,8 @@
 
 [Português](CONTRIBUTING.pt-BR.md)
 
-Anyone can propose a template or a package. Open a PR that adds or changes one
-file; CI validates it and a maintainer reviews it. Connection types are not
-accepted yet: the format is below so it can be discussed, but the validator
-refuses files in `connections/` until the app opens them (see
-[docs/connections-pending.md](docs/connections-pending.md)).
+Anyone can propose a connection type, a template or a package. Open a PR that
+adds or changes one file; CI validates it and a maintainer reviews it.
 
 ## Run the validator
 
@@ -38,36 +35,103 @@ Every item is `<folder>/<id>.json`:
 | `version` | integer, starts at 1 and goes up on every change; CI checks it against the base of the PR |
 | `name`, `description` | `{"en": "...", "pt-BR": "..."}`, both languages required |
 | `tags` | optional, kebab-case |
-| `minAppVersion` | template only, optional: the oldest Locum version that installs it, `x.y.z`; see the README for when to declare it |
+| `minAppVersion` | optional, in a template or a connection: the oldest Locum version that installs it, `x.y.z`; see the README for when to declare it |
 | `manifest` or `package` | the body, below |
 
 The schemas are in [`schemas/`](schemas/): `envelope.schema.json` and one per
 kind.
 
-## Connection types (not accepted yet)
+## Connection types
 
-`manifest` describes the type as data:
+Every connection Locum knows comes from this catalog (ADR 0018 in the app),
+including the ones that shipped inside the app. Anyone can propose a new one;
+the official ids below are published only by the maintainers.
+
+`manifest` describes the type as data. It picks mechanisms the app core already
+has and never brings code:
 
 - `category`, `logo` (or `null`), `color` (hex without `#`);
-- `methods`: `oauth` (optional `scopes`), `token` (optional `header` or `env`
-  that carries the credential) or `none`;
-- `fields`: what an instance asks for besides its name, such as an address;
-- `server`, one of:
-  - `{"transport": "http", "url": "https://..."}`, optional `headers`;
-  - `{"transport": "stdio", "image": "registry/name@sha256:<64 hex>"}`;
-  - `{"transport": "stdio", "package": {"registry": "npm", "name", "version", "bin", "lockfile"}}`,
-    where `lockfile` is the `package-lock.json` (version 2 or 3) of a project
-    whose only dependency is `name@version`. Every entry needs `integrity` and
-    an https `resolved`, and no entry may have an install script.
-  - `args` and `env` are optional on stdio. `${credential}` goes in `env` or a
-    header, never in `args`.
-- `writeTools`: the server tools that write outside the machine;
-- `hosts`, `aliases`, `packages` and `scopeKeys`, as in the app manifests.
+- `methods`, in the order the screen offers them, each type at most once:
+  - `oauth`, with optional `scopes`;
+  - `token`, with optional `header` (remote server) or `env` (local server)
+    that carries the credential;
+  - `cli` with `reader: "gh"`, the credential of another command line tool;
+  - `session` with `reader: "browser-cookie"` or `"slack-desktop"`, the session
+    the person already has. Cookie and domain live in the reader, in the app;
+  - `none`.
 
-Not accepted: `command`, `npx`, `uvx` or any other way of running a script;
-an image without digest; and the ids of types built into the app (`github`,
-`slack`, `teams`, `grafana`, `prelo`, `argocd` and the others in
-[`scripts/lib/rules.mjs`](scripts/lib/rules.mjs)).
+  `cli` and `session` read a credential from the person's machine, so only
+  official types use them.
+- `fields`: the form an instance fills besides its name, each with `key`,
+  `label`, optional `help`, `format` (`url` or `text`) and `required`;
+- `servers`, at least one of:
+  - `remote`: `{"url": "https://..."}` for a fixed address, or
+    `{"urlField": "<key>"}` when the person types the address in a required
+    `url` field. Optional `headers`, where `${credential}` goes;
+  - `local`: `{"image": "registry/name@sha256:<64 hex>"}` or
+    `{"package": {"registry": "npm", "name", "version", "bin", "lockfile"}}`,
+    with optional `args` and `env`. Not accepted in the catalog yet: the app
+    pins local servers in a later release.
+- `triggers`: trigger kinds of the core that read this type (`poll` reads
+  `github`, `slack-inbox` reads `slack`...) or one of its servers (`mcp-poll`);
+- `actions`: flow actions of the core that need the type, as `<id>.<action>`;
+- `trackers`, `scopeKeys` (prefixed by the id), `hosts`, `aliases` and
+  `packages`, which identify the type;
+- `writeTools`: the server tools that write outside the machine.
+
+A type without `servers`, `triggers` or `actions` does nothing and is refused.
+The schema is [`schemas/connection.schema.json`](schemas/connection.schema.json).
+
+### What is refused
+
+- `command`, `npx`, `uvx` or any other way of running a script.
+- A remote `url` that is not https, carries a user or password, has a
+  placeholder (`${credential}` included, it would end up in logs) or points to
+  an IP address, `localhost`, a single-label name or a local suffix (`.local`,
+  `.internal`, `.localhost`, `.home.arpa`, `.lan`). The same holds for `hosts`.
+- `${credential}` anywhere but a header of the remote server or the `env` of
+  the local one, and any other placeholder in a header.
+- A trigger kind the core does not have, or one that reads another type; an
+  action or a scope key without the type id as prefix.
+- A host, alias, package, tracker or action that another type already claims,
+  official types included, and an alias equal to the id of another type.
+- On local servers: an image without digest or with a tag next to it, runtime
+  flags that widen the container (`--privileged`, `-v`, `--network`...), env
+  names that change how the process loads code or reaches the network
+  (`NODE_OPTIONS`, `LD_*`, `DYLD_*`, `PATH`, `PYTHONPATH`, proxies...), and
+  lockfile entries without `integrity`, resolved outside
+  `https://registry.npmjs.org/` or with an install script.
+- The ids `locum` and `proprio`, which the app reserves.
+
+### Official ids
+
+The ids in [`scripts/lib/official-connections.json`](scripts/lib/official-connections.json)
+(`github`, `slack`, `teams`, `grafana`, `prelo`, `argocd` and the others that
+shipped inside the app) are published only by the maintainers.
+[`.github/CODEOWNERS`](.github/CODEOWNERS) gives each `connections/<id>.json`
+of them to the owners of CODEOWNERS itself, and `npm run validate` fails when
+one is missing or owned by someone else. With branch protection requiring code
+owner review, a PR that touches one of those files only merges with a
+maintainer's approval. No other type may claim the hosts, aliases and packages
+listed for them.
+
+### How the app receives it, and versions
+
+The app reads connection types from the signed index, the one built into it
+and the one from the network. An installed type stays pinned to the commit
+and the `sha256` of its file. When `version` goes up, the app shows the update
+with what changed:
+
+- a change that does not widen what the type asks for (text, icon, a field, a
+  read-only tool) comes in on its own, unless the person turned off "update on
+  its own" for that connection;
+- a change that widens it (a new host, scope, method, write tool, image or
+  package) always waits for the person to accept, and the credential never goes
+  to a new host before that.
+
+Declare `minAppVersion` when the type uses a method, reader, trigger kind or
+action that older apps do not have: they show the type as needing an update
+and keep the installed one running.
 
 ## Templates and packages
 

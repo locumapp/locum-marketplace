@@ -10,7 +10,10 @@ templates de automação e pacotes que qualquer pessoa pode propor.
 - `connections/`: manifestos de tipo de conexão. Cada manifesto é só dado: o
   servidor MCP (um endereço https remoto, uma imagem fixada por digest ou um
   pacote npm fixado pelo lockfile), os métodos de autenticação, os campos da
-  instância e as ferramentas que escrevem fora da máquina.
+  instância, os gatilhos e as ações do núcleo que ele oferece e as
+  ferramentas que escrevem fora da máquina. Servidor remoto é aceito; o local
+  espera o app fixá-lo. Os ids oficiais só quem mantém publica
+  ([CODEOWNERS](.github/CODEOWNERS)).
 - `templates/`: templates de automação, com os nós visíveis.
 - `packages/`: pacotes exportados do Locum, já limpos de dado de empresa.
 
@@ -58,8 +61,9 @@ MCowBQYDK2VwAyEAkZEZ6pKsyVb9KBFvI56NOo6nsaldB4j3cS/ds9Y/shM=
 O app vai recusar índice com `committedAt` menor que o do índice que já tem,
 para que um índice assinado antigo não volte a ser servido. Item instalado vai
 ficar preso ao commit e ao hash que tinha, e só mudar quando a pessoa aceitar a
-atualização. A tela de instalação vai mostrar o que o item pede: servidor ou
-imagem, hosts, métodos, escopos e ferramentas de escrita numa conexão;
+atualização. A tela de instalação vai mostrar o que o item pede: servidores,
+hosts, métodos, escopos, campos, gatilhos, ações e ferramentas de escrita numa
+conexão;
 conexões, servidores, provedores e ações num template ou pacote.
 
 ## Como propor um item
