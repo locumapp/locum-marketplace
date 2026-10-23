@@ -2,13 +2,17 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/locumapp/locum-marketplace/main/schemas/connection.schema.json",
   "title": "Locum marketplace connection type",
-  "description": "A connection type manifest, data only. The app takes the type id and name from the envelope.",
+  "description": "A connection type manifest, data only: which mechanisms of the app core it uses (authentication methods, trigger kinds, actions), the fields the person fills, and the MCP servers. The app takes the type id and name from the envelope.",
   "type": "object",
   "$ref": "envelope.schema.json",
   "required": ["manifest"],
   "properties": {
     "kind": { "const": "connection" },
-    "minAppVersion": false,
+    "minAppVersion": {
+      "description": "The oldest Locum version that installs this connection type, as x.y.z. Declare it when the type uses a method, a reader, a trigger kind or an action that older versions do not have; an older app shows the type as needing an update and keeps the installed one running.",
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
     "package": false,
     "manifest": { "$ref": "#/$defs/manifest" }
   },
@@ -24,29 +28,44 @@
     },
     "host": { "type": "string", "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$" },
     "envName": { "type": "string", "pattern": "^[A-Z_][A-Z0-9_]*$" },
+    "fieldKey": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9]*$" },
+    "kebab": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
     "manifest": {
       "type": "object",
-      "required": ["category", "logo", "color", "methods", "server"],
+      "required": ["category", "logo", "color", "methods"],
       "additionalProperties": false,
       "properties": {
         "category": { "enum": ["dev", "communication", "work", "observability", "data", "home"] },
         "logo": { "description": "Logo key known to the app, or null for the generic icon.", "type": ["string", "null"], "minLength": 1 },
         "color": { "description": "Brand color without #, for the generic icon.", "type": "string", "pattern": "^[0-9A-Fa-f]{6}$" },
-        "credentialOptional": { "const": true },
-        "hosts": { "description": "Hosts that also identify the type.", "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/host" } },
-        "aliases": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" } },
+        "credentialOptional": { "description": "A server with no reference to the credential counts as authorized.", "const": true },
+        "hosts": { "description": "Hosts that also identify the type, besides the host of the remote server. Public DNS names only.", "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/host" } },
+        "aliases": { "description": "Names other tools give to the server of the type.", "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/kebab" } },
         "packages": {
           "description": "Package names (without version) of stdio servers that belong to the type.",
           "type": "array",
           "uniqueItems": true,
           "items": { "type": "string", "pattern": "^(@[a-z0-9][a-z0-9._~-]*/)?[a-z0-9][a-z0-9._~-]*$" }
         },
-        "methods": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/method" } },
-        "fields": { "type": "array", "items": { "$ref": "#/$defs/field" } },
+        "methods": { "description": "How an instance authenticates, in the order the screen offers them.", "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/method" } },
+        "fields": { "description": "The form an instance fills, besides its name.", "type": "array", "items": { "$ref": "#/$defs/field" } },
         "scopeKeys": { "type": "array", "items": { "$ref": "#/$defs/scopeKey" } },
-        "server": { "$ref": "#/$defs/server" },
+        "servers": { "$ref": "#/$defs/servers" },
+        "triggers": {
+          "description": "Trigger kinds of the app core that read this connection, or that read one of its servers (mcp-poll).",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/kebab" }
+        },
+        "actions": {
+          "description": "Flow actions of the app core that need this connection, as <type id>.<action>.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*\\.[a-z][a-z0-9_]*$" }
+        },
+        "trackers": { "description": "Tracker kinds that live in this connection.", "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/kebab" } },
         "writeTools": {
-          "description": "MCP tools of the server that write outside the machine. The install screen lists them.",
+          "description": "MCP tools of the servers that write outside the machine. The install screen lists them.",
           "type": "array",
           "uniqueItems": true,
           "items": { "type": "string", "minLength": 1 }
@@ -56,7 +75,7 @@
     "method": {
       "type": "object",
       "required": ["type"],
-      "properties": { "type": { "enum": ["oauth", "token", "none"] } },
+      "properties": { "type": { "enum": ["oauth", "token", "cli", "session", "none"] } },
       "allOf": [
         {
           "if": { "properties": { "type": { "const": "oauth" } } },
@@ -71,9 +90,27 @@
             "additionalProperties": false,
             "properties": {
               "type": true,
-              "header": { "description": "Header that carries the credential on a remote server.", "type": "string", "pattern": "^[A-Za-z0-9-]+$" },
-              "env": { "description": "Environment variable that carries the credential on a local server.", "$ref": "#/$defs/envName" }
+              "header": { "description": "Header that carries the credential to the remote server.", "type": "string", "pattern": "^[A-Za-z0-9-]+$" },
+              "env": { "description": "Environment variable that carries the credential to the local server.", "$ref": "#/$defs/envName" }
             }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "cli" } } },
+          "then": {
+            "description": "The credential of another command line tool, read when needed by a reader in the app code.",
+            "required": ["reader"],
+            "additionalProperties": false,
+            "properties": { "type": true, "reader": { "enum": ["gh"] } }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "session" } } },
+          "then": {
+            "description": "The session the person already has in a browser or an app, read by a reader in the app code. Cookie and domain live in the reader, never here.",
+            "required": ["reader"],
+            "additionalProperties": false,
+            "properties": { "type": true, "reader": { "enum": ["browser-cookie", "slack-desktop"] } }
           }
         },
         { "if": { "properties": { "type": { "const": "none" } } }, "then": { "additionalProperties": false, "properties": { "type": true } } }
@@ -84,8 +121,9 @@
       "required": ["key", "label", "format", "required"],
       "additionalProperties": false,
       "properties": {
-        "key": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9]*$" },
+        "key": { "$ref": "#/$defs/fieldKey" },
         "label": { "$ref": "#/$defs/text" },
+        "help": { "description": "A line under the field, shown as plain text.", "$ref": "#/$defs/text" },
         "format": { "enum": ["url", "text"] },
         "required": { "type": "boolean" }
       }
@@ -100,39 +138,43 @@
         "normalize": { "enum": ["lower", "exact"] }
       }
     },
-    "server": {
-      "description": "Where the MCP server is: a remote https endpoint, an image pinned by digest, or an npm package pinned by its lockfile. Never a command.",
+    "servers": {
+      "description": "The MCP servers of the type: a remote https endpoint and, when there is one, a local server pinned by digest or lockfile. Never a command.",
       "type": "object",
-      "required": ["transport"],
-      "properties": { "transport": { "enum": ["http", "stdio"] } },
-      "if": { "properties": { "transport": { "const": "http" } } },
-      "then": { "$ref": "#/$defs/remoteServer" },
-      "else": { "$ref": "#/$defs/localServer" }
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "remote": { "$ref": "#/$defs/remoteServer" },
+        "local": { "$ref": "#/$defs/localServer" }
+      }
     },
     "remoteServer": {
       "type": "object",
-      "required": ["transport", "url"],
       "additionalProperties": false,
+      "oneOf": [{ "required": ["url"] }, { "required": ["urlField"] }],
       "properties": {
-        "transport": { "const": "http" },
-        "url": { "type": "string", "pattern": "^https://[^\\s]+$" },
-        "headers": { "type": "object", "additionalProperties": { "type": "string" } }
+        "url": { "description": "Fixed https address on a public host.", "type": "string", "pattern": "^https://[^\\s]+$" },
+        "urlField": { "description": "Key of the url field the person fills, for a server whose address is per instance.", "$ref": "#/$defs/fieldKey" },
+        "headers": {
+          "description": "Headers sent to the server. ${credential} goes only here or in the env of a local server.",
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Za-z0-9-]+$" },
+          "additionalProperties": { "type": "string" }
+        }
       }
     },
     "localServer": {
       "type": "object",
-      "required": ["transport"],
       "additionalProperties": false,
       "oneOf": [{ "required": ["image"] }, { "required": ["package"] }],
       "properties": {
-        "transport": { "const": "stdio" },
         "image": {
-          "description": "Container image pinned by digest.",
+          "description": "Container image pinned by digest, without a tag.",
           "type": "string",
           "pattern": "^[a-z0-9][a-z0-9._/:-]*@sha256:[a-f0-9]{64}$"
         },
         "package": { "$ref": "#/$defs/npmPackage" },
-        "args": { "description": "Arguments for the server. Never the credential.", "type": "array", "items": { "type": "string" } },
+        "args": { "description": "Arguments for the server, placed after the image or the bin by the app. Never the credential.", "type": "array", "items": { "type": "string" } },
         "env": { "type": "object", "propertyNames": { "$ref": "#/$defs/envName" }, "additionalProperties": { "type": "string" } }
       }
     },

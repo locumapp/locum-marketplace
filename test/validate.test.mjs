@@ -31,19 +31,19 @@ test("good connection fixtures pass: image with digest, npm package with lockfil
 const bad = [
   ["connections/missing-language.json", "name.pt-BR", /pt-BR/],
   ["connections/id-mismatch.json", "id", /file name/],
-  ["connections/npx-without-lockfile.json", "manifest.server.command", /npx.*lockfile/],
-  ["connections/image-without-digest.json", "manifest.server.image", /@sha256/],
-  ["connections/grafana.json", "id", /built into the app/],
-  ["connections/downloaded-script.json", "manifest.server.command", /script/],
-  ["connections/install-script.json", "manifest.server.package.lockfile.packages.node_modules/example-mcp.hasInstallScript", /install script/],
-  ["connections/credential-in-args.json", "manifest.server.args.1", /\$\{credential\}/],
+  ["connections/npx-without-lockfile.json", "manifest.servers.local.command", /npx.*lockfile/],
+  ["connections/image-without-digest.json", "manifest.servers.local.image", /@sha256/],
+  ["connections/proprio.json", "id", /reserved/],
+  ["connections/downloaded-script.json", "manifest.servers.local.command", /script/],
+  ["connections/install-script.json", "manifest.servers.local.package.lockfile.packages.node_modules/example-mcp.hasInstallScript", /install script/],
+  ["connections/credential-in-args.json", "manifest.servers.local.args.1", /\$\{credential\}/],
   ["templates/unknown-agent.json", "package.automacao.spec.steps.0.profile", /ghost/],
   ["templates/wrong-folder.json", "kind", /templates/],
   ["templates/unknown-fields.json", "package.automacao.spec.steps.0.retries", /unknown field/],
   ["templates/unknown-fields.json", "package.automacao.gatilhos.0.channels", /unknown field/],
   ["templates/unknown-fields.json", "package.agents.0.toolsets", /unknown field/],
   ["templates/needs-cycle.json", "package.automacao.spec.steps", /cycle.*write.*post|cycle.*post.*write/],
-  ["connections/root-extra-dependency.json", "manifest.server.package.lockfile.packages", /only on example-mcp/],
+  ["connections/root-extra-dependency.json", "manifest.servers.local.package.lockfile.packages", /only on example-mcp/],
 ];
 
 for (const [path, field, message] of bad) {
@@ -59,7 +59,7 @@ for (const [path, field, message] of bad) {
 test("the CLI exits non-zero and prints file and field of each error", () => {
   const run = spawnSync(process.execPath, ["scripts/validate.mjs", "test/fixtures/connections/image-without-digest.json"], { cwd: root, encoding: "utf8" });
   assert.equal(run.status, 1);
-  assert.match(run.stderr, /test\/fixtures\/connections\/image-without-digest\.json: manifest\.server\.image: /);
+  assert.match(run.stderr, /test\/fixtures\/connections\/image-without-digest\.json: manifest\.servers\.local\.image: /);
 });
 
 test("the CLI with no arguments validates the whole catalog and exits zero", () => {
@@ -74,13 +74,16 @@ function tempCatalog(folder) {
   return catalog;
 }
 
-test("connection types are refused in the catalog until the app opens them", async () => {
+test("remote connection types are accepted in the catalog; local servers wait for the app to pin them", async () => {
   const catalog = tempCatalog("connections");
+  copyFileSync(fixture("connections/example-remote.json"), join(catalog, "connections/example-remote.json"));
   copyFileSync(fixture("connections/example-docker.json"), join(catalog, "connections/example-docker.json"));
   const { items, errors } = await validateCatalog(catalog);
-  assert.deepEqual(items, []);
+  assert.deepEqual(items.map((i) => i.id), ["example-remote"]);
   assert.equal(errors.length, 1);
-  assert.match(errors[0].message, /connection types are not accepted yet/);
+  assert.equal(errors[0].field, "manifest.servers.local");
+  assert.match(errors[0].message, /local servers are not accepted yet/);
+  assert.deepEqual((await validateCatalog(catalog, { localServers: true })).errors, []);
 });
 
 test("a symlink in the catalog is refused, even when it points to a valid item", async () => {
@@ -266,3 +269,146 @@ for (const bad of ["0.2", "v0.2.0", "0.2.0-beta", "01.2.0", "0.2.0.1", 2]) {
     assert.match(hit.message, /x\.y\.z/);
   });
 }
+
+/** A connection fixture with a change, written to a temporary connections/ folder under its id. */
+function connection(change, from = "example-remote", catalog = tempCatalog("connections")) {
+  const item = JSON.parse(readFileSync(fixture(`connections/${from}.json`), "utf8"));
+  change(item, item.manifest);
+  const file = join(catalog, "connections", `${item.id}.json`);
+  writeFileSync(file, JSON.stringify(item));
+  return { catalog, file };
+}
+
+const remote = (url) => (_, m) => {
+  m.servers.remote.url = url;
+};
+
+const badConnections = [
+  ["a url that carries the credential", remote("https://mcp.example.com/mcp?key=${credential}"), "manifest.servers.remote.url", /\$\{credential\}.*header/],
+  ["a url with any other placeholder", remote("https://${host}/mcp"), "manifest.servers.remote.url", /placeholder/],
+  ["a url with userinfo", remote("https://user:secret@mcp.example.com/mcp"), "manifest.servers.remote.url", /user/],
+  ["a plain http url", remote("http://mcp.example.com/mcp"), "manifest.servers.remote.url", /https/],
+  ["localhost", remote("https://localhost/mcp"), "manifest.servers.remote.url", /public/],
+  ["a loopback address", remote("https://127.0.0.1/mcp"), "manifest.servers.remote.url", /public/],
+  ["a private range", remote("https://10.0.0.5/mcp"), "manifest.servers.remote.url", /public/],
+  ["the cloud metadata endpoint", remote("https://169.254.169.254/latest"), "manifest.servers.remote.url", /public/],
+  ["IPv6 loopback", remote("https://[::1]/mcp"), "manifest.servers.remote.url", /public/],
+  ["a .local name", remote("https://printer.local/mcp"), "manifest.servers.remote.url", /public/],
+  ["an internal name", remote("https://metadata.google.internal/mcp"), "manifest.servers.remote.url", /public/],
+  ["a single-label name", remote("https://intranet/mcp"), "manifest.servers.remote.url", /public/],
+  ["a host that is not public", (_, m) => (m.hosts = ["localhost"]), "manifest.hosts.0", /public/],
+  ["a urlField that is not a declared field", (_, m) => (m.servers.remote = { urlField: "address" }), "manifest.servers.remote.urlField", /declared/],
+  [
+    "a urlField that is not a required url",
+    (_, m) => {
+      m.fields = [{ key: "address", label: { en: "Address", "pt-BR": "Endereço" }, format: "text", required: true }];
+      m.servers.remote = { urlField: "address" };
+    },
+    "manifest.servers.remote.urlField",
+    /required url/,
+  ],
+  ["the credential outside a header or env", (_, m) => (m.fields = [{ key: "url", label: { en: "${credential}", "pt-BR": "x" }, format: "url", required: true }]), "manifest.fields.0.label.en", /\$\{credential\}/],
+  ["another placeholder in a header", (_, m) => (m.servers.remote.headers = { Authorization: "Bearer ${token}" }), "manifest.servers.remote.headers.Authorization", /placeholder/],
+  ["a cli method outside an official type", (_, m) => m.methods.push({ type: "cli", reader: "gh" }), "manifest.methods.1", /official/],
+  ["a session method outside an official type", (_, m) => m.methods.push({ type: "session", reader: "browser-cookie" }), "manifest.methods.1", /official/],
+  ["the same method twice", (_, m) => m.methods.push({ type: "oauth" }), "manifest.methods.1", /twice/],
+  ["a trigger kind the app does not have", (_, m) => (m.triggers = ["no-such-kind"]), "manifest.triggers.0", /unknown trigger kind/],
+  ["a trigger that reads another connection", (_, m) => (m.triggers = ["poll"]), "manifest.triggers.0", /reads the "github" connection/],
+  ["a trigger that reads no connection", (_, m) => (m.triggers = ["cron"]), "manifest.triggers.0", /reads no connection/],
+  ["an action of another type", (_, m) => (m.actions = ["other.post"]), "manifest.actions.0", /example-remote\./],
+  ["a scope key of another type", (_, m) => (m.scopeKeys = [{ key: "other.repo", normalize: "exact", description: { en: "x", "pt-BR": "x" } }]), "manifest.scopeKeys.0.key", /example-remote\./],
+  ["a type that does nothing", (_, m) => delete m.servers, "manifest.servers", /servers, triggers or actions/],
+];
+
+for (const [name, change, at, message] of badConnections) {
+  test(`a remote connection is refused with ${name}`, async () => {
+    const errors = await validateFile(connection(change).file);
+    const hit = errors.find((e) => e.field === at);
+    assert.ok(hit, `expected an error at ${at}, got ${JSON.stringify(errors)}`);
+    assert.match(hit.message, message);
+  });
+}
+
+const badLocal = [
+  ["an env name that changes how code loads", (_, m) => (m.servers.local.env = { NODE_OPTIONS: "--require x" }), "manifest.servers.local.env.NODE_OPTIONS", /loads code/],
+  ["a DYLD_ variable", (_, m) => (m.servers.local.env = { DYLD_INSERT_LIBRARIES: "x" }), "manifest.servers.local.env.DYLD_INSERT_LIBRARIES", /loads code/],
+  ["the credential in a loader variable", (_, m) => (m.methods[0].env = "LD_PRELOAD"), "manifest.methods.0.env", /loads code/],
+  ["an image with a tag and a digest", (_, m) => (m.servers.local.image = `ghcr.io/example/example-mcp:latest@sha256:${"0".repeat(64)}`), "manifest.servers.local.image", /tag/],
+  ["an argument that widens the container", (_, m) => (m.servers.local.args = ["--privileged"]), "manifest.servers.local.args.0", /container/],
+  ["a volume argument", (_, m) => (m.servers.local.args = ["-v", "/:/host"]), "manifest.servers.local.args.0", /container/],
+];
+
+for (const [name, change, at, message] of badLocal) {
+  test(`a local server is refused with ${name}`, async () => {
+    const errors = await validateFile(connection(change, "example-docker").file);
+    const hit = errors.find((e) => e.field === at);
+    assert.ok(hit, `expected an error at ${at}, got ${JSON.stringify(errors)}`);
+    assert.match(hit.message, message);
+  });
+}
+
+test("a lockfile entry resolved outside the npm registry is refused", async () => {
+  const at = "manifest.servers.local.package.lockfile.packages.node_modules/example-mcp.resolved";
+  const { file } = connection((_, m) => {
+    m.servers.local.package.lockfile.packages["node_modules/example-mcp"].resolved = "https://registry.example.com/example-mcp/-/example-mcp-1.2.3.tgz";
+  }, "example-npm");
+  const hit = (await validateFile(file)).find((e) => e.field === at);
+  assert.ok(hit);
+  assert.match(hit.message, /registry\.npmjs\.org/);
+});
+
+test("an official type may use the cli and session readers, the core triggers that read it, and minAppVersion", async () => {
+  const { file } = connection((item, m) => {
+    item.id = "github";
+    item.minAppVersion = "0.2.0";
+    m.methods = [{ type: "token", header: "Authorization" }, { type: "cli", reader: "gh" }];
+    m.servers = { remote: { url: "https://api.githubcopilot.com/mcp/", headers: { Authorization: "Bearer ${credential}" } } };
+    m.hosts = ["githubcopilot.com"];
+    m.triggers = ["poll", "github-thread-reply", "mcp-poll"];
+    m.actions = ["github.react"];
+    m.trackers = ["github-issues"];
+  });
+  assert.deepEqual(await validateFile(file), []);
+});
+
+test("a remote server whose address the person fills passes, with the field declared", async () => {
+  const { file } = connection((_, m) => {
+    m.fields = [{ key: "url", label: { en: "Address", "pt-BR": "Endereço" }, help: { en: "The https address.", "pt-BR": "O endereço https." }, format: "url", required: true }];
+    m.methods = [{ type: "token", header: "Authorization" }, { type: "none" }];
+    m.servers = { remote: { urlField: "url", headers: { Authorization: "Bearer ${credential}" } } };
+    delete m.hosts;
+  });
+  assert.deepEqual(await validateFile(file), []);
+});
+
+test("two connection types cannot claim the same host, alias, package, tracker or action", async () => {
+  const { catalog } = connection((item, m) => {
+    item.id = "example-a";
+    m.aliases = ["shared-name"];
+    m.trackers = ["shared-tracker"];
+  });
+  connection((item, m) => {
+    item.id = "example-b";
+    m.servers.remote.url = "https://other.example.com/mcp";
+    m.aliases = ["shared-name", "example-a"];
+    m.trackers = ["shared-tracker"];
+  }, "example-remote", catalog);
+  const { items, errors } = await validateCatalog(catalog);
+  assert.deepEqual(items.map((i) => i.id), ["example-a"]);
+  const messages = errors.map((e) => `${e.field}: ${e.message}`);
+  assert.ok(messages.some((m) => /^manifest\.hosts: host "api\.example\.com" is already claimed by example-a/.test(m)), messages.join("\n"));
+  assert.ok(messages.some((m) => /^manifest\.aliases: alias "shared-name" is already claimed by example-a/.test(m)), messages.join("\n"));
+  assert.ok(messages.some((m) => /^manifest\.aliases: alias "example-a" is the id of another type/.test(m)), messages.join("\n"));
+  assert.ok(messages.some((m) => /^manifest\.trackers: tracker "shared-tracker" is already claimed by example-a/.test(m)), messages.join("\n"));
+});
+
+test("a community type cannot claim what belongs to an official one", async () => {
+  const { catalog } = connection((_, m) => {
+    m.servers.remote.url = "https://mcp.slack.com/mcp";
+    m.aliases = ["ms365"];
+  });
+  const { errors } = await validateCatalog(catalog);
+  const messages = errors.map((e) => `${e.field}: ${e.message}`);
+  assert.ok(messages.some((m) => /^manifest\.servers\.remote\.url: host "mcp\.slack\.com" is already claimed by slack/.test(m)), messages.join("\n"));
+  assert.ok(messages.some((m) => /^manifest\.aliases: alias "ms365" is already claimed by teams/.test(m)), messages.join("\n"));
+});

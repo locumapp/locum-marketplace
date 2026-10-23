@@ -12,18 +12,18 @@ const byCodeUnit = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 const sorted = (values) => [...new Set(values)].sort(byCodeUnit);
 
 function connectionRequires(manifest) {
-  const server = manifest.server;
-  const summary =
-    server.transport === "http"
-      ? { transport: "http", url: server.url }
-      : server.image !== undefined
-        ? { transport: "stdio", image: server.image }
-        : { transport: "stdio", package: `${server.package.name}@${server.package.version}` };
+  const { remote, local } = manifest.servers ?? {};
+  const servers = {};
+  if (remote !== undefined) servers.remote = remote.url !== undefined ? { url: remote.url } : { urlField: remote.urlField };
+  if (local !== undefined) servers.local = local.image !== undefined ? { image: local.image } : { package: `${local.package.name}@${local.package.version}` };
   return {
-    server: summary,
-    hosts: sorted([...(server.transport === "http" ? [new URL(server.url).hostname] : []), ...(manifest.hosts ?? [])]),
+    servers,
+    hosts: sorted([...(remote?.url !== undefined ? [new URL(remote.url).hostname] : []), ...(manifest.hosts ?? [])]),
     methods: manifest.methods.map((m) => m.type),
     scopes: sorted(manifest.methods.flatMap((m) => m.scopes ?? [])),
+    fields: (manifest.fields ?? []).map((f) => f.key),
+    triggers: sorted(manifest.triggers ?? []),
+    actions: sorted(manifest.actions ?? []),
     writeTools: sorted(manifest.writeTools ?? []),
   };
 }
@@ -48,10 +48,10 @@ function packageRequires(pkg) {
  * commit time in seconds: it orders indexes without a date that changes on every build, so the
  * same catalog and commit give the same bytes.
  */
-export async function buildIndex(root, { commit, committedAt, connections = false }) {
+export async function buildIndex(root, { commit, committedAt, localServers = false }) {
   if (typeof commit !== "string" || !FULL_SHA.test(commit)) throw new Error(`commit must be a full 40-character sha, found "${commit}"`);
   if (!Number.isSafeInteger(committedAt) || committedAt < 0) throw new Error(`committedAt must be the commit time in seconds, found "${committedAt}"`);
-  const { items, errors } = await validateCatalog(root, { connections });
+  const { items, errors } = await validateCatalog(root, { localServers });
   if (errors.length > 0) {
     throw new Error(`the catalog is invalid:\n${errors.map((e) => `${relative(root, e.file)}: ${e.field}: ${e.message}`).join("\n")}`);
   }

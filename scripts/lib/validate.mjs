@@ -2,7 +2,7 @@ import { lstat, readFile, readdir } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import Ajv2020Module from "ajv/dist/2020.js";
-import { TRIGGER_ANNOTATIONS, itemRules } from "./rules.mjs";
+import { OFFICIAL_CONNECTIONS, RESERVED_CONNECTION_IDS, TRIGGER_ANNOTATIONS, connectionClaims, itemRules, officialClaims } from "./rules.mjs";
 
 const Ajv2020 = Ajv2020Module.default ?? Ajv2020Module;
 const schemasDir = fileURLToPath(new URL("../../schemas/", import.meta.url));
@@ -59,14 +59,12 @@ function expectedFromPath(file) {
 
 /**
  * Parses and checks one file. Returns the item and its errors, each with file, field and message.
- * With `root`, the file is read as part of the catalog under it, where connection types are not open yet.
+ * With `root`, the file is read as part of the catalog under it, where a connection type with a local server
+ * is refused until the app pins local servers (ADR 0018, slice 6), unless `localServers` is true.
  */
-export async function checkFile(file, { root } = {}) {
+export async function checkFile(file, { root, localServers = false } = {}) {
   const fail = (field, message, bytes) => ({ bytes, item: undefined, errors: [{ file, field, message }] });
   if (!(await lstat(file)).isFile()) return fail("", "catalog items must be regular files: symlinks and folders are refused");
-  if (root !== undefined && resolve(dirname(file)) === resolve(root, "connections")) {
-    return fail("", "connection types are not accepted yet: the app opens them in a later release");
-  }
   const bytes = await readFile(file);
   if (!file.endsWith(".json")) return fail("", "catalog items are .json files", bytes);
   let item;
@@ -81,6 +79,10 @@ export async function checkFile(file, { root } = {}) {
   const validate = all[kind === undefined ? "envelope" : SCHEMA_OF_KIND[kind]];
   validate(item);
   const ruled = itemRules(item, expected);
+  const inCatalogConnections = root !== undefined && resolve(dirname(file)) === resolve(root, "connections");
+  if (inCatalogConnections && !localServers && item?.manifest?.servers?.local !== undefined) {
+    ruled.push({ field: "manifest.servers.local", message: "local servers are not accepted yet: the app pins them in a later release, so only remote servers are published for now" });
+  }
   // A rule says more than the schema about the same field: keep the rule.
   const ruledFields = new Set(ruled.map((e) => e.field));
   const fromSchema = schemaErrors(validate).filter((e) => !ruledFields.has(e.field));
@@ -93,10 +95,11 @@ export async function validateFile(file, options) {
 }
 
 /**
- * Every item in the catalog folders under root, with its bytes, and every error, ids unique across kinds.
- * `connections: true` reads connections/ as it will be once the app opens connection types.
+ * Every item in the catalog folders under root, with its bytes, and every error, ids unique across kinds and
+ * what identifies a connection type claimed by one type only. `localServers: true` reads connections/ as it
+ * will be once the app pins local servers.
  */
-export async function validateCatalog(root, { connections = false } = {}) {
+export async function validateCatalog(root, { localServers = false } = {}) {
   const items = [];
   const errors = [];
   const owners = new Map();
@@ -110,7 +113,7 @@ export async function validateCatalog(root, { connections = false } = {}) {
     for (const name of names) {
       if (name === ".gitkeep") continue;
       const file = join(root, folder, name);
-      const checked = await checkFile(file, connections ? {} : { root });
+      const checked = await checkFile(file, { root, localServers });
       errors.push(...checked.errors);
       if (checked.errors.length > 0) continue;
       const path = `${folder}/${name}`;
@@ -123,5 +126,31 @@ export async function validateCatalog(root, { connections = false } = {}) {
       items.push({ kind: checked.item.kind, id: checked.item.id, path, bytes: checked.bytes, item: checked.item });
     }
   }
-  return { items, errors };
+  const refused = identityErrors(items.filter((i) => i.kind === "connection"));
+  errors.push(...refused.map(({ item, ...e }) => ({ file: join(root, item.path), ...e })));
+  const out = new Set(refused.map((e) => e.item));
+  return { items: items.filter((i) => !out.has(i)), errors };
+}
+
+/** Each host, alias, package, tracker and action belongs to one connection type, and an alias is never the id of another. */
+function identityErrors(connections) {
+  const owners = new Map(officialClaims().map((c) => [`${c.space}:${c.key}`, c.owner]));
+  const ids = new Set([...OFFICIAL_CONNECTIONS.keys(), ...RESERVED_CONNECTION_IDS, ...connections.map((c) => c.id)]);
+  const errors = [];
+  for (const item of connections) {
+    const mine = [];
+    for (const claim of connectionClaims(item.item)) {
+      const owner = owners.get(`${claim.space}:${claim.key}`);
+      if (owner !== undefined && owner !== item.id) {
+        errors.push({ item, field: claim.field, message: `${claim.space} "${claim.key}" is already claimed by ${owner}` });
+      } else if (claim.space === "alias" && claim.key !== item.id && ids.has(claim.key)) {
+        errors.push({ item, field: claim.field, message: `alias "${claim.key}" is the id of another type` });
+      } else {
+        mine.push(claim);
+      }
+    }
+    if (errors.some((e) => e.item === item)) continue;
+    for (const claim of mine) owners.set(`${claim.space}:${claim.key}`, item.id);
+  }
+  return errors;
 }

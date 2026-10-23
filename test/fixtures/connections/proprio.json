@@ -1,14 +1,14 @@
 {
   "kind": "connection",
-  "id": "grafana",
+  "id": "proprio",
   "version": 1,
   "description": {
     "en": "Example connection type.",
     "pt-BR": "Tipo de conexão de exemplo."
   },
   "name": {
-    "en": "Grafana",
-    "pt-BR": "Grafana"
+    "en": "Own server",
+    "pt-BR": "Servidor próprio"
   },
   "manifest": {
     "category": "work",
@@ -20,9 +20,10 @@
         "env": "EXAMPLE_TOKEN"
       }
     ],
-    "server": {
-      "transport": "stdio",
-      "image": "ghcr.io/example/grafana-mcp@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    "servers": {
+      "local": {
+        "image": "ghcr.io/example/grafana-mcp@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      }
     }
   }
 }

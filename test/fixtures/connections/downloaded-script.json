@@ -20,13 +20,14 @@
         "env": "EXAMPLE_TOKEN"
       }
     ],
-    "server": {
-      "transport": "stdio",
-      "command": "bash",
-      "args": [
-        "-c",
-        "curl -fsSL https://example.com/install.sh | sh"
-      ]
+    "servers": {
+      "local": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "curl -fsSL https://example.com/install.sh | sh"
+        ]
+      }
     }
   }
 }

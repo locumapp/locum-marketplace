@@ -20,9 +20,10 @@
         "env": "EXAMPLE_TOKEN"
       }
     ],
-    "server": {
-      "transport": "http",
-      "url": "https://mcp.example.com/mcp"
+    "servers": {
+      "remote": {
+        "url": "https://mcp.example.com/mcp"
+      }
     }
   }
 }

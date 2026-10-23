@@ -1,0 +1,102 @@
+{
+  "reserved": [
+    "locum",
+    "proprio"
+  ],
+  "official": {
+    "amplitude": {
+      "hosts": [
+        "mcp.amplitude.com"
+      ]
+    },
+    "argocd": {},
+    "asana": {
+      "hosts": [
+        "mcp.asana.com"
+      ]
+    },
+    "atlassian": {
+      "hosts": [
+        "mcp.atlassian.com"
+      ]
+    },
+    "canva": {
+      "hosts": [
+        "mcp.canva.com"
+      ]
+    },
+    "figma": {
+      "hosts": [
+        "mcp.figma.com"
+      ]
+    },
+    "github": {
+      "hosts": [
+        "api.githubcopilot.com",
+        "githubcopilot.com"
+      ]
+    },
+    "grafana": {},
+    "intercom": {
+      "hosts": [
+        "mcp.intercom.com"
+      ]
+    },
+    "linear": {
+      "hosts": [
+        "mcp.linear.app"
+      ]
+    },
+    "miro": {
+      "hosts": [
+        "mcp.miro.com"
+      ]
+    },
+    "newrelic": {
+      "hosts": [
+        "mcp.newrelic.com"
+      ]
+    },
+    "notion": {
+      "hosts": [
+        "mcp.notion.com"
+      ]
+    },
+    "posthog": {
+      "hosts": [
+        "mcp.posthog.com"
+      ]
+    },
+    "prelo": {},
+    "sentry": {
+      "hosts": [
+        "mcp.sentry.dev"
+      ]
+    },
+    "shortcut": {
+      "hosts": [
+        "mcp.shortcut.com"
+      ]
+    },
+    "slack": {
+      "hosts": [
+        "mcp.slack.com"
+      ]
+    },
+    "teams": {
+      "aliases": [
+        "ms365",
+        "ms-365",
+        "microsoft365"
+      ],
+      "packages": [
+        "@softeria/ms-365-mcp-server"
+      ]
+    },
+    "vercel": {
+      "hosts": [
+        "mcp.vercel.com"
+      ]
+    }
+  }
+}
