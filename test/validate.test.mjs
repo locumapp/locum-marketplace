@@ -406,9 +406,11 @@ test("a community type cannot claim what belongs to an official one", async () =
   const { catalog } = connection((_, m) => {
     m.servers.remote.url = "https://mcp.slack.com/mcp";
     m.aliases = ["ms365"];
+    m.trackers = ["jira"];
   });
   const { errors } = await validateCatalog(catalog);
   const messages = errors.map((e) => `${e.field}: ${e.message}`);
   assert.ok(messages.some((m) => /^manifest\.servers\.remote\.url: host "mcp\.slack\.com" is already claimed by slack/.test(m)), messages.join("\n"));
   assert.ok(messages.some((m) => /^manifest\.aliases: alias "ms365" is already claimed by teams/.test(m)), messages.join("\n"));
+  assert.ok(messages.some((m) => /^manifest\.trackers: tracker "jira" is already claimed by atlassian/.test(m)), messages.join("\n"));
 });

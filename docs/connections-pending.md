@@ -35,7 +35,7 @@ has a rule in `scripts/lib/rules.mjs` or `scripts/lib/validate.mjs` and a test.
 - **Identity of the type**: hosts (url host included), aliases, packages,
   trackers and actions belong to one type across the catalog, and an alias
   cannot be the id of another type. The official types, which still ship in
-  the app until slice 4, are listed with their hosts, aliases and packages in
+  the app until slice 4, are listed with their hosts, aliases, packages and trackers in
   `scripts/lib/official-connections.json`, so no other type can claim them.
 - **Machine credentials**: `cli` and `session` read a credential from the
   person's machine and are accepted only in official ids, whose files

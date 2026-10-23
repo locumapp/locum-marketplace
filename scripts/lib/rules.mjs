@@ -9,7 +9,7 @@ export const RESERVED_CONNECTION_IDS = new Set(officialList.reserved);
 
 /**
  * The official connection types, the ones that shipped inside the app (its `embutidos.json`) and Argo CD, with the
- * hosts, aliases and packages that identify them. Only the maintainer publishes them: CODEOWNERS covers their files
+ * hosts, aliases, packages and trackers that identify them. Only the maintainer publishes them: CODEOWNERS covers their files
  * (ADR 0018, decision 4), and no other type may claim what identifies them.
  */
 export const OFFICIAL_CONNECTIONS = new Map(Object.entries(officialList.official));
@@ -361,7 +361,7 @@ export function connectionClaims(item) {
 /** The claims of the official types, from the list, for a catalog that has not published them yet. */
 export function officialClaims() {
   return [...OFFICIAL_CONNECTIONS].flatMap(([id, o]) =>
-    connectionClaims({ manifest: { hosts: o.hosts, aliases: o.aliases, packages: o.packages } }).map((c) => ({ ...c, owner: id })),
+    connectionClaims({ manifest: { hosts: o.hosts, aliases: o.aliases, packages: o.packages, trackers: o.trackers } }).map((c) => ({ ...c, owner: id })),
   );
 }
 

@@ -112,8 +112,8 @@ shipped inside the app) are published only by the maintainers.
 of them to the owners of CODEOWNERS itself, and `npm run validate` fails when
 one is missing or owned by someone else. With branch protection requiring code
 owner review, a PR that touches one of those files only merges with a
-maintainer's approval. No other type may claim the hosts, aliases and packages
-listed for them.
+maintainer's approval. No other type may claim the hosts, aliases, packages and
+trackers listed for them.
 
 ### How the app receives it, and versions
 

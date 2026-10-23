@@ -18,6 +18,10 @@
     "atlassian": {
       "hosts": [
         "mcp.atlassian.com"
+      ],
+      "trackers": [
+        "jira",
+        "jira-atlassian"
       ]
     },
     "canva": {
@@ -34,6 +38,9 @@
       "hosts": [
         "api.githubcopilot.com",
         "githubcopilot.com"
+      ],
+      "trackers": [
+        "github-issues"
       ]
     },
     "grafana": {},
@@ -76,6 +83,9 @@
     "shortcut": {
       "hosts": [
         "mcp.shortcut.com"
+      ],
+      "trackers": [
+        "shortcut"
       ]
     },
     "slack": {

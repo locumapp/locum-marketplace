@@ -114,8 +114,8 @@ vinham dentro do app) só quem mantém publica. O
 deles aos donos do próprio CODEOWNERS, e o `npm run validate` falha quando um
 falta ou tem outro dono. Com a proteção de branch exigindo review de code
 owner, PR que mexe num desses arquivos só entra com a aprovação de quem
-mantém. Nenhum outro tipo pode usar os hosts, apelidos e pacotes listados para
-eles.
+mantém. Nenhum outro tipo pode usar os hosts, apelidos, pacotes e trackers
+listados para eles.
 
 ### Como o app recebe, e as versões
 
