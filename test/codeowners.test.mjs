@@ -65,3 +65,9 @@ test("owners compare without regard to case, as GitHub does", async () => {
   const text = "/.github/CODEOWNERS @LocumApp/Maintainers\n/scripts/ @locumapp/maintainers\n/connections/ @locumapp/MAINTAINERS\n";
   assert.deepEqual(await messages(withCodeowners(text)), []);
 });
+
+test("**/ in the middle matches zero or more folders", () => {
+  const rules = parseCodeowners("/connections/**/*.json @locumapp/maintainers\n");
+  assert.deepEqual(ownersOf(rules, "connections/github.json"), ["@locumapp/maintainers"]);
+  assert.deepEqual(ownersOf(rules, "connections/sub/github.json"), ["@locumapp/maintainers"]);
+});

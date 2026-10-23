@@ -9,7 +9,7 @@
   "properties": {
     "kind": { "const": "connection" },
     "minAppVersion": {
-      "description": "The oldest Locum version that installs this connection type, as x.y.z. Required: no released version installs connection types yet. Raise it when the type uses a method, a reader, a trigger kind or an action that older versions do not have; an older app shows the type as needing an update and keeps the installed one running.",
+      "description": "The oldest Locum version that installs this connection type, as x.y.z. Required, at 0.1.168 or newer: no earlier release installs connection types. Raise it when the type uses a method, a reader, a trigger kind or an action that older versions do not have; an older app shows the type as needing an update and keeps the installed one running.",
       "type": "string",
       "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
     },

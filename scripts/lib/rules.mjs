@@ -38,11 +38,25 @@ const CREDENTIAL_PLACES = /^manifest\.servers\.(remote\.headers|local\.env)\.[^.
 /** Variables that change how a process loads code, which certificates it trusts or where its traffic goes. */
 const LOADER_ENV = /^(NODE_OPTIONS|NODE_PATH|NODE_EXTRA_CA_CERTS|LD_.*|DYLD_.*|ELECTRON_RUN_AS_NODE|NODE_TLS_REJECT_UNAUTHORIZED|SSLKEYLOGFILE|PATH|PYTHONPATH|PYTHONHOME|PYTHONSTARTUP|PERL5LIB|PERL5OPT|RUBYOPT|RUBYLIB|JAVA_TOOL_OPTIONS|_JAVA_OPTIONS|JDK_JAVA_OPTIONS|BASH_ENV|ENV|NPM_CONFIG_.*|GIT_.*|SSL_CERT_FILE|SSL_CERT_DIR|REQUESTS_CA_BUNDLE|CURL_CA_BUNDLE|HTTPS?_PROXY|ALL_PROXY|NO_PROXY)$/i;
 /** Container runtime flags that widen what the server reaches. The app puts args after the image; this is defense in depth. */
-const CONTAINER_FLAGS = /^(--privileged|--cap-add|--pid|--ipc|--uts|--userns|--cgroupns|--network|--net|--device|--security-opt|--volume|--mount|--volumes-from)(=.*)?$|^-v/;
+const CONTAINER_FLAGS = /^(--privileged|--cap-add|--pid|--ipc|--uts|--userns|--cgroupns|--network|--net|--device|--security-opt|--volume|--mount|--volumes-from)(=.*)?$|^-v($|[/.~]|[^:]*:)/;
 /** Names that never resolve to a public host. */
 const LOCAL_SUFFIXES = [".local", ".localhost", ".localdomain", ".internal", ".intranet", ".corp", ".private", ".home", ".home.arpa", ".lan", ".test", ".example", ".invalid"];
 /** Methods whose reader takes a credential from another tool or a session on the machine: only official types use them. */
 const MACHINE_METHODS = new Set(["cli", "session"]);
+
+/**
+ * The oldest app version a connection type may declare: the first one after 0.1.167, the last release that does not
+ * install connection types. Goes up to the release of slice 2 of ADR 0018, with the published items in the same PR.
+ */
+export const CONNECTION_MIN_APP_VERSION = "0.1.168";
+
+const versionParts = (v) => v.split(".").map(Number);
+/** Compares two x.y.z versions as numbers: negative, zero or positive. */
+function compareVersions(a, b) {
+  const [x, y] = [versionParts(a), versionParts(b)];
+  for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] - y[i];
+  return 0;
+}
 
 /** Annotations the schema keeps on each trigger kind, read by the rules and the index. */
 export const TRIGGER_ANNOTATIONS = ["x-reads-connection", "x-reads-server", "x-no-event", "x-person-chooses", "x-required-to-run", "x-omitted-code", "x-held-by", "x-catch-all"];
@@ -82,6 +96,9 @@ export function itemRules(item, expected) {
       errors.push({ field: "id", message: `"${item.id}" is reserved by the app and cannot be published` });
     } else if (OFFICIAL_ALIASES.has(item.id)) {
       errors.push({ field: "id", message: `"${item.id}" is an alias of the official type "${OFFICIAL_ALIASES.get(item.id)}": the app would match its servers to this id` });
+    }
+    if (typeof item.minAppVersion === "string" && /^\d+\.\d+\.\d+$/.test(item.minAppVersion) && compareVersions(item.minAppVersion, CONNECTION_MIN_APP_VERSION) < 0) {
+      errors.push({ field: "minAppVersion", message: `a connection type needs minAppVersion ${CONNECTION_MIN_APP_VERSION} or newer: older apps do not install connection types` });
     }
     if (isObject(item.manifest)) errors.push(...connectionRules(item.manifest, item.id));
   }

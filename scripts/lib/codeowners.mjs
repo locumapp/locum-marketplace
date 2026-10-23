@@ -9,7 +9,7 @@ const OFFICIAL_LIST = "scripts/lib/official-connections.json";
 
 /**
  * A CODEOWNERS pattern as a regular expression over a repository path, as GitHub reads it: a leading `**\/` also
- * matches at the root, a pattern ending in a wildcard (`dir/*`) does not go into subfolders, and any other pattern
+ * matches at the root, one in the middle matches zero or more folders, a pattern ending in a wildcard (`dir/*`) does not go into subfolders, and any other pattern
  * also covers what is under it.
  */
 function patternToRegExp(pattern) {
@@ -19,6 +19,7 @@ function patternToRegExp(pattern) {
   const lastSegment = body.split("/").pop();
   const source = body
     .replace(/^\*\*\//, "\0")
+    .replaceAll("/**/", "/\0")
     .split(/(\0|\*\*|\*|\?)/)
     .map((part) => (part === "\0" ? "(.*/)?" : part === "**" ? ".*" : part === "*" ? "[^/]*" : part === "?" ? "[^/]" : part.replace(/[.+^${}()|[\]\\]/g, "\\$&")))
     .join("");

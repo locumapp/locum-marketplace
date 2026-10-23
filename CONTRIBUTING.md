@@ -139,9 +139,9 @@ When `version` goes up, the app will show the update with what changed
   package) will always wait for the person to accept, and the credential will
   never go to a new host before that.
 
-`minAppVersion` is required in a connection type. Until the release that reads
-connection types exists any `x.y.z` passes; after it, the floor will be that
-version. Raise it when the type uses a method, reader, trigger kind or action
+`minAppVersion` is required in a connection type, at `0.1.168` or newer: no
+earlier release installs connection types. When the release that reads them
+comes out, the floor goes up to its version. Raise it when the type uses a method, reader, trigger kind or action
 that older apps do not have: they will show the type as needing an update and
 keep the installed one running.
 

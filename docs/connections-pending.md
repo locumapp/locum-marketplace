@@ -54,9 +54,12 @@ has a rule in `scripts/lib/rules.mjs` or `scripts/lib/validate.mjs` and a test.
 
 ## Left to the app (later slices of ADR 0018)
 
-- **`minAppVersion`**: required in every connection type, because no released
-  app installs one. Any `x.y.z` passes until the release of slice 2 exists;
-  then the validator will take that version as the floor.
+- **`minAppVersion`**: required in every connection type, at
+  `0.1.168` or newer (compared as numbers). 0.1.167 is the last release, and
+  it does not install connection types, so installed apps show "needs an
+  update". When the release of slice 2 comes out, the floor in
+  `scripts/lib/rules.mjs` goes up to its version, and the published items go
+  up with it in the same PR.
 - **`mcp-poll` in many types**: the catalog accepts `mcp-poll` in more than one
   type, since it is a generic trigger of the core that reads a server, not a
   connection. The app maps each trigger kind to one connection type

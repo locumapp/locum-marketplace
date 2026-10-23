@@ -2,7 +2,7 @@
   "kind": "connection",
   "id": "downloaded-script",
   "version": 1,
-  "minAppVersion": "0.1.0",
+  "minAppVersion": "0.1.168",
   "description": {
     "en": "Example connection type.",
     "pt-BR": "Tipo de conexão de exemplo."

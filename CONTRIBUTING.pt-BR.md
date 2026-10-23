@@ -139,9 +139,9 @@ atualização com o que mudou (fatia 5):
   pacote novos) vai sempre esperar o aceite da pessoa, e a credencial nunca vai
   seguir para um host novo antes disso.
 
-`minAppVersion` é obrigatório em tipo de conexão. Enquanto a release que lê
-tipos de conexão não existe, qualquer `x.y.z` passa; depois dela, o piso vai
-ser essa versão. Suba o valor quando o tipo usar método, leitor, tipo de
+`minAppVersion` é obrigatório em tipo de conexão, em `0.1.168` ou mais nova:
+nenhuma release anterior instala tipo de conexão. Quando sair a release que
+os lê, o piso sobe para a versão dela. Suba o valor quando o tipo usar método, leitor, tipo de
 gatilho ou ação que app mais velho não tem: ele vai mostrar o tipo como
 "precisa atualizar" e manter o instalado rodando.
 

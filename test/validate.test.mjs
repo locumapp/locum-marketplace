@@ -414,6 +414,18 @@ test("a community type cannot take an alias of an official one as its id", async
   assert.match(hit.message, /alias of the official type "teams"/);
 });
 
+test("a connection type needs minAppVersion 0.1.168 or newer, compared as numbers", async () => {
+  const errors = await validateFile(connection((item) => (item.minAppVersion = "0.1.167")).file);
+  const hit = errors.find((e) => e.field === "minAppVersion");
+  assert.ok(hit, JSON.stringify(errors));
+  assert.match(hit.message, /0\.1\.168/);
+  assert.deepEqual(await validateFile(connection((item) => (item.minAppVersion = "0.1.1000")).file), []);
+});
+
+test("-vv and other short flags that are not a volume pass as server arguments", async () => {
+  assert.deepEqual(await validateFile(connection((_, m) => (m.servers.local.args = ["-vv", "-verbose"]), "example-docker").file), []);
+});
+
 test("a connection type must declare minAppVersion", async () => {
   const errors = await validateFile(connection((item) => delete item.minAppVersion).file);
   assert.ok(errors.some((e) => e.field === "minAppVersion" && /required/.test(e.message)), JSON.stringify(errors));
