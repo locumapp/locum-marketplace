@@ -1,8 +1,8 @@
 {
   "format": "locum-marketplace-index",
   "version": 1,
-  "commit": "5e714e30c231673b1ba0d591e0755868491dcd69",
-  "committedAt": 1792717911,
+  "commit": "8b92999d3c37c354bad2af53614637a40c9284a8",
+  "committedAt": 1792722405,
   "items": [
     {
       "kind": "template",
@@ -98,16 +98,17 @@
     {
       "kind": "template",
       "id": "pr-rereview",
-      "version": 2,
+      "version": 3,
+      "minAppVersion": "0.1.165",
       "path": "templates/pr-rereview.json",
-      "sha256": "425e440b2fe268acf1992606c537597dfb892019ae3f45a1cf054f0e3b589dd0",
+      "sha256": "3c43d923f2aa74e283ed2340bd629e9a1ae4fdc6029759c340bc3af806590dec",
       "name": {
         "en": "PR re-review",
         "pt-BR": "Nova revisão de PR"
       },
       "description": {
-        "en": "Checks the requests from your last review against the diff since then and the thread replies, points out new defects and prepares the review, held in the queue.",
-        "pt-BR": "Confere os pedidos da sua última review contra o diff desde ela e as respostas nas threads, aponta defeito novo e prepara a review, parada na fila."
+        "en": "Checks the requests from your last review against the diff since then and the thread replies, points out new defects, waits for CI on the head commit and prepares the review, held in the queue. An approval with CI not green goes out as a comment.",
+        "pt-BR": "Confere os pedidos da sua última review contra o diff desde ela e as respostas nas threads, aponta defeito novo, espera a esteira no commit de cabeça e prepara a review, parada na fila. Aprovação com a esteira fora do verde sai como comentário."
       },
       "tags": [
         "code-review",
@@ -128,6 +129,7 @@
         ],
         "skills": [],
         "actions": [
+          "github.checks_wait",
           "github.review_comment"
         ],
         "triggers": [
@@ -144,16 +146,17 @@
     {
       "kind": "template",
       "id": "pr-review",
-      "version": 2,
+      "version": 3,
+      "minAppVersion": "0.1.165",
       "path": "templates/pr-review.json",
-      "sha256": "7f50e7d4890f889b83b4ea298c1c1e4fe1c6dc7c9b8751c364b19723fc0ec884",
+      "sha256": "071a9cfabf66c0024dfe5157fac37e8d7b503f59911d0b08989030dd804de2ac",
       "name": {
         "en": "PR review",
         "pt-BR": "Revisão de PR"
       },
       "description": {
-        "en": "Triage, audit with a verdict, optional deploy context (asks for an MCP server named argocd) and the review on the pull request, held in the queue for approval.",
-        "pt-BR": "Triagem, auditoria com veredito, contexto de deploy opcional (pede um servidor MCP chamado argocd) e a review no pull request, parada na fila para aprovação."
+        "en": "Triage, audit with a verdict, optional deploy context (asks for an MCP server named argocd), a wait for CI on the head commit and the review on the pull request, held in the queue for approval. An approval with CI not green goes out as a comment.",
+        "pt-BR": "Triagem, auditoria com veredito, contexto de deploy opcional (pede um servidor MCP chamado argocd), espera da esteira no commit de cabeça e a review no pull request, parada na fila para aprovação. Aprovação com a esteira fora do verde sai como comentário."
       },
       "tags": [
         "code-review",
@@ -177,6 +180,7 @@
         ],
         "skills": [],
         "actions": [
+          "github.checks_wait",
           "github.review_comment"
         ],
         "triggers": [
