@@ -10,10 +10,10 @@ automation templates and packages that anyone can propose.
 - `connections/`: connection type manifests. Each manifest is data only: the
   MCP server (a remote https endpoint, an image pinned by digest, or an npm
   package pinned by its lockfile), the authentication methods, the instance
-  fields and the tools that write outside the machine. Not accepted yet: the
-  validator refuses files here until the app opens connection types, and
-  [docs/connections-pending.md](docs/connections-pending.md) lists what must
-  be closed first.
+  fields, the triggers and actions of the core it offers, and the tools that
+  write outside the machine. Remote servers are accepted; local ones wait for
+  the app to pin them. The official ids are published only by the maintainers
+  ([CODEOWNERS](.github/CODEOWNERS)).
 - `templates/`: automation templates, with every node visible.
 - `packages/`: packages exported from Locum, already cleaned of company data.
 
@@ -62,7 +62,8 @@ The app will refuse an index whose `committedAt` is older than the one it
 already has, so an old signed index cannot be served again. An installed item
 will stay pinned to the commit and hash it had, and only change when the user
 accepts an update. The install screen will show what the item asks for:
-server or image, hosts, methods, scopes and write tools for a connection;
+servers, hosts, methods, scopes, fields, triggers, actions and write tools for
+a connection;
 connections, servers, providers and actions for a template or a package.
 
 ## How to propose an item

@@ -1,10 +1,10 @@
 <!-- Português abaixo. -->
 
-**Item**: `templates/…` or `packages/…` (connection types are not accepted yet)
+**Item**: `connections/…`, `templates/…` or `packages/…`
 
 What it does, and who it is for:
 
-What it asks for on install (connections, servers, providers and actions):
+What it asks for on install (for a connection: servers, hosts, methods and write tools; for a template or package: connections, servers, providers and actions):
 
 - [ ] `npm run validate` passes locally
 - [ ] `version` went up if the item already existed
@@ -12,11 +12,11 @@ What it asks for on install (connections, servers, providers and actions):
 
 ---
 
-**Item**: `templates/…` ou `packages/…` (tipos de conexão ainda não são aceitos)
+**Item**: `connections/…`, `templates/…` ou `packages/…`
 
 O que faz, e para quem:
 
-O que pede ao instalar (conexões, servidores, provedores e ações):
+O que pede ao instalar (numa conexão: servidores, hosts, métodos e ferramentas de escrita; num template ou pacote: conexões, servidores, provedores e ações):
 
 - [ ] `npm run validate` passa local
 - [ ] `version` subiu, se o item já existia

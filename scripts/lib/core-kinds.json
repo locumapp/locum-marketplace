@@ -1,0 +1,21 @@
+{
+  "$comment": "Tracker kinds and flow actions of the app core. Copied from TRACKER_KINDS in app/src/trackers/registry.ts and ACOES_REGISTRADAS in app/src/executor/acoes-registradas.ts of the app; update it when the app gains one. Trigger kinds come from $defs.trigger in schemas/template.schema.json.",
+  "trackers": ["jira", "jira-atlassian", "github-issues", "shortcut"],
+  "actions": [
+    "github.review_comment",
+    "github.review_reply",
+    "github.resolve_thread",
+    "github.react",
+    "github.checks_wait",
+    "tracker.create_issue",
+    "digest.deliver",
+    "slack.post",
+    "teams.post",
+    "slack.react",
+    "teams.react",
+    "context.update",
+    "memory.propose",
+    "mcp.call",
+    "http.request"
+  ]
+}

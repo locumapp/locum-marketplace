@@ -1,35 +1,27 @@
-// The rules a JSON Schema cannot say: nothing here runs code, and local servers are pinned.
+// The rules a JSON Schema cannot say: nothing here runs code, local servers are pinned, and a remote server is a public https host.
 import { readFileSync } from "node:fs";
+import { isIP } from "node:net";
+
+const readJson = (path) => JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));
+const officialList = readJson("./official-connections.json");
+const coreKinds = readJson("./core-kinds.json");
+
+/** Tracker kinds and flow actions the app core has, from `core-kinds.json`. */
+export const CORE_TRACKERS = new Set(coreKinds.trackers);
+export const CORE_ACTIONS = new Set(coreKinds.actions);
+
+/** Ids nobody publishes: `locum` for the core and `proprio` for servers registered by hand. */
+export const RESERVED_CONNECTION_IDS = new Set(officialList.reserved);
 
 /**
- * Connection types that ship with the app (its `embutidos.json`), Argo CD, and the ids
- * the app reserves (`locum` for the core, `proprio` for servers registered by hand).
- * They are not published here (ADR 0012, decision 6).
+ * The official connection types, the ones that shipped inside the app (its `embutidos.json`) and Argo CD, with the
+ * hosts, aliases, packages and trackers that identify them. Only the maintainer publishes them: CODEOWNERS covers their files
+ * (ADR 0018, decision 4), and no other type may claim what identifies them.
  */
-export const RESERVED_CONNECTION_IDS = new Set([
-  "amplitude",
-  "argocd",
-  "asana",
-  "atlassian",
-  "canva",
-  "figma",
-  "github",
-  "grafana",
-  "intercom",
-  "linear",
-  "locum",
-  "miro",
-  "newrelic",
-  "notion",
-  "posthog",
-  "prelo",
-  "proprio",
-  "sentry",
-  "shortcut",
-  "slack",
-  "teams",
-  "vercel",
-]);
+export const OFFICIAL_CONNECTIONS = new Map(Object.entries(officialList.official));
+
+/** Each alias of an official type, with the type. The app matches a server name by id before alias, so no other id may take one. */
+const OFFICIAL_ALIASES = new Map([...OFFICIAL_CONNECTIONS].flatMap(([id, o]) => (o.aliases ?? []).map((alias) => [alias, id])));
 
 /** Runners that fetch and run a package on the spot, without a lockfile. */
 const ONE_SHOT_RUNNERS = new Set(["npx", "pnpx", "bunx", "uvx", "pipx", "dlx"]);
@@ -38,7 +30,33 @@ const SCRIPT_KEYS = new Set(["command", "script", "scripts", "preinstall", "inst
 const PIPE_TO_SHELL = /\b(curl|wget|iwr|irm|invoke-webrequest)\b[^|]*\|\s*(sudo\s+)?(ba|z|da|k)?sh\b|\|\s*(iex|python3?|node|pwsh|powershell)\b/i;
 const IMAGE_WITH_DIGEST = /^[a-z0-9][a-z0-9._/:-]*@sha256:[a-f0-9]{64}$/;
 const INTEGRITY = /^sha(256|384|512)-[A-Za-z0-9+/]+={0,2}$/;
+const NPM_REGISTRY = "https://registry.npmjs.org/";
 const CREDENTIAL = "${credential}";
+const PLACEHOLDER = /\$\{[^}]*\}/g;
+/** Where `${credential}` may go: a header of the remote server or the env of the local one. */
+const CREDENTIAL_PLACES = /^manifest\.servers\.(remote\.headers|local\.env)\.[^.]+$/;
+/** Variables that change how a process loads code, which certificates it trusts or where its traffic goes. */
+const LOADER_ENV = /^(NODE_OPTIONS|NODE_PATH|NODE_EXTRA_CA_CERTS|LD_.*|DYLD_.*|ELECTRON_RUN_AS_NODE|NODE_TLS_REJECT_UNAUTHORIZED|SSLKEYLOGFILE|PATH|PYTHONPATH|PYTHONHOME|PYTHONSTARTUP|PERL5LIB|PERL5OPT|RUBYOPT|RUBYLIB|JAVA_TOOL_OPTIONS|_JAVA_OPTIONS|JDK_JAVA_OPTIONS|BASH_ENV|ENV|NPM_CONFIG_.*|GIT_.*|SSL_CERT_FILE|SSL_CERT_DIR|REQUESTS_CA_BUNDLE|CURL_CA_BUNDLE|HTTPS?_PROXY|ALL_PROXY|NO_PROXY)$/i;
+/** Container runtime flags that widen what the server reaches. The app puts args after the image; this is defense in depth. */
+const CONTAINER_FLAGS = /^(--privileged|--cap-add|--pid|--ipc|--uts|--userns|--cgroupns|--network|--net|--device|--security-opt|--volume|--mount|--volumes-from)(=.*)?$|^-v($|[/.~]|[^:]*:)/;
+/** Names that never resolve to a public host. */
+const LOCAL_SUFFIXES = [".local", ".localhost", ".localdomain", ".internal", ".intranet", ".corp", ".private", ".home", ".home.arpa", ".lan", ".test", ".example", ".invalid"];
+/** Methods whose reader takes a credential from another tool or a session on the machine: only official types use them. */
+const MACHINE_METHODS = new Set(["cli", "session"]);
+
+/**
+ * The oldest app version a connection type may declare: the first one after 0.1.167, the last release that does not
+ * install connection types. Goes up to the release of slice 2 of ADR 0018, with the published items in the same PR.
+ */
+export const CONNECTION_MIN_APP_VERSION = "0.1.168";
+
+const versionParts = (v) => v.split(".").map(Number);
+/** Compares two x.y.z versions as numbers: negative, zero or positive. */
+function compareVersions(a, b) {
+  const [x, y] = [versionParts(a), versionParts(b)];
+  for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] - y[i];
+  return 0;
+}
 
 /** Annotations the schema keeps on each trigger kind, read by the rules and the index. */
 export const TRIGGER_ANNOTATIONS = ["x-reads-connection", "x-reads-server", "x-no-event", "x-person-chooses", "x-required-to-run", "x-omitted-code", "x-held-by", "x-catch-all"];
@@ -75,9 +93,14 @@ export function itemRules(item, expected) {
   }
   if (item.kind === "connection") {
     if (RESERVED_CONNECTION_IDS.has(item.id)) {
-      errors.push({ field: "id", message: `"${item.id}" is a connection type built into the app and cannot be published here` });
+      errors.push({ field: "id", message: `"${item.id}" is reserved by the app and cannot be published` });
+    } else if (OFFICIAL_ALIASES.has(item.id)) {
+      errors.push({ field: "id", message: `"${item.id}" is an alias of the official type "${OFFICIAL_ALIASES.get(item.id)}": the app would match its servers to this id` });
     }
-    if (isObject(item.manifest)) errors.push(...connectionRules(item.manifest));
+    if (typeof item.minAppVersion === "string" && /^\d+\.\d+\.\d+$/.test(item.minAppVersion) && compareVersions(item.minAppVersion, CONNECTION_MIN_APP_VERSION) < 0) {
+      errors.push({ field: "minAppVersion", message: `a connection type needs minAppVersion ${CONNECTION_MIN_APP_VERSION} or newer: older apps do not install connection types` });
+    }
+    if (isObject(item.manifest)) errors.push(...connectionRules(item.manifest, item.id));
   }
   if ((item.kind === "template" || item.kind === "package") && isObject(item.package)) {
     errors.push(...packageRules(item.package, item.kind));
@@ -85,29 +108,211 @@ export function itemRules(item, expected) {
   return errors;
 }
 
-function connectionRules(manifest) {
+/** Why a host name is not public, or undefined when it is. IPv4 in any notation comes normalized by URL. */
+function notPublic(host) {
+  let name;
+  try {
+    name = new URL(`https://${host}/`).hostname.replace(/^\[|\]$/g, "").replace(/\.$/, "");
+  } catch {
+    return "not a host name";
+  }
+  if (isIP(name) !== 0) return "an IP address";
+  if (name === "localhost" || LOCAL_SUFFIXES.some((suffix) => name.endsWith(suffix))) return "a local name";
+  if (!name.includes(".")) return "a single-label name";
+  return undefined;
+}
+
+function connectionRules(manifest, id) {
   const errors = [];
   for (const path of scriptKeys(manifest, ["manifest"])) {
-    if (path === "manifest.server.command") continue;
+    if (path === "manifest.servers.local.command") continue;
     errors.push({ field: path, message: "scripts and commands are not accepted: an item is data, and the app never runs code it downloads" });
   }
-  const server = manifest.server;
-  if (!isObject(server)) return errors;
+  errors.push(...credentialPlacement(manifest));
+
+  const methods = Array.isArray(manifest.methods) ? manifest.methods : [];
+  const methodTypes = new Set();
+  methods.forEach((method, i) => {
+    if (!isObject(method)) return;
+    if (methodTypes.has(method.type)) errors.push({ field: field("manifest.methods", i), message: `method "${method.type}" appears twice` });
+    methodTypes.add(method.type);
+    if (MACHINE_METHODS.has(method.type) && !OFFICIAL_CONNECTIONS.has(id)) {
+      errors.push({
+        field: field("manifest.methods", i),
+        message: `the "${method.type}" method reads a credential from another tool or a session on the machine; only official connection types use it`,
+      });
+    }
+    if (typeof method.env === "string" && LOADER_ENV.test(method.env)) errors.push(loaderEnvError(field("manifest.methods", i, "env"), method.env));
+  });
+
+  const fields = Array.isArray(manifest.fields) ? manifest.fields : [];
+  const fieldKeys = new Set();
+  fields.forEach((f, i) => {
+    if (!isObject(f)) return;
+    if (fieldKeys.has(f.key)) errors.push({ field: field("manifest.fields", i, "key"), message: `field "${f.key}" appears twice` });
+    fieldKeys.add(f.key);
+  });
+
+  const scopeKeys = new Set();
+  (Array.isArray(manifest.scopeKeys) ? manifest.scopeKeys : []).forEach((s, i) => {
+    if (!isObject(s) || typeof s.key !== "string") return;
+    if (!s.key.startsWith(`${id}.`)) errors.push({ field: field("manifest.scopeKeys", i, "key"), message: `scope key must start with "${id}."` });
+    if (scopeKeys.has(s.key)) errors.push({ field: field("manifest.scopeKeys", i, "key"), message: `scope key "${s.key}" appears twice` });
+    scopeKeys.add(s.key);
+  });
+
+  (Array.isArray(manifest.actions) ? manifest.actions : []).forEach((action, i) => {
+    if (typeof action !== "string") return;
+    if (!action.startsWith(`${id}.`)) {
+      errors.push({ field: field("manifest.actions", i), message: `action must start with "${id}.", the type that owns it` });
+    } else if (!CORE_ACTIONS.has(action)) {
+      errors.push({ field: field("manifest.actions", i), message: `unknown action "${action}": the app core has ${[...CORE_ACTIONS].join(", ")}` });
+    }
+  });
+
+  (Array.isArray(manifest.trackers) ? manifest.trackers : []).forEach((tracker, i) => {
+    if (typeof tracker === "string" && !CORE_TRACKERS.has(tracker)) {
+      errors.push({ field: field("manifest.trackers", i), message: `unknown tracker kind "${tracker}": the app core has ${[...CORE_TRACKERS].join(", ")}` });
+    }
+  });
+
+  (Array.isArray(manifest.triggers) ? manifest.triggers : []).forEach((kind, i) => {
+    const at = field("manifest.triggers", i);
+    const spec = TRIGGER_KINDS.get(kind);
+    if (spec === undefined) {
+      errors.push({ field: at, message: `unknown trigger kind "${kind}": the app core has ${[...TRIGGER_KINDS.keys()].join(", ")}` });
+    } else if (spec.connection !== undefined && spec.connection !== id) {
+      errors.push({ field: at, message: `the "${kind}" trigger reads the "${spec.connection}" connection, not this one` });
+    } else if (spec.connection === undefined && spec.serverField === undefined) {
+      errors.push({ field: at, message: `the "${kind}" trigger reads no connection or server, so no connection type offers it` });
+    }
+  });
+
+  (Array.isArray(manifest.hosts) ? manifest.hosts : []).forEach((host, i) => {
+    const why = typeof host === "string" ? notPublic(host) : undefined;
+    if (why !== undefined) errors.push({ field: field("manifest.hosts", i), message: `must be a public host name, found ${why}` });
+  });
+
+  const servers = manifest.servers;
+  const triggers = Array.isArray(manifest.triggers) ? manifest.triggers : [];
+  const actions = Array.isArray(manifest.actions) ? manifest.actions : [];
+  if (servers === undefined && triggers.length === 0 && actions.length === 0) {
+    errors.push({ field: "manifest.servers", message: "a connection type needs servers, triggers or actions; without them it does nothing" });
+  }
+  if (!isObject(servers)) return errors;
+  if (isObject(servers.remote)) errors.push(...remoteRules(servers.remote, fields));
+  if (isObject(servers.local)) errors.push(...localRules(servers.local));
+  return errors;
+}
+
+/** `${credential}` only where it goes to the server and nowhere it is logged: a header or the env of the local server. */
+function credentialPlacement(manifest) {
+  const errors = [];
+  const walk = (value, path) => {
+    if (path === "manifest.servers.local.package.lockfile") return;
+    if (typeof value === "string") {
+      if (!value.includes(CREDENTIAL) || CREDENTIAL_PLACES.test(path)) return;
+      const message = path.startsWith("manifest.servers.local.args.")
+        ? `${CREDENTIAL} goes in env or a header, never in an argument (arguments show up in ps)`
+        : path === "manifest.servers.remote.url"
+          ? `${CREDENTIAL} in the url ends up in logs; the credential goes in a header`
+          : `${CREDENTIAL} goes only in a header of the remote server or in the env of the local server`;
+      errors.push({ field: path, message });
+      return;
+    }
+    if (isObject(value) || Array.isArray(value)) for (const [key, child] of Object.entries(value)) walk(child, field(path, key));
+  };
+  walk(manifest, "manifest");
+  return errors;
+}
+
+function remoteRules(server, fields) {
+  const errors = [];
+  const at = "manifest.servers.remote";
+  if (typeof server.url === "string" && !server.url.includes(CREDENTIAL)) {
+    const placeholders = server.url.match(PLACEHOLDER);
+    if (placeholders !== null) {
+      errors.push({ field: field(at, "url"), message: `the url takes no placeholder (found ${placeholders.join(", ")}); an address per instance goes in urlField` });
+    } else {
+      errors.push(...urlRules(server.url, field(at, "url")));
+    }
+  }
+  if (typeof server.urlField === "string") {
+    const declared = fields.find((f) => isObject(f) && f.key === server.urlField);
+    if (declared === undefined) {
+      errors.push({ field: field(at, "urlField"), message: `"${server.urlField}" is not a declared field` });
+    } else if (declared.format !== "url" || declared.required !== true) {
+      errors.push({ field: field(at, "urlField"), message: `"${server.urlField}" must be a required url field` });
+    }
+  }
+  if (isObject(server.headers)) {
+    for (const [name, value] of Object.entries(server.headers)) {
+      const others = typeof value === "string" ? (value.match(PLACEHOLDER) ?? []).filter((p) => p !== CREDENTIAL) : [];
+      if (others.length > 0) errors.push({ field: field(at, "headers", name), message: `unknown placeholder ${others.join(", ")}; only ${CREDENTIAL} is filled in` });
+    }
+  }
+  return errors;
+}
+
+function urlRules(value, at) {
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    return [{ field: at, message: "not a valid url" }];
+  }
+  if (url.protocol !== "https:") return [{ field: at, message: "the server must be https" }];
+  const written = writtenHost(value);
+  if (written !== url.hostname || url.hostname.endsWith(".")) {
+    return [{ field: at, message: `write the host in its canonical form, lowercase ASCII without a trailing dot: "${written}" is read as "${canonicalHost(url.hostname)}"` }];
+  }
+  const errors = [];
+  if (url.username !== "" || url.password !== "") errors.push({ field: at, message: "the url must not carry a user or password; the credential goes in a header" });
+  const why = notPublic(url.hostname);
+  if (why !== undefined) errors.push({ field: at, message: `the server must be on a public host name, found ${why}` });
+  return errors;
+}
+
+/** The host as written in the url, without user, port or path. */
+function writtenHost(value) {
+  const authority = value.replace(/^[a-z]+:\/\//i, "").split(/[/?#]/)[0];
+  return authority.slice(authority.lastIndexOf("@") + 1).replace(/:\d*$/, "");
+}
+
+/** The host as the app compares it: lowercase ASCII (punycode), without a trailing dot. */
+export function canonicalHost(host) {
+  return new URL(`https://${host}/`).hostname.replace(/\.$/, "");
+}
+
+function localRules(server) {
+  const errors = [];
+  const at = "manifest.servers.local";
   if (server.command !== undefined) errors.push(commandError(server));
-  if (typeof server.image === "string" && !IMAGE_WITH_DIGEST.test(server.image)) {
-    errors.push({ field: "manifest.server.image", message: `image must be pinned by digest (name@sha256:<64 hex>), found "${server.image}"` });
+  if (typeof server.image === "string") {
+    if (!IMAGE_WITH_DIGEST.test(server.image)) {
+      errors.push({ field: field(at, "image"), message: `image must be pinned by digest (name@sha256:<64 hex>), found "${server.image}"` });
+    } else if (server.image.split("@")[0].split("/").pop().includes(":")) {
+      errors.push({ field: field(at, "image"), message: "a tag next to the digest is not accepted: the digest is what runs, so the tag only misleads" });
+    }
   }
   if (Array.isArray(server.args)) {
     server.args.forEach((arg, i) => {
       if (typeof arg !== "string") return;
-      if (arg.includes(CREDENTIAL)) {
-        errors.push({ field: field("manifest.server.args", i), message: `${CREDENTIAL} goes in env or a header, never in an argument (arguments show up in ps)` });
+      if (PIPE_TO_SHELL.test(arg)) errors.push({ field: field(at, "args", i), message: "downloading and running a script is not accepted" });
+      if (server.image !== undefined && CONTAINER_FLAGS.test(arg)) {
+        errors.push({ field: field(at, "args", i), message: `"${arg}" widens the container; args go to the server, and the app builds the run command` });
       }
-      if (PIPE_TO_SHELL.test(arg)) errors.push({ field: field("manifest.server.args", i), message: "downloading and running a script is not accepted" });
     });
+  }
+  if (isObject(server.env)) {
+    for (const name of Object.keys(server.env)) if (LOADER_ENV.test(name)) errors.push(loaderEnvError(field(at, "env", name), name));
   }
   if (isObject(server.package)) errors.push(...lockfileRules(server.package));
   return errors;
+}
+
+function loaderEnvError(at, name) {
+  return { field: at, message: `${name} changes how the process loads code, what it trusts or where its traffic goes, and is not accepted` };
 }
 
 function commandError(server) {
@@ -116,13 +321,13 @@ function commandError(server) {
   const oneShot = ONE_SHOT_RUNNERS.has(command) || (PACKAGE_MANAGERS.has(command) && args.some((a) => a === "exec" || a === "dlx" || a === "x" || a === "tool"));
   if (oneShot) {
     return {
-      field: "manifest.server.command",
-      message: `"${command}" fetches a package without a lockfile, which pins the version but not the dependencies; use server.package with an npm lockfile and integrity, or an image pinned by digest`,
+      field: "manifest.servers.local.command",
+      message: `"${command}" fetches a package without a lockfile, which pins the version but not the dependencies; use servers.local.package with an npm lockfile and integrity, or an image pinned by digest`,
     };
   }
   return {
-    field: "manifest.server.command",
-    message: "commands and scripts are not accepted: use an image pinned by digest or server.package with a lockfile",
+    field: "manifest.servers.local.command",
+    message: "commands and scripts are not accepted: use an image pinned by digest or servers.local.package with a lockfile",
   };
 }
 
@@ -132,7 +337,7 @@ function scriptKeys(value, path) {
   const found = [];
   for (const [key, child] of Object.entries(value)) {
     const here = [...path, key];
-    if (here.join(".") === "manifest.server.package.lockfile") continue;
+    if (here.join(".") === "manifest.servers.local.package.lockfile") continue;
     if (!Array.isArray(value) && SCRIPT_KEYS.has(key)) found.push(here.join("."));
     found.push(...scriptKeys(child, here));
   }
@@ -141,7 +346,7 @@ function scriptKeys(value, path) {
 
 function lockfileRules(pkg) {
   const errors = [];
-  const base = "manifest.server.package.lockfile";
+  const base = "manifest.servers.local.package.lockfile";
   const lock = pkg.lockfile;
   if (!isObject(lock) || !isObject(lock.packages)) return errors;
   const root = lock.packages[""];
@@ -160,7 +365,7 @@ function lockfileRules(pkg) {
   if (!isObject(main) || main.version !== pkg.version) {
     errors.push({ field: field(base, "packages"), message: `the lockfile must resolve ${pkg.name} to ${pkg.version}` });
   } else if (pkg.bin !== undefined && !(isObject(main.bin) && typeof main.bin[pkg.bin] === "string")) {
-    errors.push({ field: "manifest.server.package.bin", message: `${pkg.name}@${pkg.version} has no bin "${pkg.bin}" in the lockfile` });
+    errors.push({ field: "manifest.servers.local.package.bin", message: `${pkg.name}@${pkg.version} has no bin "${pkg.bin}" in the lockfile` });
   }
   for (const [key, entry] of Object.entries(lock.packages)) {
     if (key === "") continue;
@@ -176,15 +381,42 @@ function lockfileRules(pkg) {
     if (typeof entry.integrity !== "string" || !INTEGRITY.test(entry.integrity)) {
       errors.push({ field: field(at, "integrity"), message: "every lockfile entry needs an integrity hash (sha512-...)" });
     }
-    if (typeof entry.resolved !== "string" || !entry.resolved.startsWith("https://")) {
-      errors.push({ field: field(at, "resolved"), message: "every lockfile entry needs an https resolved URL" });
+    if (typeof entry.resolved !== "string" || !entry.resolved.startsWith(NPM_REGISTRY)) {
+      errors.push({ field: field(at, "resolved"), message: `every lockfile entry must resolve from ${NPM_REGISTRY}` });
     }
+    // Only the honest case: a lockfile can leave the flag out, so the app also installs with --ignore-scripts.
     if (entry.hasInstallScript === true) {
       errors.push({ field: field(at, "hasInstallScript"), message: "a dependency with an install script runs code on install and is not accepted" });
     }
   }
   return errors;
 }
+
+/**
+ * What identifies each connection type in the catalog: the host of its remote server and its hosts, aliases,
+ * packages, trackers and actions. Each one belongs to one type, so a server never matches two.
+ */
+export function connectionClaims(item) {
+  const m = isObject(item.manifest) ? item.manifest : {};
+  const list = (value) => (Array.isArray(value) ? value.filter((v) => typeof v === "string") : []);
+  const claims = [];
+  const url = m.servers?.remote?.url;
+  if (typeof url === "string" && URL.canParse(url)) claims.push({ space: "host", key: canonicalHost(new URL(url).hostname), field: "manifest.servers.remote.url" });
+  for (const host of list(m.hosts)) if (URL.canParse(`https://${host}/`)) claims.push({ space: "host", key: canonicalHost(host), field: "manifest.hosts" });
+  for (const alias of list(m.aliases)) claims.push({ space: "alias", key: alias, field: "manifest.aliases" });
+  for (const pkg of list(m.packages)) claims.push({ space: "package", key: pkg, field: "manifest.packages" });
+  for (const tracker of list(m.trackers)) claims.push({ space: "tracker", key: tracker, field: "manifest.trackers" });
+  for (const action of list(m.actions)) claims.push({ space: "action", key: action, field: "manifest.actions" });
+  return claims;
+}
+
+/** The claims of the official types, from the list, for a catalog that has not published them yet. */
+export function officialClaims() {
+  return [...OFFICIAL_CONNECTIONS].flatMap(([id, o]) =>
+    connectionClaims({ manifest: { hosts: o.hosts, aliases: o.aliases, packages: o.packages, trackers: o.trackers } }).map((c) => ({ ...c, owner: id })),
+  );
+}
+
 
 /**
  * What the import checks beyond the schema: agent ids, the agent a step uses, step keys and needs, and version 4 features.

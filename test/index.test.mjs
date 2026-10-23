@@ -69,37 +69,63 @@ test("every template says in requires the triggers it brings, in order, with wha
   assert.deepEqual(triggers["pr-thread-reply"], [{ kind: "github-thread-reply", choose: ["owner", "repoMatch"] }]);
 });
 
-test("connections stay out of the index for now; once open, a connection requires what the install screen shows: server, hosts, methods, scopes and write tools", async () => {
+test("remote connections reach the index, local ones wait; a connection requires what the install screen shows", async () => {
   const catalog = mkdtempSync(join(tmpdir(), "catalog-"));
   mkdirSync(join(catalog, "connections"));
   for (const name of ["example-docker", "example-npm", "example-remote"]) {
     cpSync(join(root, "test/fixtures/connections", `${name}.json`), join(catalog, "connections", `${name}.json`));
   }
-  await assert.rejects(buildIndex(catalog, AT), /connection types are not accepted yet/);
-  const index = JSON.parse(await buildIndex(catalog, { ...AT, connections: true }));
+  await assert.rejects(buildIndex(catalog, AT), /example-docker\.json: manifest\.servers\.local: local servers are not accepted yet/);
+  const index = JSON.parse(await buildIndex(catalog, { ...AT, localServers: true }));
   const requires = Object.fromEntries(index.items.map((i) => [i.id, i.requires]));
   assert.deepEqual(requires["example-docker"], {
-    server: { transport: "stdio", image: "ghcr.io/example/example-mcp@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" },
+    servers: { local: { image: "ghcr.io/example/example-mcp@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" } },
     hosts: [],
-    methods: ["token"],
+    methods: [{ type: "token" }],
     scopes: [],
+    fields: [],
+    triggers: [],
+    actions: [],
     writeTools: ["create_item", "delete_item"],
   });
-  assert.deepEqual(requires["example-npm"].server, { transport: "stdio", package: "example-mcp@1.2.3" });
+  assert.deepEqual(requires["example-npm"].servers, { local: { package: "example-mcp@1.2.3" } });
   assert.deepEqual(requires["example-remote"], {
-    server: { transport: "http", url: "https://mcp.example.com/mcp" },
+    servers: { remote: { url: "https://mcp.example.com/mcp" } },
     hosts: ["api.example.com", "mcp.example.com"],
-    methods: ["oauth"],
+    methods: [{ type: "oauth" }],
     scopes: ["read", "write"],
+    fields: [],
+    triggers: [],
+    actions: [],
     writeTools: ["post_message"],
   });
+});
+
+test("a connection whose address the person fills requires the field, and carries its minAppVersion", async () => {
+  const catalog = mkdtempSync(join(tmpdir(), "catalog-"));
+  mkdirSync(join(catalog, "connections"));
+  const item = JSON.parse(readFileSync(join(root, "test/fixtures/connections/example-remote.json"), "utf8"));
+  item.id = "grafana";
+  item.minAppVersion = "0.2.0";
+  item.manifest.fields = [{ key: "url", label: { en: "Address", "pt-BR": "Endereço" }, format: "url", required: true }];
+  item.manifest.servers = { remote: { urlField: "url" } };
+  item.manifest.triggers = ["mcp-poll"];
+  item.manifest.methods.push({ type: "session", reader: "browser-cookie" });
+  writeFileSync(join(catalog, "connections/grafana.json"), JSON.stringify(item));
+  const [entry] = JSON.parse(await buildIndex(catalog, AT)).items;
+  assert.equal(entry.minAppVersion, "0.2.0");
+  assert.deepEqual(entry.requires.servers, { remote: { urlField: "url" } });
+  assert.deepEqual(entry.requires.hosts, ["api.example.com"]);
+  assert.deepEqual(entry.requires.fields, ["url"]);
+  assert.deepEqual(entry.requires.triggers, ["mcp-poll"]);
+  assert.deepEqual(entry.requires.methods, [{ type: "oauth" }, { type: "session", reader: "browser-cookie" }]);
 });
 
 test("an invalid catalog does not become an index", async () => {
   const catalog = mkdtempSync(join(tmpdir(), "catalog-"));
   mkdirSync(join(catalog, "connections"));
-  cpSync(join(root, "test/fixtures/connections/grafana.json"), join(catalog, "connections/grafana.json"));
-  await assert.rejects(buildIndex(catalog, { ...AT, connections: true }), /grafana\.json: id/);
+  cpSync(join(root, "test/fixtures/connections/proprio.json"), join(catalog, "connections/proprio.json"));
+  await assert.rejects(buildIndex(catalog, { ...AT, localServers: true }), /proprio\.json: id/);
 });
 
 test("the commit must be a full sha", async () => {

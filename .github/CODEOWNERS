@@ -1,0 +1,28 @@
+# The official connection ids (scripts/lib/official-connections.json) are published only by the maintainers.
+# npm run validate checks that every one of them is listed here with the owners of this file.
+
+/.github/ @locumapp/maintainers
+/keys/ @locumapp/maintainers
+/schemas/ @locumapp/maintainers
+/scripts/ @locumapp/maintainers
+
+/connections/amplitude.json @locumapp/maintainers
+/connections/argocd.json @locumapp/maintainers
+/connections/asana.json @locumapp/maintainers
+/connections/atlassian.json @locumapp/maintainers
+/connections/canva.json @locumapp/maintainers
+/connections/figma.json @locumapp/maintainers
+/connections/github.json @locumapp/maintainers
+/connections/grafana.json @locumapp/maintainers
+/connections/intercom.json @locumapp/maintainers
+/connections/linear.json @locumapp/maintainers
+/connections/miro.json @locumapp/maintainers
+/connections/newrelic.json @locumapp/maintainers
+/connections/notion.json @locumapp/maintainers
+/connections/posthog.json @locumapp/maintainers
+/connections/prelo.json @locumapp/maintainers
+/connections/sentry.json @locumapp/maintainers
+/connections/shortcut.json @locumapp/maintainers
+/connections/slack.json @locumapp/maintainers
+/connections/teams.json @locumapp/maintainers
+/connections/vercel.json @locumapp/maintainers

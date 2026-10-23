@@ -2,6 +2,7 @@
   "kind": "connection",
   "id": "npx-without-lockfile",
   "version": 1,
+  "minAppVersion": "0.1.168",
   "description": {
     "en": "Example connection type.",
     "pt-BR": "Tipo de conexão de exemplo."
@@ -20,13 +21,14 @@
         "env": "EXAMPLE_TOKEN"
       }
     ],
-    "server": {
-      "transport": "stdio",
-      "command": "npx",
-      "args": [
-        "-y",
-        "example-mcp@1.2.3"
-      ]
+    "servers": {
+      "local": {
+        "command": "npx",
+        "args": [
+          "-y",
+          "example-mcp@1.2.3"
+        ]
+      }
     }
   }
 }

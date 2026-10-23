@@ -2,6 +2,7 @@
   "kind": "connection",
   "id": "image-without-digest",
   "version": 1,
+  "minAppVersion": "0.1.168",
   "description": {
     "en": "Example connection type.",
     "pt-BR": "Tipo de conexão de exemplo."
@@ -20,9 +21,10 @@
         "env": "EXAMPLE_TOKEN"
       }
     ],
-    "server": {
-      "transport": "stdio",
-      "image": "ghcr.io/example/example-mcp:1.0.0"
+    "servers": {
+      "local": {
+        "image": "ghcr.io/example/example-mcp:1.0.0"
+      }
     }
   }
 }
