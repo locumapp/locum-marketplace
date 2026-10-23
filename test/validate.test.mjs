@@ -352,6 +352,13 @@ test("a template where one trigger that brings an event has batch and another ha
   const hit = await errorAt(file, "package.automacao.gatilhos.1.batch");
   assert.match(hit.message, /"slack-inbox" has batch/);
   assert.match(hit.message, /no prompt serves both/);
+  assert.match(hit.message, /Batch all the triggers/);
+});
+
+test("a manual trigger next to a batched one fails telling to remove it, since manual takes no batch", async () => {
+  const file = batched((item) => item.package.automacao.gatilhos.push({ kind: "manual" }));
+  const hit = await errorAt(file, "package.automacao.gatilhos.1.batch");
+  assert.match(hit.message, /"manual" trigger takes no batch: remove it/);
 });
 
 /** slack-reply with a filter on its inbox trigger. */
@@ -370,6 +377,7 @@ for (const [condition, at, message] of [
   [{ path: "author..login" }, "path", /pattern/],
   [{ path: "author", compare: "like" }, "compare", /must be one of/],
   [{ path: "author", against: "x".repeat(501) }, "against", /500/],
+  [{ path: "author", against: "\u{1F600}".repeat(300) }, "against", /UTF-16/],
   [{ path: "author", against: "{{steps.read.text}}" }, "against", /only event markers/],
   [{ path: "author", compare: "matches", against: "(" }, "against", /regular expression/],
   [{ path: "author", value: "x" }, "value", /unknown field/],

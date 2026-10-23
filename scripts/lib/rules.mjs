@@ -668,7 +668,8 @@ function triggerRules(pkg, kind) {
     triggers.forEach((t, i) => {
       const reads = isObject(t) ? TRIGGER_KINDS.get(t.kind) : undefined;
       if (reads === undefined || reads.noEvent || t.batch !== undefined) return;
-      errors.push({ field: field("package.automacao.gatilhos", i, "batch"), message: `a "${t.kind}" trigger brings a single event, and ${batched.join(", ")} ${batched.length === 1 ? "has" : "have"} batch: a run of each reads a different event, and no prompt serves both. Batch all the triggers that bring an event, or none` });
+      const fix = reads.takesBatch ? "Batch all the triggers that bring an event, or none" : `A "${t.kind}" trigger takes no batch: remove it, or batch none`;
+      errors.push({ field: field("package.automacao.gatilhos", i, "batch"), message: `a "${t.kind}" trigger brings a single event, and ${batched.join(", ")} ${batched.length === 1 ? "has" : "have"} batch: a run of each reads a different event, and no prompt serves both. ${fix}` });
     });
   }
   if (kind === "template" && batched.length > 0) {
@@ -691,6 +692,8 @@ function filterRules(filter, at) {
     const against = isObject(condition) ? condition.against : undefined;
     if (typeof against !== "string") return;
     const where = field(at, j, "against");
+    // The app counts UTF-16 units (zod), the schema counts code points (ajv).
+    if (against.length > 500) errors.push({ field: where, message: `${against.length} UTF-16 units, over the 500 the app takes` });
     const foreign = [...against.matchAll(/\{\{[^}]*\}\}/g)].map((m) => m[0]).find((m) => !/^\{\{\s*event\.[\w-]+(?:\.[\w-]+)*\s*\}\}$/.test(m));
     if (foreign !== undefined) {
       errors.push({ field: where, message: `${foreign}: against takes only event markers, like {{event.author.login}}; steps, memory and the others do not exist yet when the filter runs` });
