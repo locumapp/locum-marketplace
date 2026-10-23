@@ -3,6 +3,7 @@ import { relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readFile } from "node:fs/promises";
 import { validateCatalog, validateFile } from "./lib/validate.mjs";
+import { checkCodeowners } from "./lib/codeowners.mjs";
 import { findForbiddenTerms, parseTerms, termsPath, trackedFiles } from "./lib/forbidden-terms.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -12,7 +13,7 @@ const errors = [];
 let count;
 if (files.length === 0) {
   const result = await validateCatalog(root);
-  errors.push(...result.errors);
+  errors.push(...result.errors, ...(await checkCodeowners(root)));
   count = result.items.length;
 } else {
   for (const file of files) errors.push(...(await validateFile(resolve(file), { root })));
