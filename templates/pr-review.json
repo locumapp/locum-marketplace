@@ -207,7 +207,7 @@
             "requiresServers": [
               "argocd"
             ],
-            "prompt": "Verifique se houve deploy recente do servico afetado e se algum achado\ncritico ja esta em producao.\n\nAchados:\n{{steps.audit}}"
+            "prompt": "Verifique se houve deploy recente do serviço afetado e se algum achado\ncrítico já está em produção.\n\nAchados:\n{{steps.audit}}"
           },
           {
             "type": "action",
