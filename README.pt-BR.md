@@ -11,8 +11,9 @@ templates de automação e pacotes que qualquer pessoa pode propor.
   servidor MCP (um endereço https remoto, uma imagem fixada por digest ou um
   pacote npm fixado pelo lockfile), os métodos de autenticação, os campos da
   instância, os gatilhos e as ações do núcleo que ele oferece e as
-  ferramentas que escrevem fora da máquina. Servidor remoto é aceito; o local
-  espera o app fixá-lo. Os ids oficiais só quem mantém publica
+  ferramentas que escrevem fora da máquina. Servidor remoto é aceito; o local,
+  só por imagem e só em tipo oficial, até o app fixá-lo. Os ids oficiais só
+  quem mantém publica
   ([CODEOWNERS](.github/CODEOWNERS)).
 - `templates/`: templates de automação, com os nós visíveis.
 - `packages/`: pacotes exportados do Locum, já limpos de dado de empresa.

@@ -1,0 +1,29 @@
+{
+  "kind": "connection",
+  "id": "linear",
+  "version": 1,
+  "minAppVersion": "0.1.168",
+  "name": {
+    "en": "Linear",
+    "pt-BR": "Linear"
+  },
+  "description": {
+    "en": "Linear's official MCP server. Agents search, read and comment on issues in the authorized workspace.",
+    "pt-BR": "Servidor MCP oficial do Linear. Os agents buscam, leem e comentam issues do workspace autorizado."
+  },
+  "manifest": {
+    "category": "work",
+    "logo": "linear",
+    "color": "5E6AD2",
+    "methods": [
+      {
+        "type": "oauth"
+      }
+    ],
+    "servers": {
+      "remote": {
+        "url": "https://mcp.linear.app/mcp"
+      }
+    }
+  }
+}

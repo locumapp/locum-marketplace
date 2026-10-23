@@ -1,0 +1,29 @@
+{
+  "kind": "connection",
+  "id": "newrelic",
+  "version": 1,
+  "minAppVersion": "0.1.168",
+  "name": {
+    "en": "New Relic",
+    "pt-BR": "New Relic"
+  },
+  "description": {
+    "en": "New Relic's official MCP server. Agents run NRQL, read logs and look up incidents in the authorized account.",
+    "pt-BR": "Servidor MCP oficial do New Relic. Os agents rodam NRQL, leem logs e consultam incidentes da conta autorizada."
+  },
+  "manifest": {
+    "category": "observability",
+    "logo": "newrelic",
+    "color": "008C99",
+    "methods": [
+      {
+        "type": "oauth"
+      }
+    ],
+    "servers": {
+      "remote": {
+        "url": "https://mcp.newrelic.com/mcp"
+      }
+    }
+  }
+}

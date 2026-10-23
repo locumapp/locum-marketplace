@@ -1,0 +1,29 @@
+{
+  "kind": "connection",
+  "id": "notion",
+  "version": 1,
+  "minAppVersion": "0.1.168",
+  "name": {
+    "en": "Notion",
+    "pt-BR": "Notion"
+  },
+  "description": {
+    "en": "Notion's official MCP server. Agents search and read the pages and databases you allow during authorization.",
+    "pt-BR": "Servidor MCP oficial do Notion. Os agents buscam e leem páginas e bases que você liberar na autorização."
+  },
+  "manifest": {
+    "category": "work",
+    "logo": "notion",
+    "color": "000000",
+    "methods": [
+      {
+        "type": "oauth"
+      }
+    ],
+    "servers": {
+      "remote": {
+        "url": "https://mcp.notion.com/mcp"
+      }
+    }
+  }
+}

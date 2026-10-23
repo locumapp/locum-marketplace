@@ -1,0 +1,33 @@
+{
+  "kind": "connection",
+  "id": "atlassian",
+  "version": 1,
+  "minAppVersion": "0.1.168",
+  "name": {
+    "en": "Atlassian",
+    "pt-BR": "Atlassian"
+  },
+  "description": {
+    "en": "Atlassian's official MCP server (Rovo), with Jira and Confluence. Authorization picks the site and what Locum sees, and the same connection is where tasks proposed by an agent go, always after your approval.",
+    "pt-BR": "Servidor MCP oficial da Atlassian (Rovo), com Jira e Confluence. A autorização escolhe o site e o que o Locum enxerga, e a mesma conexão serve de destino para as tarefas que um agent propõe abrir, sempre depois da sua aprovação."
+  },
+  "manifest": {
+    "category": "work",
+    "logo": "atlassian",
+    "color": "0052CC",
+    "methods": [
+      {
+        "type": "oauth"
+      }
+    ],
+    "servers": {
+      "remote": {
+        "url": "https://mcp.atlassian.com/v1/mcp"
+      }
+    },
+    "trackers": [
+      "jira",
+      "jira-atlassian"
+    ]
+  }
+}

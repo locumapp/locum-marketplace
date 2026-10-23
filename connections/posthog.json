@@ -1,0 +1,29 @@
+{
+  "kind": "connection",
+  "id": "posthog",
+  "version": 1,
+  "minAppVersion": "0.1.168",
+  "name": {
+    "en": "PostHog",
+    "pt-BR": "PostHog"
+  },
+  "description": {
+    "en": "PostHog's official MCP server. Agents query events, insights and flags in the authorized project.",
+    "pt-BR": "Servidor MCP oficial do PostHog. Os agents consultam eventos, insights e flags do projeto autorizado."
+  },
+  "manifest": {
+    "category": "data",
+    "logo": "posthog",
+    "color": "F54E00",
+    "methods": [
+      {
+        "type": "oauth"
+      }
+    ],
+    "servers": {
+      "remote": {
+        "url": "https://mcp.posthog.com/mcp"
+      }
+    }
+  }
+}

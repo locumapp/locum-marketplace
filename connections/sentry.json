@@ -1,0 +1,29 @@
+{
+  "kind": "connection",
+  "id": "sentry",
+  "version": 1,
+  "minAppVersion": "0.1.168",
+  "name": {
+    "en": "Sentry",
+    "pt-BR": "Sentry"
+  },
+  "description": {
+    "en": "Sentry's official MCP server. Agents search errors, events and stack traces in the authorized organizations.",
+    "pt-BR": "Servidor MCP oficial do Sentry. Os agents buscam erros, eventos e stack traces das organizações autorizadas."
+  },
+  "manifest": {
+    "category": "observability",
+    "logo": "sentry",
+    "color": "362D59",
+    "methods": [
+      {
+        "type": "oauth"
+      }
+    ],
+    "servers": {
+      "remote": {
+        "url": "https://mcp.sentry.dev/mcp"
+      }
+    }
+  }
+}

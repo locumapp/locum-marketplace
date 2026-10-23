@@ -43,8 +43,10 @@ test("the index lists every item sorted, with the hash of the file bytes and the
   assert.equal(index.commit, COMMIT);
   assert.equal(index.committedAt, 1792000000);
   assert.deepEqual(Object.keys(index), ["format", "version", "commit", "committedAt", "items"]);
-  const ids = index.items.map((i) => i.id);
-  assert.deepEqual(ids.slice(0, 3), ["morning-briefing", "observability-watch", "pr-rereview"]);
+  const kinds = index.items.map((i) => i.kind);
+  assert.equal(kinds.lastIndexOf("connection") < kinds.indexOf("template"), true);
+  assert.deepEqual(index.items.filter((i) => i.kind === "connection").map((i) => i.id).slice(0, 3), ["amplitude", "asana", "atlassian"]);
+  assert.deepEqual(index.items.filter((i) => i.kind === "template").map((i) => i.id).slice(0, 3), ["morning-briefing", "observability-watch", "pr-rereview"]);
   const review = index.items.find((i) => i.id === "pr-review");
   assert.equal(review.path, "templates/pr-review.json");
   assert.equal(review.sha256, createHash("sha256").update(readFileSync(join(root, review.path))).digest("hex"));

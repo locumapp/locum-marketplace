@@ -1,0 +1,29 @@
+{
+  "kind": "connection",
+  "id": "intercom",
+  "version": 1,
+  "minAppVersion": "0.1.168",
+  "name": {
+    "en": "Intercom",
+    "pt-BR": "Intercom"
+  },
+  "description": {
+    "en": "Intercom's official MCP server. Agents search conversations and contacts in the authorized workspace.",
+    "pt-BR": "Servidor MCP oficial do Intercom. Os agents buscam conversas e contatos do workspace autorizado."
+  },
+  "manifest": {
+    "category": "communication",
+    "logo": "intercom",
+    "color": "1F8DED",
+    "methods": [
+      {
+        "type": "oauth"
+      }
+    ],
+    "servers": {
+      "remote": {
+        "url": "https://mcp.intercom.com/mcp"
+      }
+    }
+  }
+}

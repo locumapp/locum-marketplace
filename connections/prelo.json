@@ -1,0 +1,48 @@
+{
+  "kind": "connection",
+  "id": "prelo",
+  "version": 1,
+  "minAppVersion": "0.1.170",
+  "name": {
+    "en": "Prelo",
+    "pt-BR": "Prelo"
+  },
+  "description": {
+    "en": "Prelo's own MCP server, on the Mac or in Docker at home. Agents check the printer, preview a piece and print notes, checklists, labels, QR codes, notebook pages and the daily newspaper; by default every print waits in the queue for your approval.",
+    "pt-BR": "Servidor MCP do próprio Prelo, no Mac ou no Docker de casa. Os agents conferem a impressora, veem a prévia e imprimem recados, listas, etiquetas, QR codes, folhas de caderno e o jornal do dia; por padrão cada impressão espera na Fila pela sua aprovação."
+  },
+  "manifest": {
+    "category": "home",
+    "logo": "prelo",
+    "color": "1C1917",
+    "credentialOptional": true,
+    "methods": [
+      {
+        "type": "token"
+      },
+      {
+        "type": "none"
+      }
+    ],
+    "fields": [
+      {
+        "key": "url",
+        "label": {
+          "pt-BR": "Endereço",
+          "en": "Address"
+        },
+        "format": "url",
+        "required": true
+      }
+    ],
+    "servers": {
+      "remote": {
+        "urlField": "url",
+        "path": "/mcp",
+        "headers": {
+          "Authorization": "Bearer ${credential}"
+        }
+      }
+    }
+  }
+}

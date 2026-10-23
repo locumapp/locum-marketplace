@@ -1,0 +1,29 @@
+{
+  "kind": "connection",
+  "id": "miro",
+  "version": 1,
+  "minAppVersion": "0.1.168",
+  "name": {
+    "en": "Miro",
+    "pt-BR": "Miro"
+  },
+  "description": {
+    "en": "Miro's official MCP server. Agents read and draw on the boards you allow.",
+    "pt-BR": "Servidor MCP oficial do Miro. Os agents leem e desenham em quadros que você liberar."
+  },
+  "manifest": {
+    "category": "work",
+    "logo": "miro",
+    "color": "050038",
+    "methods": [
+      {
+        "type": "oauth"
+      }
+    ],
+    "servers": {
+      "remote": {
+        "url": "https://mcp.miro.com/"
+      }
+    }
+  }
+}

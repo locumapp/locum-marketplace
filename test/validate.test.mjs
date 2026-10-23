@@ -535,6 +535,13 @@ test("in the catalog, an official type may run an image pinned by digest; a pack
   assert.match(errors[1].message, /package/);
 });
 
+test("every official type that shipped in the app is published, and argocd, which never did, is not", async () => {
+  const { items } = await validateCatalog(root);
+  const official = JSON.parse(readFileSync(join(root, "scripts/lib/official-connections.json"), "utf8")).official;
+  const published = items.filter((i) => i.kind === "connection").map((i) => i.id);
+  assert.deepEqual(published, Object.keys(official).filter((id) => id !== "argocd").sort());
+});
+
 test("two connection types cannot claim the same host or alias, and the error points to both files", async () => {
   const { catalog } = connection((item, m) => {
     item.id = "example-a";

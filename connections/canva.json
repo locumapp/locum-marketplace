@@ -1,0 +1,29 @@
+{
+  "kind": "connection",
+  "id": "canva",
+  "version": 1,
+  "minAppVersion": "0.1.168",
+  "name": {
+    "en": "Canva",
+    "pt-BR": "Canva"
+  },
+  "description": {
+    "en": "Canva's official MCP server. Agents search and read designs in your account.",
+    "pt-BR": "Servidor MCP oficial do Canva. Os agents buscam e leem designs da sua conta."
+  },
+  "manifest": {
+    "category": "work",
+    "logo": null,
+    "color": "00C4CC",
+    "methods": [
+      {
+        "type": "oauth"
+      }
+    ],
+    "servers": {
+      "remote": {
+        "url": "https://mcp.canva.com/mcp"
+      }
+    }
+  }
+}

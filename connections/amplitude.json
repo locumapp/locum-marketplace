@@ -1,0 +1,29 @@
+{
+  "kind": "connection",
+  "id": "amplitude",
+  "version": 1,
+  "minAppVersion": "0.1.168",
+  "name": {
+    "en": "Amplitude",
+    "pt-BR": "Amplitude"
+  },
+  "description": {
+    "en": "Amplitude's official MCP server. Agents query charts, cohorts and events in the authorized project.",
+    "pt-BR": "Servidor MCP oficial do Amplitude. Os agents consultam gráficos, coortes e eventos do projeto autorizado."
+  },
+  "manifest": {
+    "category": "data",
+    "logo": null,
+    "color": "1E61F0",
+    "methods": [
+      {
+        "type": "oauth"
+      }
+    ],
+    "servers": {
+      "remote": {
+        "url": "https://mcp.amplitude.com/mcp"
+      }
+    }
+  }
+}

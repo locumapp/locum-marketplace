@@ -68,11 +68,21 @@ app já tem e nunca traz código:
 - `servers`, com ao menos um de:
   - `remote`: `{"url": "https://..."}` para endereço fixo, ou
     `{"urlField": "<key>"}` quando a pessoa digita o endereço num campo `url`
-    obrigatório. `headers` opcional, onde vai o `${credential}`;
+    obrigatório, com `path` opcional somado ao fim dele (`"/mcp"`, sem
+    marcador nem segmento `.` ou `..`). `headers` opcional, onde vai o
+    `${credential}`;
   - `local`: `{"image": "registro/nome@sha256:<64 hex>"}` ou
     `{"package": {"registry": "npm", "name", "version", "bin", "lockfile"}}`,
-    com `args` e `env` opcionais. Ainda não é aceito no catálogo: o app fixa
-    servidor local numa release seguinte.
+    com `args` e `env` opcionais. No catálogo, só tipo oficial publica
+    servidor local, e só por imagem, que o app sobe com `docker run`; o pacote
+    e o servidor local de terceiro esperam o app fixá-los numa release
+    seguinte.
+
+  Os valores de `url` (só no caminho), `headers`, `args` e `env` aceitam
+  `${field:<key>}`, o valor de um campo declarado em `fields`. O
+  `${credential}` vai num lugar só de cada servidor, um cabeçalho do remoto ou
+  uma variável do local, e é o lugar que o método `token` declara em `header`
+  ou `env`, quando declara.
 - `triggers`: tipos de gatilho do núcleo que leem este tipo (`poll` lê
   `github`, `slack-inbox` lê `slack`...) ou um servidor dele (`mcp-poll`);
 - `actions`: ações de fluxo do núcleo que precisam do tipo, como
@@ -87,15 +97,23 @@ esquema é o [`schemas/connection.schema.json`](schemas/connection.schema.json).
 ### O que é recusado
 
 - `command`, `npx`, `uvx` ou qualquer jeito de rodar script.
-- `url` remota que não é https, traz usuário ou senha, tem placeholder
-  (`${credential}` incluído, que pararia em log), escreve o host diferente da
+- `url` remota que não é https, traz usuário ou senha, tem `${credential}`
+  (que pararia em log) ou `${field:...}` fora do caminho (no host, na porta,
+  na consulta ou na âncora), escreve o host diferente da
   forma canônica (ASCII minúsculo, punycode, sem ponto final, o que pega
   homógrafo) ou aponta para endereço IP, `localhost`, nome sem ponto ou sufixo
   privado (`.local`, `.localhost`, `.localdomain`, `.internal`, `.intranet`,
   `.corp`, `.private`, `.home`, `.home.arpa`, `.lan`, `.test`, `.example`,
   `.invalid`). O mesmo vale para `hosts`.
-- `${credential}` fora de header do servidor remoto ou do `env` do local, e
-  qualquer outro placeholder em header.
+- `${credential}` fora de header do servidor remoto ou do `env` do local, em
+  mais de um lugar do mesmo servidor ou fora do lugar que o método `token`
+  declara; marcador que não é `${credential}` nem `${field:<key>}` de campo
+  declarado; `path` sem `urlField`.
+- Em tipo de terceiro, campo `text` citado no servidor que recebe
+  `${credential}`. Um texto livre numa variável, num argumento ou num
+  cabeçalho pode apontar o servidor para outro host (`--base-url`,
+  `API_HOST`) sem passar pela regra de origem que o app aplica ao campo `url`.
+  Use um campo `url`.
 - Tipo de gatilho, tipo de tracker ou ação que o núcleo não tem
   ([`scripts/lib/core-kinds.json`](scripts/lib/core-kinds.json) e os gatilhos
   do esquema de template), gatilho que lê outro tipo, e ação ou chave de escopo
@@ -106,7 +124,9 @@ esquema é o [`schemas/connection.schema.json`](schemas/connection.schema.json).
   alarga o contêiner (`--privileged`, `-v`, `--network`...), variável que muda
   como o processo carrega código ou sai para a rede (`NODE_OPTIONS`,
   `NODE_TLS_REJECT_UNAUTHORIZED`, `ELECTRON_RUN_AS_NODE`, `SSLKEYLOGFILE`,
-  `LD_*`, `DYLD_*`, `PATH`, `PYTHONPATH`, proxies...), e entrada de lockfile sem
+  `LD_*`, `DYLD_*`, `PATH`, `PYTHONPATH`, proxies...), que muda o `docker` que
+  sobe o servidor (`DOCKER_*`) ou que o cliente MCP sobrescreve (`HOME`,
+  `LOGNAME`, `SHELL`, `TERM`, `USER`), a mesma lista do app, e entrada de lockfile sem
   `integrity`, resolvida fora de `https://registry.npmjs.org/` ou com script
   de instalação.
 - Os ids `locum` e `proprio`, que o app reserva, e id igual a apelido de tipo
@@ -124,13 +144,23 @@ falta ou tem outro dono. Os donos só seguram o merge quando a proteção da
 [docs/connections-pending.md](docs/connections-pending.md)). Nenhum outro tipo pode usar os hosts, apelidos, pacotes e trackers
 listados para eles.
 
-### Como o app vai receber, e as versões
+Os tipos que vinham dentro do app estão em `connections/`, com o mesmo
+conteúdo que o app usa hoje. O `argocd` está na lista para ninguém tomar o id
+nem o nome do servidor que os templates pedem, mas não tem tipo no app: fica
+sem arquivo até ter.
 
-Nada disto vale no app ainda: nenhuma versão publicada instala tipo de conexão
-do catálogo. O app vai ler os tipos de conexão do índice assinado, o embutido
-nele e o da rede (ADR 0018, fatia 2). Tipo instalado vai ficar preso ao commit
-e ao `sha256` do arquivo. Quando `version` subir, o app vai mostrar a
-atualização com o que mudou (fatia 5):
+### Como o app recebe, e as versões
+
+O app lê os tipos de conexão do índice assinado, o embutido no build e o da
+rede (ADR 0018, fatia 2), e "Adicionar conexão" lista os de terceiro com o
+estado: "Ainda não instala", ou "Precisa atualizar o Locum" quando o
+`minAppVersion` passa da versão do app. Nenhum instala ainda; a instalação é a
+fatia 3. Tipo do índice com id ou apelido oficial é ignorado, e os oficiais
+seguem vindo de dentro do app até a fatia 4, que passa a lê-los daqui. Até lá,
+publicar ou mudar um oficial não muda nada para quem usa.
+
+Tipo instalado vai ficar preso ao commit e ao `sha256` do arquivo. Quando
+`version` subir, o app vai mostrar a atualização com o que mudou (fatia 5):
 
 - mudança que não amplia o que o tipo pede (texto, ícone, campo, ferramenta de
   leitura) vai entrar sozinha, a não ser que a pessoa tenha desligado
@@ -139,11 +169,12 @@ atualização com o que mudou (fatia 5):
   pacote novos) vai sempre esperar o aceite da pessoa, e a credencial nunca vai
   seguir para um host novo antes disso.
 
-`minAppVersion` é obrigatório em tipo de conexão, em `0.1.168` ou mais nova:
-nenhuma release anterior instala tipo de conexão. Quando sair a release que
-os lê, o piso sobe para a versão dela. Suba o valor quando o tipo usar método, leitor, tipo de
-gatilho ou ação que app mais velho não tem: ele vai mostrar o tipo como
-"precisa atualizar" e manter o instalado rodando.
+`minAppVersion` é obrigatório em tipo de conexão, em `0.1.168` ou mais nova, a
+primeira release que lê tipos do índice. Suba o valor quando o tipo usar algo
+que app mais velho não tem, método, leitor, tipo de gatilho, ação ou campo do
+esquema: ele vai mostrar o tipo como "precisa atualizar" e manter o instalado
+rodando. O `path` e os marcadores `${field:<key>}` entraram no esquema do app
+em `0.1.170`, que é o piso do Grafana e do Prelo.
 
 ## Templates e pacotes
 

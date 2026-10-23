@@ -67,11 +67,21 @@ has and never brings code:
 - `servers`, at least one of:
   - `remote`: `{"url": "https://..."}` for a fixed address, or
     `{"urlField": "<key>"}` when the person types the address in a required
-    `url` field. Optional `headers`, where `${credential}` goes;
+    `url` field, with an optional `path` added to its end (`"/mcp"`, without
+    markers or `.` and `..` segments). Optional `headers`, where
+    `${credential}` goes;
   - `local`: `{"image": "registry/name@sha256:<64 hex>"}` or
     `{"package": {"registry": "npm", "name", "version", "bin", "lockfile"}}`,
-    with optional `args` and `env`. Not accepted in the catalog yet: the app
-    pins local servers in a later release.
+    with optional `args` and `env`. In the catalog, only an official type
+    publishes a local server, and only by image, which the app runs with
+    `docker run`; a package and a local server from a third party wait for
+    the app to pin them in a later release.
+
+  The values of `url` (in the path only), `headers`, `args` and `env` take
+  `${field:<key>}`, the value of a field declared in `fields`. `${credential}`
+  goes in one place of each server, a header of the remote one or a variable of
+  the local one, and it is the place the `token` method declares in `header` or
+  `env`, when it does.
 - `triggers`: trigger kinds of the core that read this type (`poll` reads
   `github`, `slack-inbox` reads `slack`...) or one of its servers (`mcp-poll`);
 - `actions`: flow actions of the core that need the type, as `<id>.<action>`;
@@ -85,8 +95,9 @@ The schema is [`schemas/connection.schema.json`](schemas/connection.schema.json)
 ### What is refused
 
 - `command`, `npx`, `uvx` or any other way of running a script.
-- A remote `url` that is not https, carries a user or password, has a
-  placeholder (`${credential}` included, it would end up in logs), writes the
+- A remote `url` that is not https, carries a user or password, has
+  `${credential}` (it would end up in logs) or `${field:...}` outside the path
+  (in the host, the port, the query or the fragment), writes the
   host differently from its canonical form (lowercase ASCII, punycode, no
   trailing dot, which catches homographs) or points to an IP address,
   `localhost`, a single-label name or a private suffix (`.local`, `.localhost`,
@@ -94,7 +105,13 @@ The schema is [`schemas/connection.schema.json`](schemas/connection.schema.json)
   `.home.arpa`, `.lan`, `.test`, `.example`, `.invalid`). The same holds for
   `hosts`.
 - `${credential}` anywhere but a header of the remote server or the `env` of
-  the local one, and any other placeholder in a header.
+  the local one, in more than one place of the same server or outside the
+  place the `token` method declares; a marker that is neither `${credential}`
+  nor `${field:<key>}` of a declared field; `path` without `urlField`.
+- In a type from a third party, a `text` field used in the server that
+  receives `${credential}`. Free text in a variable, an argument or a header
+  can point the server to another host (`--base-url`, `API_HOST`) without the
+  origin check the app applies to a `url` field. Use a `url` field.
 - A trigger kind, tracker kind or action the core does not have
   ([`scripts/lib/core-kinds.json`](scripts/lib/core-kinds.json) and the
   triggers in the template schema), a trigger that reads another type, and an
@@ -105,7 +122,9 @@ The schema is [`schemas/connection.schema.json`](schemas/connection.schema.json)
   flags that widen the container (`--privileged`, `-v`, `--network`...), env
   names that change how the process loads code or reaches the network
   (`NODE_OPTIONS`, `NODE_TLS_REJECT_UNAUTHORIZED`, `ELECTRON_RUN_AS_NODE`,
-  `SSLKEYLOGFILE`, `LD_*`, `DYLD_*`, `PATH`, `PYTHONPATH`, proxies...), and
+  `SSLKEYLOGFILE`, `LD_*`, `DYLD_*`, `PATH`, `PYTHONPATH`, proxies...), change
+  the `docker` that runs the server (`DOCKER_*`) or that the MCP client sets
+  (`HOME`, `LOGNAME`, `SHELL`, `TERM`, `USER`), the same list as the app, and
   lockfile entries without `integrity`, resolved outside
   `https://registry.npmjs.org/` or with an install script.
 - The ids `locum` and `proprio`, which the app reserves, and an id equal to an
@@ -123,11 +142,22 @@ branch protection on `main` requires code owner review, which is not on yet
 (see [docs/connections-pending.md](docs/connections-pending.md)). No other type may claim the hosts, aliases, packages and
 trackers listed for them.
 
-### How the app will receive it, and versions
+The types that shipped inside the app are in `connections/`, with the same
+content the app uses today. `argocd` is on the list so that nobody takes the id
+or the server name the templates ask for, but the app has no type for it: it
+has no file until it does.
 
-None of this works in the app yet: no released version installs connection
-types from the catalog. The app will read connection types from the signed
-index, the one built into it and the one from the network (ADR 0018, slice 2).
+### How the app receives it, and versions
+
+The app reads connection types from the signed index, the one built into it
+and the one from the network (ADR 0018, slice 2), and "Add connection" lists
+the third-party ones with their state: "Not installable yet", or "Needs a
+newer Locum" when `minAppVersion` is above the app version. None installs yet;
+installing is slice 3. A type in the index with an official id or alias is
+ignored, and the official types keep coming from inside the app until slice 4,
+which reads them from here. Until then, publishing or changing an official
+type changes nothing for anyone using the app.
+
 An installed type will stay pinned to the commit and the `sha256` of its file.
 When `version` goes up, the app will show the update with what changed
 (slice 5):
@@ -139,11 +169,12 @@ When `version` goes up, the app will show the update with what changed
   package) will always wait for the person to accept, and the credential will
   never go to a new host before that.
 
-`minAppVersion` is required in a connection type, at `0.1.168` or newer: no
-earlier release installs connection types. When the release that reads them
-comes out, the floor goes up to its version. Raise it when the type uses a method, reader, trigger kind or action
-that older apps do not have: they will show the type as needing an update and
-keep the installed one running.
+`minAppVersion` is required in a connection type, at `0.1.168` or newer, the
+first release that reads types from the index. Raise it when the type uses
+something older apps do not have, a method, reader, trigger kind, action or
+schema field: they will show the type as needing an update and keep the
+installed one running. `path` and the `${field:<key>}` markers came into the
+app schema in `0.1.170`, which is the floor of Grafana and Prelo.
 
 ## Templates and packages
 
