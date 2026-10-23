@@ -54,7 +54,7 @@ test("the index lists every item sorted, with the hash of the file bytes and the
     servers: ["argocd"],
     providers: [{ provider: "claude-code", models: ["claude-opus-5", "claude-sonnet-5"] }],
     skills: [],
-    actions: ["github.review_comment"],
+    actions: ["github.checks_wait", "github.review_comment"],
     triggers: [{ kind: "poll", choose: ["owner", "repoMatch"] }],
   });
 });

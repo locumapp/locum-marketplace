@@ -1,14 +1,15 @@
 {
   "kind": "template",
   "id": "pr-review",
-  "version": 2,
+  "version": 3,
+  "minAppVersion": "0.1.165",
   "name": {
     "en": "PR review",
     "pt-BR": "Revisão de PR"
   },
   "description": {
-    "en": "Triage, audit with a verdict, optional deploy context (asks for an MCP server named argocd) and the review on the pull request, held in the queue for approval.",
-    "pt-BR": "Triagem, auditoria com veredito, contexto de deploy opcional (pede um servidor MCP chamado argocd) e a review no pull request, parada na fila para aprovação."
+    "en": "Triage, audit with a verdict, optional deploy context (asks for an MCP server named argocd), a wait for CI on the head commit and the review on the pull request, held in the queue for approval. An approval with CI not green goes out as a comment.",
+    "pt-BR": "Triagem, auditoria com veredito, contexto de deploy opcional (pede um servidor MCP chamado argocd), espera da esteira no commit de cabeça e a review no pull request, parada na fila para aprovação. Aprovação com a esteira fora do verde sai como comentário."
   },
   "tags": [
     "code-review",
@@ -206,19 +207,41 @@
             "requiresServers": [
               "argocd"
             ],
-            "prompt": "Verifique se houve deploy recente do servico afetado e se algum achado\ncritico ja esta em producao.\n\nAchados:\n{{steps.audit}}"
+            "prompt": "Verifique se houve deploy recente do serviço afetado e se algum achado\ncrítico já está em produção.\n\nAchados:\n{{steps.audit}}"
+          },
+          {
+            "type": "action",
+            "key": "ci",
+            "name": "Esperar a esteira",
+            "needs": [],
+            "optional": false,
+            "action": "github.checks_wait",
+            "mode": "auto",
+            "params": {
+              "timeoutMin": 45,
+              "pollSeconds": 60,
+              "settleSeconds": 60,
+              "ignore": [],
+              "count": "all"
+            }
           },
           {
             "type": "action",
             "key": "post",
             "name": "Comentar no PR",
             "needs": [
-              "audit"
+              "audit",
+              "ci"
             ],
             "optional": false,
             "action": "github.review_comment",
             "mode": "approve",
-            "input": "audit"
+            "input": "audit",
+            "params": {
+              "ciFrom": "ci",
+              "ifCiNotGreen": "comment",
+              "ciNotGreenText": "A esteira não estava verde ({{state}}), então a aprovação virou comentário. Falhou: {{failed}}. Pendente: {{pending}}."
+            }
           }
         ]
       },
