@@ -664,6 +664,7 @@
               "maxRepliesPerThread": true,
               "maxRepliesPerPr": true,
               "lookbackMinutes": true,
+              "excerptLines": true,
               "everyMinutes": true,
               "workingHours": true
             },
