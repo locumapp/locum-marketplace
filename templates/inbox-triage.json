@@ -8,8 +8,8 @@
     "pt-BR": "Triagem da caixa de entrada"
   },
   "description": {
-    "en": "Joins the mentions and direct messages you received on Slack or Teams for half an hour and delivers to the queue only what needs your attention.",
-    "pt-BR": "Junta as menções e mensagens diretas que chegaram no Slack ou no Teams por meia hora e entrega na fila só o que pede a sua atenção."
+    "en": "Joins the mentions and direct messages you received on Slack or Teams for half an hour and delivers to the queue only what needs your attention: one digest per trigger per window. The Teams chats are chosen on install.",
+    "pt-BR": "Junta as menções e mensagens diretas que chegaram no Slack ou no Teams por meia hora e entrega na fila só o que pede a sua atenção: um digest por gatilho a cada janela. Os chats do Teams são escolhidos na instalação."
   },
   "tags": [
     "digest",
@@ -27,7 +27,7 @@
         "skills": [],
         "budget": {
           "perRunUsd": 0.1,
-          "perDayUsd": 2
+          "perDayUsd": 10
         },
         "steps": [
           {
@@ -39,7 +39,7 @@
             "model": "claude-code/claude-sonnet-5",
             "maxSteps": 4,
             "requiresServers": [],
-            "prompt": "Você faz a triagem das menções e mensagens diretas que uma pessoa recebeu no\nSlack ou no Teams entre {{event.windowStart}} e {{event.windowEnd}}\n(milissegundos desde 1970, em UTC), e separa só o que pede a atenção dela.\n\nCada item de `items` é uma mensagem, com quem escreveu (`author`), o texto\n(`text`) e a conversa de onde veio: `channel` e `threadTs` no Slack, `chatId`\nou `channel` no Teams.\n\nPara cada assunto relevante:\n- `channel`: a conversa de onde a mensagem veio, com o valor que está no item.\n- `subject`: quem escreveu e o assunto, em poucas palavras (ex.: \"@autor sobre\n  o prazo da entrega\").\n- `kind`:\n  - `needs_reply` quando alguém fez uma pergunta direta ou espera uma decisão\n    ou um alinhamento dela;\n  - `info` quando é comunicado ou atualização que ela deve saber, sem ação\n    imediata;\n  - `ignore` quando é ruído, conversa sem contexto de trabalho ou mensagem dela\n    mesma.\n- `summary`: em uma frase, o que foi pedido ou comunicado.\n- `threadTs`: a thread do item, quando houver.\n\nNão invente conversa nem mensagem: classifique só o que está em `items`.\n\nO lote decidiu {{event.count}} mensagens: as de `items` e mais {{event.cut}}\nque passaram do máximo do gatilho e ficaram de fora. Outras\n{{event.deferred}} não couberam neste lote e chegam no próximo.\nSe `cut` for maior que zero, comece a `headline` dizendo quantas mensagens\nficaram de fora deste lote, e não suponha o que elas diziam: quem lê abre\no Slack ou o Teams para ver o resto. Se `deferred` for maior que zero, diga na\n`headline` que mais mensagens chegam no próximo.\n\nMensagens:\n{{event.items}}",
+            "prompt": "Você faz a triagem das menções e mensagens diretas que uma pessoa recebeu no\nSlack ou no Teams entre {{event.windowStart}} e {{event.windowEnd}}\n(milissegundos desde 1970, em UTC), e separa só o que pede a atenção dela.\n\nCada item de `items` é uma mensagem, com quem escreveu (`author`) e o texto\n(`text`). A conversa de onde ela veio muda com a origem:\n- no Slack, `channel` é o canal e `threadTs` a thread;\n- no Teams, `chatId` é o chat, `channel` o nome do canal (só em mensagem de\n  canal), `threadId` a thread e `webUrl` o endereço da mensagem.\n\nPara cada assunto relevante:\n- `channel`: a conversa de onde a mensagem veio, nunca vazio. Use o `channel`\n  do item; sem ele, o `chatId`; sem os dois, escreva `Slack` ou `Teams`.\n- `subject`: quem escreveu e o assunto, em poucas palavras (ex.: \"@autor sobre\n  o prazo da entrega\").\n- `kind`:\n  - `needs_reply` quando alguém fez uma pergunta direta ou espera uma decisão\n    ou um alinhamento dela;\n  - `info` quando é comunicado ou atualização que ela deve saber, sem ação\n    imediata;\n  - `ignore` quando é ruído, conversa sem contexto de trabalho ou mensagem dela\n    mesma.\n- `summary`: em uma frase, o que foi pedido ou comunicado.\n- `threadTs`: a thread do item, quando houver: `threadTs` no Slack, `threadId`\n  no Teams.\n\nNão invente conversa nem mensagem: classifique só o que está em `items`.\n\nO lote decidiu {{event.count}} mensagens: as de `items` e mais {{event.cut}}\nque passaram do máximo do gatilho e ficaram de fora. Outras\n{{event.deferred}} não couberam neste lote e chegam no próximo.\nSe `cut` for maior que zero, comece a `headline` dizendo quantas mensagens\nficaram de fora deste lote, e não suponha o que elas diziam: quem lê abre\no Slack ou o Teams para ver o resto. Se `deferred` for maior que zero, diga na\n`headline` que mais mensagens chegam no próximo.\n\nMensagens:\n{{event.items}}",
             "outputSchema": {
               "type": "object",
               "additionalProperties": false,
