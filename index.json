@@ -1,8 +1,8 @@
 {
   "format": "locum-marketplace-index",
   "version": 1,
-  "commit": "5170c941ccfefe522f91bf3baa8e6a14926ff0fb",
-  "committedAt": 1792711227,
+  "commit": "5e714e30c231673b1ba0d591e0755868491dcd69",
+  "committedAt": 1792717911,
   "items": [
     {
       "kind": "template",
@@ -193,9 +193,10 @@
     {
       "kind": "template",
       "id": "pr-thread-reply",
-      "version": 2,
+      "version": 3,
+      "minAppVersion": "0.1.166",
       "path": "templates/pr-thread-reply.json",
-      "sha256": "ebd0f1235670f46382bed10a1943f560e9a631f3cc34ecb67ba1e3724af725cf",
+      "sha256": "3668399efd700ab937df52c716c1a64d754b0cdf1b5ac4db1ea63171b7331658",
       "name": {
         "en": "PR thread reply",
         "pt-BR": "Resposta em thread de PR"
