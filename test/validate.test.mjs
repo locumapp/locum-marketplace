@@ -270,6 +270,62 @@ for (const bad of ["0.2", "v0.2.0", "0.2.0-beta", "01.2.0", "0.2.0.1", 2]) {
   });
 }
 
+/** slack-reply with its inbox trigger in batch, reading what the batch event brings. */
+const batched = (change = () => {}) =>
+  variant((item) => {
+    item.minAppVersion = "0.1.175";
+    item.package.automacao.gatilhos[0].batch = { windowMinutes: 60, max: 50 };
+    item.package.automacao.spec.steps[0].prompt =
+      "Resuma as mensagens.\n{{event.items}}\nDe {{ event.windowStart }} a {{event.windowEnd}}: {{event.count}} decididas, {{event.cut}} cortadas, {{event.deferred}} adiadas.";
+    change(item);
+  });
+
+test("a trigger with filter takes batch, and the template reads what the batch event brings", async () => {
+  assert.deepEqual(await validateFile(batched()), []);
+});
+
+for (const [batch, at, message] of [
+  [{ windowMinutes: 0, max: 50 }, "windowMinutes", />= 1/],
+  [{ windowMinutes: 10081, max: 50 }, "windowMinutes", /<= 10080/],
+  [{ windowMinutes: 60, max: 0 }, "max", />= 1/],
+  [{ windowMinutes: 60, max: 501 }, "max", /<= 500/],
+  [{ windowMinutes: 60, max: 2.5 }, "max", /integer/],
+  [{ windowMinutes: 60 }, "max", /required/],
+  [{ windowMinutes: 60, max: 50, every: 5 }, "every", /unknown field/],
+]) {
+  test(`batch ${JSON.stringify(batch)} fails at batch.${at}, with the limits of the app`, async () => {
+    const hit = await errorAt(batched((item) => (item.package.automacao.gatilhos[0].batch = batch)), `package.automacao.gatilhos.0.batch.${at}`);
+    assert.match(hit.message, message);
+  });
+}
+
+test("batch on a trigger without filter fails at batch, as the app refuses it", async () => {
+  for (const trigger of [{ kind: "cron", expression: "0 9 * * 1-5" }, { kind: "manual" }]) {
+    const file = batched((item) => (item.package.automacao.gatilhos = [{ ...trigger, batch: { windowMinutes: 60, max: 50 } }]));
+    const hit = await errorAt(file, "package.automacao.gatilhos.0.batch");
+    assert.match(hit.message, new RegExp(`"${trigger.kind}" trigger has no filter`));
+  }
+});
+
+test("with batch, a step that reads a field of a single event fails, because the batch event has no such field", async () => {
+  const file = batched((item) => (item.package.automacao.spec.steps[0].prompt += "\nCanal: {{event.channel}}"));
+  const hit = await errorAt(file, "package.automacao.spec.steps.0.prompt");
+  assert.match(hit.message, /reads \{\{event\.channel\}\}/);
+  assert.match(hit.message, /"slack-inbox" has batch/);
+});
+
+test("the batch event still counts as no event when a clock trigger starts the run", async () => {
+  const file = batched((item) => item.package.automacao.gatilhos.push({ kind: "cron", expression: "0 9 * * 1-5" }));
+  assert.match((await errorAt(file, "package.automacao.spec.steps.0.prompt")).message, /"cron" brings no event/);
+});
+
+test("batch needs minAppVersion 0.1.175, the first app with batch", async () => {
+  for (const version of [undefined, "0.1.174"]) {
+    const file = batched((item) => (version === undefined ? delete item.minAppVersion : (item.minAppVersion = version)));
+    assert.match((await errorAt(file, "minAppVersion")).message, /batch needs minAppVersion 0\.1\.175/);
+  }
+});
+
 /** A connection fixture with a change, written to a temporary connections/ folder under its id. */
 function connection(change, from = "example-remote", catalog = tempCatalog("connections")) {
   const item = JSON.parse(readFileSync(fixture(`connections/${from}.json`), "utf8"));

@@ -213,5 +213,18 @@ ferramentas dos passos. Template que precisaria de um evento que nenhum
 gatilho entrega fica fora do catálogo até o app ter esse gatilho. Pacote pode
 vir sem gatilho.
 
+Tipo de gatilho que tem `filter` também aceita `batch: {"windowMinutes",
+"max"}` (`$defs.batch`, com os limites do app: de 1 a 10080 minutos e de 1 a
+500 eventos). Sem ele, cada evento é um run. Com ele, os eventos que passam no
+filtro juntam pela janela e viram um run só, e esse run lê o evento do lote:
+`{{event.items}}` (os eventos, na ordem de chegada), `{{event.cut}}` (quantos
+passaram de `max` e ficaram de fora), `{{event.deferred}}`, `{{event.count}}`,
+`{{event.windowStart}}` e `{{event.windowEnd}}` (`x-event-fields`). Passo que lê
+outro campo, como `{{event.channel}}`, é recusado, porque o evento do lote não
+o tem: leia cada evento dentro de `{{event.items}}`. `batch` em tipo sem
+`filter` é recusado, e template com `batch` precisa de `minAppVersion` `0.1.175`
+ou mais nova, a primeira versão do app com lote. A janela e o máximo ficam
+escritos no template, nunca a cargo do app.
+
 Antes de abrir o PR, confira que não sobrou dado de empresa: nomes de pessoas,
 times, canais, hosts e repositórios precisam ser genéricos.

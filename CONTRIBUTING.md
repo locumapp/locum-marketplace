@@ -216,5 +216,19 @@ any of them fetches with the tools of its steps. A template that would need an
 event no trigger delivers stays out of the catalog until the app has that
 trigger. A package may come without a trigger.
 
+A trigger kind that has `filter` also takes `batch: {"windowMinutes", "max"}`
+(`$defs.batch`, with the limits of the app: 1 to 10080 minutes and 1 to 500
+events). Without it, each event is one run. With it, the events that pass the
+filter join for the window and become one run, and that run reads the batch
+event: `{{event.items}}` (the events, in the order they arrived),
+`{{event.cut}}` (how many went past `max` and were left out),
+`{{event.deferred}}`, `{{event.count}}`, `{{event.windowStart}}` and
+`{{event.windowEnd}}` (`x-event-fields`). A step that reads another field, like
+`{{event.channel}}`, is refused, because the batch event has none: read each
+event inside `{{event.items}}`. `batch` in a kind without `filter` is refused,
+and a template with `batch` needs `minAppVersion` `0.1.175` or newer, the first
+app with batch. The window and the maximum are written in the template, never
+left to the app.
+
 Before opening the PR, check that no company data is left: names of people,
 teams, channels, hosts and repositories must be generic.
