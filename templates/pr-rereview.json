@@ -1,14 +1,15 @@
 {
   "kind": "template",
   "id": "pr-rereview",
-  "version": 2,
+  "version": 3,
+  "minAppVersion": "0.1.165",
   "name": {
     "en": "PR re-review",
     "pt-BR": "Nova revisão de PR"
   },
   "description": {
-    "en": "Checks the requests from your last review against the diff since then and the thread replies, points out new defects and prepares the review, held in the queue.",
-    "pt-BR": "Confere os pedidos da sua última review contra o diff desde ela e as respostas nas threads, aponta defeito novo e prepara a review, parada na fila."
+    "en": "Checks the requests from your last review against the diff since then and the thread replies, points out new defects, waits for CI on the head commit and prepares the review, held in the queue. An approval with CI not green goes out as a comment.",
+    "pt-BR": "Confere os pedidos da sua última review contra o diff desde ela e as respostas nas threads, aponta defeito novo, espera a esteira no commit de cabeça e prepara a review, parada na fila. Aprovação com a esteira fora do verde sai como comentário."
   },
   "tags": [
     "code-review",
@@ -112,15 +113,37 @@
           },
           {
             "type": "action",
+            "key": "ci",
+            "name": "Esperar a esteira",
+            "needs": [],
+            "optional": false,
+            "action": "github.checks_wait",
+            "mode": "auto",
+            "params": {
+              "timeoutMin": 45,
+              "pollSeconds": 60,
+              "settleSeconds": 60,
+              "ignore": [],
+              "count": "all"
+            }
+          },
+          {
+            "type": "action",
             "key": "post",
             "name": "Publicar a re-review",
             "needs": [
-              "rereview"
+              "rereview",
+              "ci"
             ],
             "optional": false,
             "action": "github.review_comment",
             "mode": "approve",
-            "input": "rereview"
+            "input": "rereview",
+            "params": {
+              "ciFrom": "ci",
+              "ifCiNotGreen": "comment",
+              "ciNotGreenText": "A esteira não estava verde ({{state}}), então a aprovação virou comentário. Falhou: {{failed}}. Pendente: {{pending}}."
+            }
           }
         ]
       },
