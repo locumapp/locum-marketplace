@@ -1,0 +1,39 @@
+{
+  "kind": "connection",
+  "id": "teams",
+  "version": 1,
+  "minAppVersion": "0.1.168",
+  "name": {
+    "en": "Microsoft Teams",
+    "pt-BR": "Microsoft Teams"
+  },
+  "description": {
+    "en": "Teams through a Microsoft 365 MCP server or an app in Entra. Wakes agents on mentions and chat messages, and a proposed reply goes out under your name after you approve it.",
+    "pt-BR": "Teams por um servidor MCP do Microsoft 365 ou por um app no Entra. Acorda agents com menções e mensagens de chat, e a resposta proposta sai com o seu nome depois da sua aprovação."
+  },
+  "manifest": {
+    "category": "communication",
+    "logo": null,
+    "color": "5059C9",
+    "methods": [
+      {
+        "type": "oauth"
+      }
+    ],
+    "aliases": [
+      "ms365",
+      "ms-365",
+      "microsoft365"
+    ],
+    "packages": [
+      "@softeria/ms-365-mcp-server"
+    ],
+    "triggers": [
+      "teams-inbox"
+    ],
+    "actions": [
+      "teams.post",
+      "teams.react"
+    ]
+  }
+}

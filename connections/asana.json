@@ -1,0 +1,29 @@
+{
+  "kind": "connection",
+  "id": "asana",
+  "version": 1,
+  "minAppVersion": "0.1.168",
+  "name": {
+    "en": "Asana",
+    "pt-BR": "Asana"
+  },
+  "description": {
+    "en": "Asana's official MCP server. Agents read and update tasks in the projects you allow.",
+    "pt-BR": "Servidor MCP oficial do Asana. Os agents leem e atualizam tarefas dos projetos que você liberar."
+  },
+  "manifest": {
+    "category": "work",
+    "logo": "asana",
+    "color": "F06A6A",
+    "methods": [
+      {
+        "type": "oauth"
+      }
+    ],
+    "servers": {
+      "remote": {
+        "url": "https://mcp.asana.com/v2/mcp"
+      }
+    }
+  }
+}

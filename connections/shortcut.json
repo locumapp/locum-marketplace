@@ -1,0 +1,32 @@
+{
+  "kind": "connection",
+  "id": "shortcut",
+  "version": 1,
+  "minAppVersion": "0.1.168",
+  "name": {
+    "en": "Shortcut",
+    "pt-BR": "Shortcut"
+  },
+  "description": {
+    "en": "Shortcut's official MCP server. Agents read and update stories and epics in the workspace you authorize.",
+    "pt-BR": "Servidor MCP oficial do Shortcut. Os agents leem e atualizam stories e épicos do workspace que você autorizar."
+  },
+  "manifest": {
+    "category": "work",
+    "logo": "shortcut",
+    "color": "58B1E4",
+    "methods": [
+      {
+        "type": "oauth"
+      }
+    ],
+    "servers": {
+      "remote": {
+        "url": "https://mcp.shortcut.com/mcp"
+      }
+    },
+    "trackers": [
+      "shortcut"
+    ]
+  }
+}

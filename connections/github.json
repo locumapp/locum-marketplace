@@ -1,0 +1,64 @@
+{
+  "kind": "connection",
+  "id": "github",
+  "version": 1,
+  "minAppVersion": "0.1.168",
+  "name": {
+    "en": "GitHub",
+    "pt-BR": "GitHub"
+  },
+  "description": {
+    "en": "Personal GitHub token, stored in the keychain. PR triggers and reviews use it to read the repository.",
+    "pt-BR": "Token pessoal do GitHub, guardado no keychain. É ele que os gatilhos de PR e as revisões usam para ler o repositório."
+  },
+  "manifest": {
+    "category": "dev",
+    "logo": "github",
+    "color": "181717",
+    "methods": [
+      {
+        "type": "token"
+      },
+      {
+        "type": "cli",
+        "reader": "gh"
+      }
+    ],
+    "hosts": [
+      "api.githubcopilot.com",
+      "githubcopilot.com"
+    ],
+    "triggers": [
+      "poll",
+      "github-thread-reply"
+    ],
+    "actions": [
+      "github.review_comment",
+      "github.review_reply",
+      "github.resolve_thread",
+      "github.react",
+      "github.checks_wait"
+    ],
+    "trackers": [
+      "github-issues"
+    ],
+    "scopeKeys": [
+      {
+        "key": "github.repo",
+        "normalize": "lower",
+        "description": {
+          "pt-BR": "Repositório, como dono/nome",
+          "en": "Repository, as owner/name"
+        }
+      },
+      {
+        "key": "github.author",
+        "normalize": "lower",
+        "description": {
+          "pt-BR": "Quem abriu o pull request",
+          "en": "Who opened the pull request"
+        }
+      }
+    ]
+  }
+}

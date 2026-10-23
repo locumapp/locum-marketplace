@@ -11,8 +11,8 @@ automation templates and packages that anyone can propose.
   MCP server (a remote https endpoint, an image pinned by digest, or an npm
   package pinned by its lockfile), the authentication methods, the instance
   fields, the triggers and actions of the core it offers, and the tools that
-  write outside the machine. Remote servers are accepted; local ones wait for
-  the app to pin them. The official ids are published only by the maintainers
+  write outside the machine. Remote servers are accepted; local ones only by
+  image and only in an official type, until the app pins them. The official ids are published only by the maintainers
   ([CODEOWNERS](.github/CODEOWNERS)).
 - `templates/`: automation templates, with every node visible.
 - `packages/`: packages exported from Locum, already cleaned of company data.

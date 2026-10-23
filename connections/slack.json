@@ -1,0 +1,35 @@
+{
+  "kind": "connection",
+  "id": "slack",
+  "version": 1,
+  "minAppVersion": "0.1.168",
+  "name": {
+    "en": "Slack",
+    "pt-BR": "Slack"
+  },
+  "description": {
+    "en": "Channels Locum reads through Slack's official server, with an app created in your workspace, or through another MCP server you already have.",
+    "pt-BR": "Canais que o Locum lê pelo servidor oficial do Slack, com um app criado no seu workspace, ou por outro servidor MCP que você já tenha."
+  },
+  "manifest": {
+    "category": "communication",
+    "logo": null,
+    "color": "4A154B",
+    "methods": [
+      {
+        "type": "oauth"
+      }
+    ],
+    "hosts": [
+      "mcp.slack.com"
+    ],
+    "triggers": [
+      "slack-channel",
+      "slack-inbox"
+    ],
+    "actions": [
+      "slack.post",
+      "slack.react"
+    ]
+  }
+}

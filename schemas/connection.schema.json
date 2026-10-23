@@ -153,10 +153,15 @@
       "additionalProperties": false,
       "oneOf": [{ "required": ["url"] }, { "required": ["urlField"] }],
       "properties": {
-        "url": { "description": "Fixed https address on a public host.", "type": "string", "pattern": "^https://[^\\s]+$" },
+        "url": { "description": "Fixed https address on a public host. ${field:<key>} brings the value of a declared field, only in the path: after the first / that follows the host and before ? or #.", "type": "string", "pattern": "^https://[^\\s]+$" },
         "urlField": { "description": "Key of the url field the person fills, for a server whose address is per instance.", "$ref": "#/$defs/fieldKey" },
+        "path": {
+          "description": "Suffix added to the address of urlField, as /mcp: the person types the base address. Only with urlField, without markers or . and .. segments.",
+          "type": "string",
+          "pattern": "^(/[A-Za-z0-9._~-]+)+$"
+        },
         "headers": {
-          "description": "Headers sent to the server. ${credential} goes only here or in the env of a local server.",
+          "description": "Headers sent to the server. ${credential} goes only here or in the env of a local server; ${field:<key>} brings the value of a declared field.",
           "type": "object",
           "propertyNames": { "pattern": "^[A-Za-z0-9-]+$" },
           "additionalProperties": { "type": "string" }

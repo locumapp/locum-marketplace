@@ -1,0 +1,48 @@
+{
+  "kind": "connection",
+  "id": "grafana",
+  "version": 1,
+  "minAppVersion": "0.1.170",
+  "name": {
+    "en": "Grafana",
+    "pt-BR": "Grafana"
+  },
+  "description": {
+    "en": "Grafana's official MCP server, through Docker. Register each instance (dev, prod) with its address and a service account token.",
+    "pt-BR": "Servidor MCP oficial do Grafana, pelo Docker. Cadastre cada instância (dev, prod) com o endereço e um token de service account."
+  },
+  "manifest": {
+    "category": "observability",
+    "logo": "grafana",
+    "color": "F46800",
+    "methods": [
+      {
+        "type": "token"
+      }
+    ],
+    "fields": [
+      {
+        "key": "url",
+        "label": {
+          "pt-BR": "Endereço",
+          "en": "Address"
+        },
+        "format": "url",
+        "required": true
+      }
+    ],
+    "servers": {
+      "local": {
+        "image": "mcp/grafana@sha256:9362bcf6aa0e44e61f645b905cec03fb346a946a34a4dafecd7f3e28d3724014",
+        "args": [
+          "-t",
+          "stdio"
+        ],
+        "env": {
+          "GRAFANA_URL": "${field:url}",
+          "GRAFANA_SERVICE_ACCOUNT_TOKEN": "${credential}"
+        }
+      }
+    }
+  }
+}

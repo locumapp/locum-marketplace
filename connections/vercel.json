@@ -1,0 +1,29 @@
+{
+  "kind": "connection",
+  "id": "vercel",
+  "version": 1,
+  "minAppVersion": "0.1.168",
+  "name": {
+    "en": "Vercel",
+    "pt-BR": "Vercel"
+  },
+  "description": {
+    "en": "Vercel's official MCP server. Agents look up projects, deployments and build logs.",
+    "pt-BR": "Servidor MCP oficial da Vercel. Os agents consultam projetos, deploys e logs de build."
+  },
+  "manifest": {
+    "category": "dev",
+    "logo": "vercel",
+    "color": "000000",
+    "methods": [
+      {
+        "type": "oauth"
+      }
+    ],
+    "servers": {
+      "remote": {
+        "url": "https://mcp.vercel.com"
+      }
+    }
+  }
+}

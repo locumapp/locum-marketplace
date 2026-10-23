@@ -32,11 +32,16 @@ const IMAGE_WITH_DIGEST = /^[a-z0-9][a-z0-9._/:-]*@sha256:[a-f0-9]{64}$/;
 const INTEGRITY = /^sha(256|384|512)-[A-Za-z0-9+/]+={0,2}$/;
 const NPM_REGISTRY = "https://registry.npmjs.org/";
 const CREDENTIAL = "${credential}";
-const PLACEHOLDER = /\$\{[^}]*\}/g;
+/** A marker in a value of the servers: `${credential}`, `${field:<key>}` or, refused, anything else. */
+const MARKER = /\$\{([^}]*)\}/g;
+const FIELD_MARKER = /^field:([a-z][a-zA-Z0-9]*)$/;
 /** Where `${credential}` may go: a header of the remote server or the env of the local one. */
 const CREDENTIAL_PLACES = /^manifest\.servers\.(remote\.headers|local\.env)\.[^.]+$/;
-/** Variables that change how a process loads code, which certificates it trusts or where its traffic goes. */
-const LOADER_ENV = /^(NODE_OPTIONS|NODE_PATH|NODE_EXTRA_CA_CERTS|LD_.*|DYLD_.*|ELECTRON_RUN_AS_NODE|NODE_TLS_REJECT_UNAUTHORIZED|SSLKEYLOGFILE|PATH|PYTHONPATH|PYTHONHOME|PYTHONSTARTUP|PERL5LIB|PERL5OPT|RUBYOPT|RUBYLIB|JAVA_TOOL_OPTIONS|_JAVA_OPTIONS|JDK_JAVA_OPTIONS|BASH_ENV|ENV|NPM_CONFIG_.*|GIT_.*|SSL_CERT_FILE|SSL_CERT_DIR|REQUESTS_CA_BUNDLE|CURL_CA_BUNDLE|HTTPS?_PROXY|ALL_PROXY|NO_PROXY)$/i;
+/**
+ * Variables that change how a process loads code, which certificates it trusts or where its traffic goes, the docker
+ * that runs the server (its env goes to docker too) and the ones the MCP client sets. The same list as the app.
+ */
+const RESERVED_ENV = /^(DOCKER_.*|HOME|LOGNAME|SHELL|TERM|USER|NODE_OPTIONS|NODE_PATH|NODE_EXTRA_CA_CERTS|LD_.*|DYLD_.*|ELECTRON_RUN_AS_NODE|NODE_TLS_REJECT_UNAUTHORIZED|SSLKEYLOGFILE|PATH|PYTHONPATH|PYTHONHOME|PYTHONSTARTUP|PERL5LIB|PERL5OPT|RUBYOPT|RUBYLIB|JAVA_TOOL_OPTIONS|_JAVA_OPTIONS|JDK_JAVA_OPTIONS|BASH_ENV|ENV|NPM_CONFIG_.*|GIT_.*|SSL_CERT_FILE|SSL_CERT_DIR|REQUESTS_CA_BUNDLE|CURL_CA_BUNDLE|HTTPS?_PROXY|ALL_PROXY|NO_PROXY)$/i;
 /** Container runtime flags that widen what the server reaches. The app puts args after the image; this is defense in depth. */
 const CONTAINER_FLAGS = /^(--privileged|--cap-add|--pid|--ipc|--uts|--userns|--cgroupns|--network|--net|--device|--security-opt|--volume|--mount|--volumes-from)(=.*)?$|^-v($|[/.~]|[^:]*:)/;
 /** Names that never resolve to a public host. */
@@ -49,6 +54,19 @@ const MACHINE_METHODS = new Set(["cli", "session"]);
  * install connection types. Goes up to the release of slice 2 of ADR 0018, with the published items in the same PR.
  */
 export const CONNECTION_MIN_APP_VERSION = "0.1.168";
+
+/** The first app version whose schema takes `servers.remote.path` and the `${field:<key>}` markers. */
+export const MARKERS_MIN_APP_VERSION = "0.1.170";
+
+/** A display name as the app compares it with the official ones: without accents or format characters, in lowercase. */
+const normalizedName = (name) => name.normalize("NFKC").normalize("NFD").replace(/[\p{M}\p{Cf}]/gu, "").toLowerCase().trim();
+
+/** The display names of the official types and of the reserved `proprio`, which the app refuses in another type. */
+const OFFICIAL_NAMES = new Map(
+  [...Object.entries(officialList.official), ...Object.entries(officialList.reservedNames ?? {}).map(([id, names]) => [id, { names }])].flatMap(([id, o]) =>
+    (o.names ?? []).map((name) => [normalizedName(name), id]),
+  ),
+);
 
 const versionParts = (v) => v.split(".").map(Number);
 /** Compares two x.y.z versions as numbers: negative, zero or positive. */
@@ -97,8 +115,20 @@ export function itemRules(item, expected) {
     } else if (OFFICIAL_ALIASES.has(item.id)) {
       errors.push({ field: "id", message: `"${item.id}" is an alias of the official type "${OFFICIAL_ALIASES.get(item.id)}": the app would match its servers to this id` });
     }
-    if (typeof item.minAppVersion === "string" && /^\d+\.\d+\.\d+$/.test(item.minAppVersion) && compareVersions(item.minAppVersion, CONNECTION_MIN_APP_VERSION) < 0) {
-      errors.push({ field: "minAppVersion", message: `a connection type needs minAppVersion ${CONNECTION_MIN_APP_VERSION} or newer: older apps do not install connection types` });
+    if (typeof item.minAppVersion === "string" && /^\d+\.\d+\.\d+$/.test(item.minAppVersion)) {
+      if (compareVersions(item.minAppVersion, CONNECTION_MIN_APP_VERSION) < 0) {
+        errors.push({ field: "minAppVersion", message: `a connection type needs minAppVersion ${CONNECTION_MIN_APP_VERSION} or newer: older apps do not install connection types` });
+      } else if (usesMarkers(item.manifest) && compareVersions(item.minAppVersion, MARKERS_MIN_APP_VERSION) < 0) {
+        errors.push({ field: "minAppVersion", message: `servers.remote.path and \${field:<key>} need minAppVersion ${MARKERS_MIN_APP_VERSION} or newer: older apps refuse them` });
+      }
+    }
+    if (isObject(item.name)) {
+      for (const [language, name] of Object.entries(item.name)) {
+        const official = typeof name === "string" ? OFFICIAL_NAMES.get(normalizedName(name)) : undefined;
+        if (official !== undefined && official !== item.id) {
+          errors.push({ field: field("name", language), message: `"${name}" is the name of the official type "${official}": the app ignores a type that takes it` });
+        }
+      }
     }
     if (isObject(item.manifest)) errors.push(...connectionRules(item.manifest, item.id));
   }
@@ -106,6 +136,14 @@ export function itemRules(item, expected) {
     errors.push(...packageRules(item.package, item.kind));
   }
   return errors;
+}
+
+/** Whether the servers use what came into the app schema in 0.1.170: a path after urlField or a field marker. */
+function usesMarkers(manifest) {
+  const servers = isObject(manifest) ? manifest.servers : undefined;
+  if (!isObject(servers)) return false;
+  if (isObject(servers.remote) && servers.remote.path !== undefined) return true;
+  return JSON.stringify([servers.remote?.url, servers.remote?.headers, servers.local?.args, servers.local?.env]).includes("${field:");
 }
 
 /** Why a host name is not public, or undefined when it is. IPv4 in any notation comes normalized by URL. */
@@ -129,6 +167,7 @@ function connectionRules(manifest, id) {
     errors.push({ field: path, message: "scripts and commands are not accepted: an item is data, and the app never runs code it downloads" });
   }
   errors.push(...credentialPlacement(manifest));
+  errors.push(...markerRules(manifest));
 
   const methods = Array.isArray(manifest.methods) ? manifest.methods : [];
   const methodTypes = new Set();
@@ -142,7 +181,7 @@ function connectionRules(manifest, id) {
         message: `the "${method.type}" method reads a credential from another tool or a session on the machine; only official connection types use it`,
       });
     }
-    if (typeof method.env === "string" && LOADER_ENV.test(method.env)) errors.push(loaderEnvError(field("manifest.methods", i, "env"), method.env));
+    if (typeof method.env === "string" && RESERVED_ENV.test(method.env)) errors.push(loaderEnvError(field("manifest.methods", i, "env"), method.env));
   });
 
   const fields = Array.isArray(manifest.fields) ? manifest.fields : [];
@@ -229,12 +268,14 @@ function credentialPlacement(manifest) {
 function remoteRules(server, fields) {
   const errors = [];
   const at = "manifest.servers.remote";
-  if (typeof server.url === "string" && !server.url.includes(CREDENTIAL)) {
-    const placeholders = server.url.match(PLACEHOLDER);
-    if (placeholders !== null) {
-      errors.push({ field: field(at, "url"), message: `the url takes no placeholder (found ${placeholders.join(", ")}); an address per instance goes in urlField` });
-    } else {
-      errors.push(...urlRules(server.url, field(at, "url")));
+  // A marker in the url has its own error from markerRules; a field in the path does not change the host.
+  if (typeof server.url === "string" && markersOf(server.url).every((m) => m.kind === "field")) {
+    errors.push(...urlRules(server.url.replace(MARKER, "x"), field(at, "url")));
+  }
+  if (typeof server.path === "string") {
+    if (server.urlField === undefined) errors.push({ field: field(at, "path"), message: "path goes only with urlField: it is added to the address the person fills" });
+    if (server.path.split("/").some((s) => s === "." || s === "..")) {
+      errors.push({ field: field(at, "path"), message: "path takes no . or .. segment, which the url parser turns into another route" });
     }
   }
   if (typeof server.urlField === "string") {
@@ -245,10 +286,112 @@ function remoteRules(server, fields) {
       errors.push({ field: field(at, "urlField"), message: `"${server.urlField}" must be a required url field` });
     }
   }
-  if (isObject(server.headers)) {
-    for (const [name, value] of Object.entries(server.headers)) {
-      const others = typeof value === "string" ? (value.match(PLACEHOLDER) ?? []).filter((p) => p !== CREDENTIAL) : [];
-      if (others.length > 0) errors.push({ field: field(at, "headers", name), message: `unknown placeholder ${others.join(", ")}; only ${CREDENTIAL} is filled in` });
+  return errors;
+}
+
+/** The markers of a value, in order. A `${` left open counts as an unknown marker. */
+function markersOf(value) {
+  const found = [];
+  for (const m of value.matchAll(MARKER)) {
+    const key = FIELD_MARKER.exec(m[1])?.[1];
+    found.push({ kind: m[1] === "credential" ? "credential" : key !== undefined ? "field" : "unknown", key, text: m[0], index: m.index });
+  }
+  if (value.replace(MARKER, "").includes("${")) found.push({ kind: "unknown", text: "${", index: value.indexOf("${") });
+  return found;
+}
+
+/** Where the path of an https url sits: from the first `/` after the host to the first `?` or `#`; empty without that `/`. */
+function pathRegion(url) {
+  const afterScheme = url.indexOf("://") + 3;
+  const cut = url.slice(afterScheme).search(/[/?#]/);
+  if (cut < 0 || url[afterScheme + cut] !== "/") return { start: url.length, end: url.length };
+  const start = afterScheme + cut;
+  const end = url.slice(start).search(/[?#]/);
+  return { start, end: end < 0 ? url.length : start + end };
+}
+
+/**
+ * The markers in the values of the servers, with the rules of the app (ADR 0018, "Marcadores nos valores"): only
+ * `${credential}` and `${field:<key>}` of a declared field, the field only in the path of the url, the credential in one
+ * place of each server and where the token method says. A free text field in the server that receives the credential is
+ * refused in every type, as the app does with every type of the index: it could point the server to another host
+ * without the origin check of a url.
+ */
+function markerRules(manifest) {
+  const servers = manifest.servers;
+  if (!isObject(servers)) return [];
+  const errors = [];
+  const fields = new Map((Array.isArray(manifest.fields) ? manifest.fields : []).filter(isObject).map((f) => [f.key, f]));
+  const read = (at, value, region) => {
+    const out = { credentials: 0, keys: [] };
+    if (typeof value !== "string") return out;
+    for (const m of markersOf(value)) {
+      if (m.kind === "unknown") {
+        errors.push({ field: at, message: `unknown placeholder ${m.text}; only ${CREDENTIAL} and \${field:<key>} are filled in` });
+      } else if (m.kind === "credential") {
+        out.credentials++;
+      } else {
+        out.keys.push(m.key);
+        if (!fields.has(m.key)) errors.push({ field: at, message: `"${m.key}" is not a declared field` });
+        if (region !== undefined && (m.index < region.start || m.index >= region.end)) {
+          errors.push({ field: at, message: `\${field:${m.key}} goes only in the path of the url, after the host and before ? or #` });
+        }
+      }
+    }
+    return out;
+  };
+  const entries = (value) => (isObject(value) ? Object.entries(value) : []);
+  const used = [];
+  const { remote, local } = servers;
+  if (isObject(remote)) {
+    const at = "manifest.servers.remote";
+    const keys = typeof remote.urlField === "string" ? [remote.urlField] : [];
+    if (typeof remote.url === "string") keys.push(...read(field(at, "url"), remote.url, pathRegion(remote.url)).keys);
+    let credentials = 0;
+    for (const [name, value] of entries(remote.headers)) {
+      const got = read(field(at, "headers", name), value);
+      credentials += got.credentials;
+      keys.push(...got.keys);
+    }
+    if (credentials > 1) errors.push({ field: field(at, "headers"), message: "the credential goes in one place of the server" });
+    used.push({ at, http: true, slots: remote.headers, keys, credentials });
+  }
+  if (isObject(local)) {
+    const at = "manifest.servers.local";
+    const keys = [];
+    (Array.isArray(local.args) ? local.args : []).forEach((arg, i) => keys.push(...read(field(at, "args", i), arg).keys));
+    let credentials = 0;
+    for (const [name, value] of entries(local.env)) {
+      const got = read(field(at, "env", name), value);
+      credentials += got.credentials;
+      keys.push(...got.keys);
+    }
+    if (credentials > 1) errors.push({ field: field(at, "env"), message: "the credential goes in one place of the server" });
+    used.push({ at, http: false, slots: local.env, keys, credentials });
+  }
+
+  const token = (Array.isArray(manifest.methods) ? manifest.methods : []).find((m) => isObject(m) && m.type === "token");
+  for (const server of used) {
+    const slot = entries(server.slots).find(([, v]) => typeof v === "string" && v.includes(CREDENTIAL))?.[0];
+    if (token !== undefined && (typeof token.header === "string" || typeof token.env === "string")) {
+      const declared = server.http ? token.header : token.env;
+      const same = declared !== undefined && slot !== undefined && (server.http ? slot.toLowerCase() === declared.toLowerCase() : slot === declared);
+      if (!same) {
+        errors.push({
+          field: "manifest.methods",
+          message: `the token method puts the credential in "${declared ?? "another server"}", and the server takes it in "${slot ?? "no place"}"`,
+        });
+      }
+    }
+    if (server.credentials > 0) {
+      for (const key of new Set(server.keys)) {
+        if (fields.get(key)?.format === "text") {
+          errors.push({
+            field: server.at,
+            message: `the field "${key}" is free text and goes into the server that receives the credential, where it could point the server to another host; use a url field`,
+          });
+        }
+      }
     }
   }
   return errors;
@@ -305,14 +448,17 @@ function localRules(server) {
     });
   }
   if (isObject(server.env)) {
-    for (const name of Object.keys(server.env)) if (LOADER_ENV.test(name)) errors.push(loaderEnvError(field(at, "env", name), name));
+    for (const name of Object.keys(server.env)) if (RESERVED_ENV.test(name)) errors.push(loaderEnvError(field(at, "env", name), name));
   }
   if (isObject(server.package)) errors.push(...lockfileRules(server.package));
   return errors;
 }
 
 function loaderEnvError(at, name) {
-  return { field: at, message: `${name} changes how the process loads code, what it trusts or where its traffic goes, and is not accepted` };
+  return {
+    field: at,
+    message: `${name} changes how the process loads code, what it trusts, where its traffic goes, the docker that runs the server or what the MCP client sets, and is not accepted`,
+  };
 }
 
 function commandError(server) {
@@ -405,6 +551,8 @@ export function connectionClaims(item) {
   for (const host of list(m.hosts)) if (URL.canParse(`https://${host}/`)) claims.push({ space: "host", key: canonicalHost(host), field: "manifest.hosts" });
   for (const alias of list(m.aliases)) claims.push({ space: "alias", key: alias, field: "manifest.aliases" });
   for (const pkg of list(m.packages)) claims.push({ space: "package", key: pkg, field: "manifest.packages" });
+  const local = m.servers?.local?.package?.name;
+  if (typeof local === "string" && !list(m.packages).includes(local)) claims.push({ space: "package", key: local, field: "manifest.servers.local.package.name" });
   for (const tracker of list(m.trackers)) claims.push({ space: "tracker", key: tracker, field: "manifest.trackers" });
   for (const action of list(m.actions)) claims.push({ space: "action", key: action, field: "manifest.actions" });
   return claims;

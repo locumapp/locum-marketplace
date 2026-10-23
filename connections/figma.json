@@ -1,0 +1,29 @@
+{
+  "kind": "connection",
+  "id": "figma",
+  "version": 1,
+  "minAppVersion": "0.1.168",
+  "name": {
+    "en": "Figma",
+    "pt-BR": "Figma"
+  },
+  "description": {
+    "en": "Figma's remote MCP server. Agents read frames and variables to compare screens with the design.",
+    "pt-BR": "Servidor MCP remoto do Figma. Os agents leem frames e variáveis para comparar tela com design."
+  },
+  "manifest": {
+    "category": "work",
+    "logo": "figma",
+    "color": "F24E1E",
+    "methods": [
+      {
+        "type": "oauth"
+      }
+    ],
+    "servers": {
+      "remote": {
+        "url": "https://mcp.figma.com/mcp"
+      }
+    }
+  }
+}
