@@ -213,5 +213,40 @@ ferramentas dos passos. Template que precisaria de um evento que nenhum
 gatilho entrega fica fora do catálogo até o app ter esse gatilho. Pacote pode
 vir sem gatilho.
 
+Tipo de gatilho que tem `filter` também aceita `batch: {"windowMinutes",
+"max"}` (`$defs.batch`, com os limites do app: de 1 a 10080 minutos e de 1 a
+500 eventos). Sem ele, cada evento é um run. Com ele, os eventos que passam no
+filtro juntam pela janela e viram um run só, e esse run lê o evento do lote:
+`{{event.items}}` (os eventos, na ordem de chegada), `{{event.cut}}` (quantos
+passaram de `max` e ficaram de fora), `{{event.deferred}}`, `{{event.count}}`,
+`{{event.windowStart}}` e `{{event.windowEnd}}` (`x-event-fields`). Passo que lê
+outro campo, como `{{event.channel}}`, é recusado, porque o evento do lote não
+o tem: leia cada evento dentro de `{{event.items}}`. `batch` em tipo sem
+`filter` é recusado, e template com `batch` precisa de `minAppVersion` `0.1.175`
+ou mais nova, a primeira versão do app com lote. A janela e o máximo ficam
+escritos no template, nunca a cargo do app. Também é recusado:
+
+- `batch` em gatilho que deixa de fora um campo de `x-required-to-run`
+  (`channels` no `slack-channel`, `repoMatch` no `poll`): sem ele o app não
+  cria o gatilho na instalação e o descarta inteiro, com o lote junto, até a
+  pessoa escolher. Gatilho segurado por `x-held-by` ou com entrada em
+  `omitidos` é criado com a configuração inteira e mantém o lote;
+- template em que um gatilho que entrega evento tem `batch` e outro não: o run
+  de cada um lê um evento diferente, e nenhum prompt serve aos dois.
+
+O `filter` (`$defs.filter`) também segue o app: no máximo 20 condições, cada
+uma com `path` (o caminho no evento, como `author.login`), `compare` (as
+comparações do passo `if`) e `against` (até 500 caracteres). O `against` só
+aceita marcador do evento e, com `matches` e sem marcador, precisa ser uma
+expressão regular válida.
+
+Limite conhecido: com lote, o app também avisa da ação que tira o alvo ou o
+escopo do evento (a resposta a uma conversa, as ações de thread do GitHub, o
+`github.review_comment` sem `owner`, `repo` e `pull`, o escopo da memória) fora
+de um "para cada" sobre `{{event.items}}`. O catálogo não confere isso: a lista
+mora no app, com exceções por parâmetro, e o esquema do template ainda não tem
+"para cada". Template com lote deve entregar por uma ação que não lê alvo do
+evento, como o `digest.deliver`.
+
 Antes de abrir o PR, confira que não sobrou dado de empresa: nomes de pessoas,
 times, canais, hosts e repositórios precisam ser genéricos.

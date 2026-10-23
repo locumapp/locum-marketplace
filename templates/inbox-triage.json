@@ -1,0 +1,161 @@
+{
+  "kind": "template",
+  "id": "inbox-triage",
+  "version": 1,
+  "minAppVersion": "0.1.175",
+  "name": {
+    "en": "Inbox triage",
+    "pt-BR": "Triagem da caixa de entrada"
+  },
+  "description": {
+    "en": "Joins the mentions and direct messages you received on Slack or Teams for half an hour and delivers to the queue only what needs your attention: one digest per trigger per window. The Teams chats are chosen on install.",
+    "pt-BR": "Junta as menções e mensagens diretas que chegaram no Slack ou no Teams por meia hora e entrega na fila só o que pede a sua atenção: um digest por gatilho a cada janela. Os chats do Teams são escolhidos na instalação."
+  },
+  "tags": [
+    "digest",
+    "slack",
+    "teams"
+  ],
+  "package": {
+    "formato": "locum-pacote",
+    "versao": 2,
+    "automacao": {
+      "id": "inbox-triage",
+      "spec": {
+        "name": "Triagem da caixa de entrada",
+        "defaultTools": [],
+        "skills": [],
+        "budget": {
+          "perRunUsd": 0.1,
+          "perDayUsd": 10
+        },
+        "steps": [
+          {
+            "type": "model",
+            "key": "classify",
+            "name": "Classificar as mensagens",
+            "needs": [],
+            "optional": false,
+            "model": "claude-code/claude-sonnet-5",
+            "maxSteps": 4,
+            "requiresServers": [],
+            "prompt": "Você faz a triagem das menções e mensagens diretas que uma pessoa recebeu no\nSlack ou no Teams entre {{event.windowStart}} e {{event.windowEnd}}\n(milissegundos desde 1970, em UTC), e separa só o que pede a atenção dela.\n\nCada item de `items` é uma mensagem, com quem escreveu (`author`) e o texto\n(`text`). A conversa de onde ela veio muda com a origem:\n- no Slack, `channel` é o canal e `threadTs` a thread;\n- no Teams, `chatId` é o chat, `channel` o nome do canal (só em mensagem de\n  canal), `threadId` a thread e `webUrl` o endereço da mensagem.\n\nPara cada assunto relevante:\n- `channel`: a conversa de onde a mensagem veio, nunca vazio. Use o `channel`\n  do item; sem ele, o `chatId`; sem os dois, escreva `Slack` ou `Teams`.\n- `subject`: quem escreveu e o assunto, em poucas palavras (ex.: \"@autor sobre\n  o prazo da entrega\").\n- `kind`:\n  - `needs_reply` quando alguém fez uma pergunta direta ou espera uma decisão\n    ou um alinhamento dela;\n  - `info` quando é comunicado ou atualização que ela deve saber, sem ação\n    imediata;\n  - `ignore` quando é ruído, conversa sem contexto de trabalho ou mensagem dela\n    mesma.\n- `summary`: em uma frase, o que foi pedido ou comunicado.\n- `threadTs`: a thread do item, quando houver: `threadTs` no Slack, `threadId`\n  no Teams.\n\nNão invente conversa nem mensagem: classifique só o que está em `items`.\n\nO lote decidiu {{event.count}} mensagens: as de `items` e mais {{event.cut}}\nque passaram do máximo do gatilho e ficaram de fora. Outras\n{{event.deferred}} não couberam neste lote e chegam no próximo.\nSe `cut` for maior que zero, comece a `headline` dizendo quantas mensagens\nficaram de fora deste lote, e não suponha o que elas diziam: quem lê abre\no Slack ou o Teams para ver o resto. Se `deferred` for maior que zero, diga na\n`headline` que mais mensagens chegam no próximo.\n\nMensagens:\n{{event.items}}",
+            "outputSchema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "headline",
+                "items"
+              ],
+              "properties": {
+                "headline": {
+                  "type": "string"
+                },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "channel",
+                      "subject",
+                      "kind",
+                      "summary"
+                    ],
+                    "properties": {
+                      "channel": {
+                        "type": "string"
+                      },
+                      "subject": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "enum": [
+                          "needs_reply",
+                          "info",
+                          "ignore"
+                        ]
+                      },
+                      "summary": {
+                        "type": "string"
+                      },
+                      "threadTs": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "action",
+            "key": "deliver",
+            "name": "Entregar na fila",
+            "needs": [
+              "classify"
+            ],
+            "optional": false,
+            "action": "digest.deliver",
+            "mode": "approve",
+            "pendingPerTarget": "accumulate",
+            "input": "classify"
+          }
+        ]
+      },
+      "gatilhos": [
+        {
+          "kind": "slack-inbox",
+          "mentions": true,
+          "dms": true,
+          "everyMinutes": 5,
+          "batch": {
+            "windowMinutes": 30,
+            "max": 50
+          }
+        },
+        {
+          "kind": "teams-inbox",
+          "mentions": true,
+          "dms": true,
+          "everyMinutes": 5,
+          "chatsRestritos": 1,
+          "batch": {
+            "windowMinutes": 30,
+            "max": 50
+          }
+        }
+      ]
+    },
+    "agents": [],
+    "requisitos": {
+      "conexoes": [
+        {
+          "id": "slack",
+          "nome": "Slack"
+        },
+        {
+          "id": "teams",
+          "nome": "Microsoft Teams"
+        }
+      ],
+      "servidores": [],
+      "provedores": [
+        {
+          "provedor": "claude-code",
+          "modelos": [
+            "claude-sonnet-5"
+          ]
+        }
+      ],
+      "skills": []
+    },
+    "skills": [],
+    "omitidos": [
+      {
+        "codigo": "id-do-slack",
+        "onde": "gatilho:0"
+      }
+    ]
+  }
+}

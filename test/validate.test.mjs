@@ -19,7 +19,7 @@ test("the catalog in the repository is valid, with the migrated templates", asyn
   assert.deepEqual(errors, []);
   const templates = items.filter((i) => i.kind === "template").map((i) => i.id);
   assert.ok(templates.includes("pr-review"));
-  assert.equal(templates.length, 8);
+  assert.equal(templates.length, 9);
 });
 
 test("good connection fixtures pass: image with digest, npm package with lockfile, remote server", async () => {
@@ -269,6 +269,130 @@ for (const bad of ["0.2", "v0.2.0", "0.2.0-beta", "01.2.0", "0.2.0.1", 2]) {
     assert.match(hit.message, /x\.y\.z/);
   });
 }
+
+/** slack-reply with its inbox trigger in batch, reading what the batch event brings. */
+const batched = (change = () => {}) =>
+  variant((item) => {
+    item.minAppVersion = "0.1.175";
+    item.package.automacao.gatilhos[0].batch = { windowMinutes: 60, max: 50 };
+    item.package.automacao.spec.steps[0].prompt =
+      "Resuma as mensagens.\n{{event.items}}\nDe {{ event.windowStart }} a {{event.windowEnd}}: {{event.count}} decididas, {{event.cut}} cortadas, {{event.deferred}} adiadas.";
+    change(item);
+  });
+
+test("a trigger with filter takes batch, and the template reads what the batch event brings", async () => {
+  assert.deepEqual(await validateFile(batched()), []);
+});
+
+for (const [batch, at, message] of [
+  [{ windowMinutes: 0, max: 50 }, "windowMinutes", />= 1/],
+  [{ windowMinutes: 10081, max: 50 }, "windowMinutes", /<= 10080/],
+  [{ windowMinutes: 60, max: 0 }, "max", />= 1/],
+  [{ windowMinutes: 60, max: 501 }, "max", /<= 500/],
+  [{ windowMinutes: 60, max: 2.5 }, "max", /integer/],
+  [{ windowMinutes: 60 }, "max", /required/],
+  [{ windowMinutes: 60, max: 50, every: 5 }, "every", /unknown field/],
+]) {
+  test(`batch ${JSON.stringify(batch)} fails at batch.${at}, with the limits of the app`, async () => {
+    const hit = await errorAt(batched((item) => (item.package.automacao.gatilhos[0].batch = batch)), `package.automacao.gatilhos.0.batch.${at}`);
+    assert.match(hit.message, message);
+  });
+}
+
+test("batch on a trigger without filter fails at batch, as the app refuses it", async () => {
+  for (const trigger of [{ kind: "cron", expression: "0 9 * * 1-5" }, { kind: "manual" }]) {
+    const file = batched((item) => (item.package.automacao.gatilhos = [{ ...trigger, batch: { windowMinutes: 60, max: 50 } }]));
+    const hit = await errorAt(file, "package.automacao.gatilhos.0.batch");
+    assert.match(hit.message, new RegExp(`"${trigger.kind}" trigger has no filter`));
+  }
+});
+
+test("with batch, a step that reads a field of a single event fails, because the batch event has no such field", async () => {
+  const file = batched((item) => (item.package.automacao.spec.steps[0].prompt += "\nCanal: {{event.channel}}"));
+  const hit = await errorAt(file, "package.automacao.spec.steps.0.prompt");
+  assert.match(hit.message, /reads \{\{event\.channel\}\}/);
+  assert.match(hit.message, /"slack-inbox" has batch/);
+});
+
+test("the batch event still counts as no event when a clock trigger starts the run", async () => {
+  const file = batched((item) => item.package.automacao.gatilhos.push({ kind: "cron", expression: "0 9 * * 1-5" }));
+  assert.match((await errorAt(file, "package.automacao.spec.steps.0.prompt")).message, /"cron" brings no event/);
+});
+
+test("batch needs minAppVersion 0.1.175, the first app with batch", async () => {
+  for (const version of [undefined, "0.1.174"]) {
+    const file = batched((item) => (version === undefined ? delete item.minAppVersion : (item.minAppVersion = version)));
+    assert.match((await errorAt(file, "minAppVersion")).message, /batch needs minAppVersion 0\.1\.175/);
+  }
+});
+
+test("batch on a trigger the app only creates after the person chooses fails at batch, because the app drops it whole", async () => {
+  const file = batched((item) => {
+    item.package.automacao.gatilhos = [{ kind: "slack-channel", everyMinutes: 5, batch: { windowMinutes: 60, max: 50 } }];
+    item.package.omitidos = [];
+  });
+  const hit = await errorAt(file, "package.automacao.gatilhos.0.batch");
+  assert.match(hit.message, /without channels/);
+  assert.match(hit.message, /drops the whole trigger, batch included/);
+});
+
+test("a held trigger and one with an omitted entry keep batch: the app creates them with the whole config", async () => {
+  const file = batched((item) => {
+    item.package.automacao.gatilhos.push({ kind: "teams-inbox", mentions: true, chatsRestritos: 1, batch: { windowMinutes: 30, max: 50 } });
+    item.package.requisitos.conexoes.push({ id: "teams", nome: "Microsoft Teams" });
+  });
+  assert.deepEqual(await validateFile(file), []);
+});
+
+test("a template where one trigger that brings an event has batch and another has not fails at the one without", async () => {
+  const file = batched((item) => {
+    item.package.automacao.gatilhos.push({ kind: "teams-inbox", mentions: true, chatsRestritos: 1 });
+    item.package.requisitos.conexoes.push({ id: "teams", nome: "Microsoft Teams" });
+  });
+  const hit = await errorAt(file, "package.automacao.gatilhos.1.batch");
+  assert.match(hit.message, /"slack-inbox" has batch/);
+  assert.match(hit.message, /no prompt serves both/);
+  assert.match(hit.message, /Batch all the triggers/);
+});
+
+test("a manual trigger next to a batched one fails telling to remove it, since manual takes no batch", async () => {
+  const file = batched((item) => item.package.automacao.gatilhos.push({ kind: "manual" }));
+  const hit = await errorAt(file, "package.automacao.gatilhos.1.batch");
+  assert.match(hit.message, /"manual" trigger takes no batch: remove it/);
+});
+
+/** slack-reply with a filter on its inbox trigger. */
+const filtered = (filter) => variant((item) => (item.package.automacao.gatilhos[0].filter = filter));
+
+test("a filter with the conditions of the app passes", async () => {
+  const conditions = [
+    { path: "author", compare: "not_equals", against: "{{ event.channel }}" },
+    { path: "text", compare: "matches", against: "^deploy\\b" },
+    { path: "thread-ts" },
+  ];
+  assert.deepEqual(await validateFile(filtered(conditions)), []);
+});
+
+for (const [condition, at, message] of [
+  [{ path: "author..login" }, "path", /pattern/],
+  [{ path: "author", compare: "like" }, "compare", /must be one of/],
+  [{ path: "author", against: "x".repeat(501) }, "against", /500/],
+  [{ path: "author", against: "\u{1F600}".repeat(300) }, "against", /UTF-16/],
+  [{ path: "author", against: "{{steps.read.text}}" }, "against", /only event markers/],
+  [{ path: "author", compare: "matches", against: "(" }, "against", /regular expression/],
+  [{ path: "author", value: "x" }, "value", /unknown field/],
+  [{ compare: "exists" }, "path", /required/],
+]) {
+  test(`filter condition ${JSON.stringify(condition)} fails at filter.0.${at}`, async () => {
+    const hit = await errorAt(filtered([condition]), `package.automacao.gatilhos.0.filter.0.${at}`);
+    assert.match(hit.message, message);
+  });
+}
+
+test("a filter with more than 20 conditions fails at the filter", async () => {
+  const hit = await errorAt(filtered(Array.from({ length: 21 }, () => ({ path: "author" }))), "package.automacao.gatilhos.0.filter");
+  assert.match(hit.message, /20/);
+});
 
 /** A connection fixture with a change, written to a temporary connections/ folder under its id. */
 function connection(change, from = "example-remote", catalog = tempCatalog("connections")) {

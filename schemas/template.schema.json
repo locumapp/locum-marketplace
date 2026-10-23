@@ -468,7 +468,7 @@
       ]
     },
     "trigger": {
-      "description": "A trigger without what belongs to the person (channels, chats, owner, authors): they choose it on import. Each kind says what it reads (x-reads-connection; x-reads-server, the field that names the server), whether it brings no event (x-no-event), and the fields the person picks when installing (x-person-chooses), with the values that would take everything and so count as not chosen (x-catch-all). A template leaves each of those out in one way: the app needs the field to create the trigger (x-required-to-run), an entry in omitidos with the code in x-omitted-code at gatilho:<position>, or the field in x-held-by that holds the trigger until the person chooses.",
+      "description": "A trigger without what belongs to the person (channels, chats, owner, authors): they choose it on import. Each kind says what it reads (x-reads-connection; x-reads-server, the field that names the server), whether it brings no event (x-no-event), and the fields the person picks when installing (x-person-chooses), with the values that would take everything and so count as not chosen (x-catch-all). A template leaves each of those out in one way: the app needs the field to create the trigger (x-required-to-run), an entry in omitidos with the code in x-omitted-code at gatilho:<position>, or the field in x-held-by that holds the trigger until the person chooses. A kind with filter also takes batch ($defs.batch).",
       "type": "object",
       "required": [
         "kind"
@@ -605,6 +605,12 @@
               "lookbackMinutes": true,
               "authorPath": true,
               "pageSize": true,
+              "filter": {
+                "$ref": "#/$defs/filter"
+              },
+              "batch": {
+                "$ref": "#/$defs/batch"
+              },
               "everyMinutes": true,
               "workingHours": true
             },
@@ -632,6 +638,12 @@
             ],
             "properties": {
               "kind": true,
+              "filter": {
+                "$ref": "#/$defs/filter"
+              },
+              "batch": {
+                "$ref": "#/$defs/batch"
+              },
               "everyMinutes": true,
               "workingHours": true
             },
@@ -665,6 +677,12 @@
               "maxRepliesPerPr": true,
               "lookbackMinutes": true,
               "excerptLines": true,
+              "filter": {
+                "$ref": "#/$defs/filter"
+              },
+              "batch": {
+                "$ref": "#/$defs/batch"
+              },
               "everyMinutes": true,
               "workingHours": true
             },
@@ -709,6 +727,12 @@
               "agruparPrs": true,
               "maxPrs": true,
               "filtroIa": true,
+              "filter": {
+                "$ref": "#/$defs/filter"
+              },
+              "batch": {
+                "$ref": "#/$defs/batch"
+              },
               "everyMinutes": true,
               "workingHours": true,
               "chatsRestritos": true
@@ -747,7 +771,12 @@
               "onLabels": true,
               "checksGreen": true,
               "checksGreenMaxRevisits": true,
-              "filter": true,
+              "filter": {
+                "$ref": "#/$defs/filter"
+              },
+              "batch": {
+                "$ref": "#/$defs/batch"
+              },
               "everyMinutes": true,
               "workingHours": true
             },
@@ -793,6 +822,12 @@
               "server": true,
               "tool": true,
               "args": true,
+              "filter": {
+                "$ref": "#/$defs/filter"
+              },
+              "batch": {
+                "$ref": "#/$defs/batch"
+              },
               "everyMinutes": true,
               "workingHours": true
             },
@@ -800,6 +835,73 @@
             "x-person-chooses": []
           }
         }
+      ]
+    },
+    "filter": {
+      "description": "Filter of the trigger, as the app reads it (TriggerFilter): the event only becomes a run when it passes every condition, with the comparisons of the if step. Absent or empty, every event passes. against takes only event markers, and with matches and no marker it is a regular expression; the validator checks both.",
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "path": {
+            "description": "The path in the event, as in {{event.<path>}} without event.",
+            "type": "string",
+            "pattern": "^[\\w-]+(\\.[\\w-]+)*$"
+          },
+          "compare": {
+            "enum": [
+              "equals",
+              "not_equals",
+              "contains",
+              "not_contains",
+              "greater",
+              "less",
+              "exists",
+              "empty",
+              "matches"
+            ]
+          },
+          "against": {
+            "type": "string",
+            "maxLength": 500
+          }
+        }
+      }
+    },
+    "batch": {
+      "description": "Batch of the trigger, as the app reads it (TriggerBatch): the events that pass the filter join for windowMinutes and become one run, with at most max of them. Absent, each event is one run. The run of a batch reads the batch event, with the fields in x-event-fields, and not the fields of a single event.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "windowMinutes",
+        "max"
+      ],
+      "properties": {
+        "windowMinutes": {
+          "description": "How long the batch stays open after its first event, from 1 minute to a week.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10080
+        },
+        "max": {
+          "description": "How many events the run takes; the ones past it are cut and counted in cut.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 500
+        }
+      },
+      "x-event-fields": [
+        "items",
+        "cut",
+        "deferred",
+        "count",
+        "windowStart",
+        "windowEnd"
       ]
     },
     "agent": {

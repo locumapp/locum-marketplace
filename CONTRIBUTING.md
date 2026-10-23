@@ -216,5 +216,42 @@ any of them fetches with the tools of its steps. A template that would need an
 event no trigger delivers stays out of the catalog until the app has that
 trigger. A package may come without a trigger.
 
+A trigger kind that has `filter` also takes `batch: {"windowMinutes", "max"}`
+(`$defs.batch`, with the limits of the app: 1 to 10080 minutes and 1 to 500
+events). Without it, each event is one run. With it, the events that pass the
+filter join for the window and become one run, and that run reads the batch
+event: `{{event.items}}` (the events, in the order they arrived),
+`{{event.cut}}` (how many went past `max` and were left out),
+`{{event.deferred}}`, `{{event.count}}`, `{{event.windowStart}}` and
+`{{event.windowEnd}}` (`x-event-fields`). A step that reads another field, like
+`{{event.channel}}`, is refused, because the batch event has none: read each
+event inside `{{event.items}}`. `batch` in a kind without `filter` is refused,
+and a template with `batch` needs `minAppVersion` `0.1.175` or newer, the first
+app with batch. The window and the maximum are written in the template, never
+left to the app. Also refused:
+
+- `batch` in a trigger that leaves out a field in `x-required-to-run`
+  (`channels` in `slack-channel`, `repoMatch` in `poll`): without it the app
+  does not create the trigger on install, and drops it whole, batch included,
+  until the person chooses. A trigger held by `x-held-by` or with an entry in
+  `omitidos` is created with its whole config, and keeps its batch;
+- a template where one trigger that brings an event has `batch` and another
+  has not: a run of each reads a different event, and no prompt serves both.
+
+`filter` (`$defs.filter`) follows the app too: at most 20 conditions, each with
+`path` (the path in the event, like `author.login`), `compare` (the comparisons
+of the `if` step) and `against` (up to 500 characters). `against` takes only
+event markers, and with `matches` and no marker it must be a valid regular
+expression.
+
+Known limit: with batch, the app also warns about an action that takes its
+target or scope from the event (a conversation reply, the GitHub thread
+actions, `github.review_comment` without `owner`, `repo` and `pull`, the memory
+scope) and is not inside a "for each" over `{{event.items}}`. The catalog does
+not check it: the list lives in the app, with exceptions by parameter, and the
+template schema has no "for each" yet. A template with batch should deliver
+through an action that does not read a target from the event, like
+`digest.deliver`.
+
 Before opening the PR, check that no company data is left: names of people,
 teams, channels, hosts and repositories must be generic.

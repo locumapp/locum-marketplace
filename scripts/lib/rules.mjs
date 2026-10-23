@@ -58,6 +58,9 @@ export const CONNECTION_MIN_APP_VERSION = "0.1.168";
 /** The first app version whose schema takes `servers.remote.path` and the `${field:<key>}` markers. */
 export const MARKERS_MIN_APP_VERSION = "0.1.170";
 
+/** The first app version with `batch` in a trigger (ADR 0019, slice 7a). */
+export const BATCH_MIN_APP_VERSION = "0.1.175";
+
 /** A display name as the app compares it with the official ones: without accents or format characters, in lowercase. */
 const normalizedName = (name) => name.normalize("NFKC").normalize("NFD").replace(/[\p{M}\p{Cf}]/gu, "").toLowerCase().trim();
 
@@ -76,17 +79,23 @@ function compareVersions(a, b) {
   return 0;
 }
 
-/** Annotations the schema keeps on each trigger kind, read by the rules and the index. */
-export const TRIGGER_ANNOTATIONS = ["x-reads-connection", "x-reads-server", "x-no-event", "x-person-chooses", "x-required-to-run", "x-omitted-code", "x-held-by", "x-catch-all"];
+/** Annotations the schema keeps on each trigger kind and on the batch, read by the rules and the index. */
+export const TRIGGER_ANNOTATIONS = ["x-reads-connection", "x-reads-server", "x-no-event", "x-person-chooses", "x-required-to-run", "x-omitted-code", "x-held-by", "x-catch-all", "x-event-fields"];
+
+const templateSchema = JSON.parse(readFileSync(new URL("../../schemas/template.schema.json", import.meta.url), "utf8"));
+
+/** What the run of a batch reads in `{{event.*}}`, from `$defs.batch` in the template schema. */
+const BATCH_EVENT_FIELDS = templateSchema.$defs.batch["x-event-fields"];
 
 /** What each trigger kind reads and what the person picks on install, from `$defs.trigger` in the template schema. */
 export const TRIGGER_KINDS = new Map(
-  JSON.parse(readFileSync(new URL("../../schemas/template.schema.json", import.meta.url), "utf8")).$defs.trigger.allOf.map((branch) => [
+  templateSchema.$defs.trigger.allOf.map((branch) => [
     branch.if.properties.kind.const,
     {
       connection: branch.then["x-reads-connection"],
       serverField: branch.then["x-reads-server"],
       noEvent: branch.then["x-no-event"] === true,
+      takesBatch: branch.then.properties.batch !== undefined,
       chooses: branch.then["x-person-chooses"],
       requiredToRun: branch.then["x-required-to-run"] ?? [],
       catchAll: branch.then["x-catch-all"] ?? {},
@@ -131,6 +140,10 @@ export function itemRules(item, expected) {
       }
     }
     if (isObject(item.manifest)) errors.push(...connectionRules(item.manifest, item.id));
+  }
+  const batched = item.kind === "template" && (Array.isArray(item.package?.automacao?.gatilhos) ? item.package.automacao.gatilhos : []).some((t) => isObject(t) && t.batch !== undefined);
+  if (batched && (item.minAppVersion === undefined || (typeof item.minAppVersion === "string" && /^\d+\.\d+\.\d+$/.test(item.minAppVersion) && compareVersions(item.minAppVersion, BATCH_MIN_APP_VERSION) < 0))) {
+    errors.push({ field: "minAppVersion", message: `batch needs minAppVersion ${BATCH_MIN_APP_VERSION} or newer: older apps run each event on its own and the batch fields come out empty` });
   }
   if ((item.kind === "template" || item.kind === "package") && isObject(item.package)) {
     errors.push(...packageRules(item.package, item.kind));
@@ -621,6 +634,15 @@ function triggerRules(pkg, kind) {
     const reads = isObject(trigger) ? TRIGGER_KINDS.get(trigger.kind) : undefined;
     if (reads === undefined) return;
     const at = field("package.automacao.gatilhos", i);
+    if (trigger.batch !== undefined && !reads.takesBatch) {
+      errors.push({ field: field(at, "batch"), message: `a "${trigger.kind}" trigger has no filter, so it has no batch either: the app joins only the events that pass a trigger filter` });
+    } else if (trigger.batch !== undefined) {
+      const waiting = reads.requiredToRun.filter((f) => trigger[f] === undefined);
+      if (waiting.length > 0) {
+        errors.push({ field: field(at, "batch"), message: `a "${trigger.kind}" trigger without ${waiting.join(", ")} is not created on install: the app drops the whole trigger, batch included, until the person chooses, and the one they make by hand has no batch` });
+      }
+    }
+    if (reads.takesBatch && Array.isArray(trigger.filter)) errors.push(...filterRules(trigger.filter, field(at, "filter")));
     if (reads.connection !== undefined && !connections.has(reads.connection)) {
       errors.push({ field: field(at, "kind"), message: `a "${trigger.kind}" trigger reads the "${reads.connection}" connection, which is not in package.requisitos.conexoes` });
     }
@@ -640,7 +662,55 @@ function triggerRules(pkg, kind) {
       }
     });
   }
+  const batched = [...new Set(triggers.filter((t) => isObject(t) && t.batch !== undefined && TRIGGER_KINDS.get(t.kind)?.takesBatch).map((t) => `"${t.kind}"`))];
+  if (kind === "template" && batched.length > 0) {
+    // A run of each reads a different event: the list of the batch or a single one.
+    triggers.forEach((t, i) => {
+      const reads = isObject(t) ? TRIGGER_KINDS.get(t.kind) : undefined;
+      if (reads === undefined || reads.noEvent || t.batch !== undefined) return;
+      const fix = reads.takesBatch ? "Batch all the triggers that bring an event, or none" : `A "${t.kind}" trigger takes no batch: remove it, or batch none`;
+      errors.push({ field: field("package.automacao.gatilhos", i, "batch"), message: `a "${t.kind}" trigger brings a single event, and ${batched.join(", ")} ${batched.length === 1 ? "has" : "have"} batch: a run of each reads a different event, and no prompt serves both. ${fix}` });
+    });
+  }
+  if (kind === "template" && batched.length > 0) {
+    // The run of a batch gets the batch event, and a field of a single event renders as nothing.
+    const single = (marker) => marker.split(".").length > 1 && !BATCH_EVENT_FIELDS.includes(marker.split(".")[1]);
+    const steps = Array.isArray(pkg.automacao?.spec?.steps) ? pkg.automacao.spec.steps : [];
+    steps.forEach((step, i) => {
+      for (const { path, marker } of eventReads(step, field("package.automacao.spec.steps", i), single)) {
+        errors.push({ field: path, message: `reads ${marker}, but ${batched.join(", ")} ${batched.length === 1 ? "has" : "have"} batch, and the batch event brings only ${BATCH_EVENT_FIELDS.join(", ")}: read each event inside {{event.items}}` });
+      }
+    });
+  }
   return errors;
+}
+
+/** What the schema cannot say about a filter condition, checked as the app does (TriggerFilterCondition). */
+function filterRules(filter, at) {
+  const errors = [];
+  filter.forEach((condition, j) => {
+    const against = isObject(condition) ? condition.against : undefined;
+    if (typeof against !== "string") return;
+    const where = field(at, j, "against");
+    // The app counts UTF-16 units (zod), the schema counts code points (ajv).
+    if (against.length > 500) errors.push({ field: where, message: `${against.length} UTF-16 units, over the 500 the app takes` });
+    const foreign = [...against.matchAll(/\{\{[^}]*\}\}/g)].map((m) => m[0]).find((m) => !/^\{\{\s*event\.[\w-]+(?:\.[\w-]+)*\s*\}\}$/.test(m));
+    if (foreign !== undefined) {
+      errors.push({ field: where, message: `${foreign}: against takes only event markers, like {{event.author.login}}; steps, memory and the others do not exist yet when the filter runs` });
+    } else if (condition.compare === "matches" && !against.includes("{{") && !validRegex(against)) {
+      errors.push({ field: where, message: "not a valid regular expression" });
+    }
+  });
+  return errors;
+}
+
+function validRegex(value) {
+  try {
+    new RegExp(value, "i");
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** A template leaves what the person chooses out in the way its kind says, so the install asks for it. */
@@ -671,21 +741,21 @@ function leftOutRules(pkg, trigger, i, reads) {
 
 /** What the app renders with the event, by step type (`camposRenderizados` in the app executor); name, key and the rest are not. */
 const RENDERED = { model: ["prompt"], action: ["params"], logic: ["value", "against", "title"] };
-const EVENT_MARKER = /\{\{\s*(event(?:\.[\w.]+)?)\s*\}\}/;
+const EVENT_MARKER = /\{\{\s*(event(?:\.[\w.]+)?)\s*\}\}/g;
 
-/** Where a step reads the event, with the marker as the app names it. */
-function eventReads(step, at) {
+/** Where a step reads the event, with the first marker of each field that `counts`, as the app names it. */
+function eventReads(step, at, counts = () => true) {
   if (!isObject(step)) return [];
-  return (RENDERED[step.type] ?? []).flatMap((key) => markers(step[key], field(at, key)));
+  return (RENDERED[step.type] ?? []).flatMap((key) => markers(step[key], field(at, key), counts));
 }
 
-function markers(value, path) {
+function markers(value, path, counts) {
   if (typeof value === "string") {
-    const found = EVENT_MARKER.exec(value);
-    return found === null ? [] : [{ path, marker: `{{${found[1]}}}` }];
+    const found = [...value.matchAll(EVENT_MARKER)].map((m) => m[1]).find(counts);
+    return found === undefined ? [] : [{ path, marker: `{{${found}}}` }];
   }
   if (!isObject(value) && !Array.isArray(value)) return [];
-  return Object.entries(value).flatMap(([key, child]) => markers(child, field(path, key)));
+  return Object.entries(value).flatMap(([key, child]) => markers(child, field(path, key), counts));
 }
 
 /** The first cycle in the needs between steps, as a list of keys that starts and ends on the same step. */
