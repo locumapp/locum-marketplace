@@ -743,6 +743,11 @@
               "authorship": true,
               "includeDrafts": true,
               "filters": true,
+              "on": true,
+              "onLabels": true,
+              "checksGreen": true,
+              "checksGreenMaxRevisits": true,
+              "filter": true,
               "everyMinutes": true,
               "workingHours": true
             },
