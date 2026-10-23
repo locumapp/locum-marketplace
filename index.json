@@ -1,8 +1,8 @@
 {
   "format": "locum-marketplace-index",
   "version": 1,
-  "commit": "b05ba951f3bd5f7163a26461566d34d370c7ee32",
-  "committedAt": 1792724122,
+  "commit": "df0c973ffe33d69d49c67aa064e24c3230c53017",
+  "committedAt": 1792778456,
   "items": [
     {
       "kind": "template",
@@ -98,17 +98,17 @@
     {
       "kind": "template",
       "id": "pr-rereview",
-      "version": 3,
-      "minAppVersion": "0.1.165",
+      "version": 4,
+      "minAppVersion": "0.1.174",
       "path": "templates/pr-rereview.json",
-      "sha256": "3c43d923f2aa74e283ed2340bd629e9a1ae4fdc6029759c340bc3af806590dec",
+      "sha256": "98f9e477fabba6985eae0f015f8980626452d269c27adbec88442d014f87bb1d",
       "name": {
         "en": "PR re-review",
         "pt-BR": "Nova revisão de PR"
       },
       "description": {
-        "en": "Checks the requests from your last review against the diff since then and the thread replies, points out new defects, waits for CI on the head commit and prepares the review, held in the queue. An approval with CI not green goes out as a comment.",
-        "pt-BR": "Confere os pedidos da sua última review contra o diff desde ela e as respostas nas threads, aponta defeito novo, espera a esteira no commit de cabeça e prepara a review, parada na fila. Aprovação com a esteira fora do verde sai como comentário."
+        "en": "Checks the requests from your last review against the diff since then and the thread replies, points out new defects, waits for CI on the head commit and prepares the review, held in the queue. It runs again when the author pushes after your review, and when CI turns green on a review that went out as a comment because CI was not green.",
+        "pt-BR": "Confere os pedidos da sua última review contra o diff desde ela e as respostas nas threads, aponta defeito novo, espera a esteira no commit de cabeça e prepara a review, parada na fila. Volta quando o autor sobe commit depois da sua review e quando a esteira fica verde numa review que saiu como comentário por causa da esteira."
       },
       "tags": [
         "code-review",
@@ -133,6 +133,13 @@
           "github.review_comment"
         ],
         "triggers": [
+          {
+            "kind": "poll",
+            "choose": [
+              "owner",
+              "repoMatch"
+            ]
+          },
           {
             "kind": "poll",
             "choose": [
