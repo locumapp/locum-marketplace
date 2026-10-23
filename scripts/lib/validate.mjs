@@ -59,8 +59,9 @@ function expectedFromPath(file) {
 
 /**
  * Parses and checks one file. Returns the item and its errors, each with file, field and message.
- * With `root`, the file is read as part of the catalog under it, where a connection type with a local server
- * is refused until the app pins local servers (ADR 0018, slice 6), unless `localServers` is true.
+ * With `root`, the file is read as part of the catalog under it, where a local server is refused until the app pins
+ * local servers (ADR 0018, slice 6), unless `localServers` is true. An official type may already run an image pinned
+ * by digest, which the app builds the docker command for; a package still waits.
  */
 export async function checkFile(file, { root, localServers = false } = {}) {
   const fail = (field, message, bytes) => ({ bytes, item: undefined, errors: [{ file, field, message }] });
@@ -80,8 +81,13 @@ export async function checkFile(file, { root, localServers = false } = {}) {
   validate(item);
   const ruled = itemRules(item, expected);
   const inCatalogConnections = root !== undefined && resolve(dirname(file)) === resolve(root, "connections");
-  if (inCatalogConnections && !localServers && item?.manifest?.servers?.local !== undefined) {
-    ruled.push({ field: "manifest.servers.local", message: "local servers are not accepted yet: the app pins them in a later release, so only remote servers are published for now" });
+  const local = item?.manifest?.servers?.local;
+  if (inCatalogConnections && !localServers && local !== undefined) {
+    if (!OFFICIAL_CONNECTIONS.has(item.id)) {
+      ruled.push({ field: "manifest.servers.local", message: "local servers are not accepted yet: the app pins them in a later release, so only remote servers are published for now" });
+    } else if (local?.package !== undefined) {
+      ruled.push({ field: "manifest.servers.local", message: "a local server by package is not accepted yet: the app installs it pinned by the lockfile in a later release" });
+    }
   }
   // A rule says more than the schema about the same field: keep the rule.
   const ruledFields = new Set(ruled.map((e) => e.field));

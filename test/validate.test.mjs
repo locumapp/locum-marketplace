@@ -386,6 +386,155 @@ test("a remote server whose address the person fills passes, with the field decl
   assert.deepEqual(await validateFile(file), []);
 });
 
+const urlField = { key: "url", label: { en: "Address", "pt-BR": "Endereço" }, format: "url", required: true };
+const textField = (key) => ({ key, label: { en: "Value", "pt-BR": "Valor" }, format: "text", required: true });
+
+test("a remote server takes a path after the address the person fills, and field markers in the url path and headers", async () => {
+  const withPath = connection((_, m) => {
+    m.fields = [urlField];
+    m.methods = [{ type: "token", header: "Authorization" }, { type: "none" }];
+    m.servers = { remote: { urlField: "url", path: "/api/mcp", headers: { Authorization: "Bearer ${credential}", "X-Origin": "${field:url}" } } };
+    delete m.hosts;
+  });
+  assert.deepEqual(await validateFile(withPath.file), []);
+  const inPath = connection((_, m) => {
+    m.fields = [textField("workspace")];
+    m.servers.remote = { url: "https://mcp.example.com/w/${field:workspace}/mcp", headers: { "X-Workspace": "${field:workspace}" } };
+  });
+  assert.deepEqual(await validateFile(inPath.file), []);
+});
+
+const markerConnections = [
+  ["a path without urlField", (_, m) => (m.servers.remote.path = "/mcp"), "manifest.servers.remote.path", /urlField/],
+  [
+    "a path with a .. segment",
+    (_, m) => {
+      m.fields = [urlField];
+      m.servers.remote = { urlField: "url", path: "/a/../mcp" };
+    },
+    "manifest.servers.remote.path",
+    /\.\./,
+  ],
+  [
+    "a marker in the path",
+    (_, m) => {
+      m.fields = [urlField];
+      m.servers.remote = { urlField: "url", path: "/${field:url}" };
+    },
+    "manifest.servers.remote.path",
+    /pattern/,
+  ],
+  [
+    "a field marker in the host",
+    (_, m) => {
+      m.fields = [textField("tenant")];
+      m.servers.remote.url = "https://${field:tenant}.example.com/mcp";
+    },
+    "manifest.servers.remote.url",
+    /only in the path/,
+  ],
+  [
+    "a field marker in the query",
+    (_, m) => {
+      m.fields = [textField("tenant")];
+      m.servers.remote.url = "https://mcp.example.com/mcp?t=${field:tenant}";
+    },
+    "manifest.servers.remote.url",
+    /only in the path/,
+  ],
+  ["a field marker of a field not declared", (_, m) => (m.servers.remote.headers = { "X-Tenant": "${field:tenant}" }), "manifest.servers.remote.headers.X-Tenant", /not a declared field/],
+  ["a marker left open", (_, m) => (m.servers.remote.headers = { "X-Tenant": "${field:tenant" }), "manifest.servers.remote.headers.X-Tenant", /placeholder/],
+  [
+    "the credential in two headers",
+    (_, m) => (m.servers.remote.headers = { Authorization: "Bearer ${credential}", "X-Api-Key": "${credential}" }),
+    "manifest.servers.remote.headers",
+    /one place/,
+  ],
+  [
+    "a token method that puts the credential in another header",
+    (_, m) => {
+      m.methods = [{ type: "token", header: "X-Api-Key" }];
+      m.servers.remote.headers = { Authorization: "Bearer ${credential}" };
+    },
+    "manifest.methods",
+    /X-Api-Key.*Authorization/,
+  ],
+  [
+    "a free text field in a header next to the credential",
+    (_, m) => {
+      m.fields = [textField("host")];
+      m.methods = [{ type: "token", header: "Authorization" }];
+      m.servers.remote.headers = { Authorization: "Bearer ${credential}", "X-Host": "${field:host}" };
+    },
+    "manifest.servers.remote",
+    /free text/,
+  ],
+];
+
+for (const [name, change, at, message] of markerConnections) {
+  test(`a remote connection is refused with ${name}`, async () => {
+    const errors = await validateFile(connection(change).file);
+    const hit = errors.find((e) => e.field === at);
+    assert.ok(hit, `expected an error at ${at}, got ${JSON.stringify(errors)}`);
+    assert.match(hit.message, message);
+  });
+}
+
+const markerLocal = [
+  ["an unknown placeholder in an argument", (_, m) => (m.servers.local.args = ["--org", "${org}"]), "manifest.servers.local.args.1", /placeholder/],
+  ["an unknown placeholder in env", (_, m) => (m.servers.local.env.EXAMPLE_ORG = "${org}"), "manifest.servers.local.env.EXAMPLE_ORG", /placeholder/],
+  [
+    "a free text field in env next to the credential",
+    (_, m) => {
+      m.fields = [textField("host")];
+      m.servers.local.env.EXAMPLE_HOST = "${field:host}";
+    },
+    "manifest.servers.local",
+    /free text/,
+  ],
+  ["a token method that puts the credential in another variable", (_, m) => (m.methods = [{ type: "token", env: "OTHER_TOKEN" }]), "manifest.methods", /OTHER_TOKEN.*EXAMPLE_TOKEN/],
+  ...["DOCKER_HOST", "HOME", "LOGNAME", "PATH", "SHELL", "TERM", "USER"].map((name) => [
+    `the variable ${name}`,
+    (_, m) => (m.servers.local.env[name] = "x"),
+    `manifest.servers.local.env.${name}`,
+    /docker|MCP client|loads code/,
+  ]),
+  ["DOCKER_CONFIG as the variable of the token", (_, m) => (m.methods[0].env = "DOCKER_CONFIG"), "manifest.methods.0.env", /docker/],
+];
+
+for (const [name, change, at, message] of markerLocal) {
+  test(`a local server is refused with ${name}`, async () => {
+    const errors = await validateFile(connection(change, "example-docker").file);
+    const hit = errors.find((e) => e.field === at);
+    assert.ok(hit, `expected an error at ${at}, got ${JSON.stringify(errors)}`);
+    assert.match(hit.message, message);
+  });
+}
+
+test("an official type may take a free text field in the server that receives the credential", async () => {
+  const { file } = connection((item, m) => {
+    item.id = "grafana";
+    m.fields = [urlField, textField("org")];
+    m.servers.local.env = { GRAFANA_URL: "${field:url}", GRAFANA_ORG: "${field:org}", EXAMPLE_TOKEN: "${credential}" };
+  }, "example-docker");
+  assert.deepEqual(await validateFile(file), []);
+});
+
+test("in the catalog, an official type may run an image pinned by digest; a package or a community local server waits", async () => {
+  const catalog = tempCatalog("connections");
+  connection((item) => (item.id = "grafana"), "example-docker", catalog);
+  connection((item) => (item.id = "prelo"), "example-npm", catalog);
+  connection(() => {}, "example-docker", catalog);
+  const { items, errors } = await validateCatalog(catalog);
+  assert.deepEqual(items.map((i) => i.id), ["grafana"]);
+  assert.deepEqual(errors.map((e) => [e.file.split("/").pop(), e.field]), [
+    ["example-docker.json", "manifest.servers.local"],
+    ["prelo.json", "manifest.servers.local"],
+  ]);
+  assert.match(errors[0].message, /not accepted yet/);
+  assert.match(errors[1].message, /package/);
+});
+
 test("two connection types cannot claim the same host or alias, and the error points to both files", async () => {
   const { catalog } = connection((item, m) => {
     item.id = "example-a";
