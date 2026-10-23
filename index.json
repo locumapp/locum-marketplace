@@ -1,9 +1,726 @@
 {
   "format": "locum-marketplace-index",
   "version": 1,
-  "commit": "df0c973ffe33d69d49c67aa064e24c3230c53017",
-  "committedAt": 1792778456,
+  "commit": "e70a6b34ee1d6fd2d2fe828a6e9f0bf753986446",
+  "committedAt": 1792791649,
   "items": [
+    {
+      "kind": "connection",
+      "id": "amplitude",
+      "version": 1,
+      "minAppVersion": "0.1.168",
+      "path": "connections/amplitude.json",
+      "sha256": "a3416c54ed5d38e33ddecaae568f9711657ae15b4eb2fc8c1b469307dea54aa7",
+      "name": {
+        "en": "Amplitude",
+        "pt-BR": "Amplitude"
+      },
+      "description": {
+        "en": "Amplitude's official MCP server. Agents query charts, cohorts and events in the authorized project.",
+        "pt-BR": "Servidor MCP oficial do Amplitude. Os agents consultam gráficos, coortes e eventos do projeto autorizado."
+      },
+      "tags": [],
+      "requires": {
+        "servers": {
+          "remote": {
+            "url": "https://mcp.amplitude.com/mcp"
+          }
+        },
+        "hosts": [
+          "mcp.amplitude.com"
+        ],
+        "methods": [
+          {
+            "type": "oauth"
+          }
+        ],
+        "scopes": [],
+        "fields": [],
+        "triggers": [],
+        "actions": [],
+        "writeTools": []
+      }
+    },
+    {
+      "kind": "connection",
+      "id": "asana",
+      "version": 1,
+      "minAppVersion": "0.1.168",
+      "path": "connections/asana.json",
+      "sha256": "4d99db0fda75abb9497eb6be203c8a6fe5f5ab681f9187c313c57b281eb2fae7",
+      "name": {
+        "en": "Asana",
+        "pt-BR": "Asana"
+      },
+      "description": {
+        "en": "Asana's official MCP server. Agents read and update tasks in the projects you allow.",
+        "pt-BR": "Servidor MCP oficial do Asana. Os agents leem e atualizam tarefas dos projetos que você liberar."
+      },
+      "tags": [],
+      "requires": {
+        "servers": {
+          "remote": {
+            "url": "https://mcp.asana.com/v2/mcp"
+          }
+        },
+        "hosts": [
+          "mcp.asana.com"
+        ],
+        "methods": [
+          {
+            "type": "oauth"
+          }
+        ],
+        "scopes": [],
+        "fields": [],
+        "triggers": [],
+        "actions": [],
+        "writeTools": []
+      }
+    },
+    {
+      "kind": "connection",
+      "id": "atlassian",
+      "version": 1,
+      "minAppVersion": "0.1.168",
+      "path": "connections/atlassian.json",
+      "sha256": "9abc99bc7672fb2fb3d63002cd4c3280e461829c66b3f46c8ba0bb78967087b9",
+      "name": {
+        "en": "Atlassian",
+        "pt-BR": "Atlassian"
+      },
+      "description": {
+        "en": "Atlassian's official MCP server (Rovo), with Jira and Confluence. Authorization picks the site and what Locum sees, and the same connection is where tasks proposed by an agent go, always after your approval.",
+        "pt-BR": "Servidor MCP oficial da Atlassian (Rovo), com Jira e Confluence. A autorização escolhe o site e o que o Locum enxerga, e a mesma conexão serve de destino para as tarefas que um agent propõe abrir, sempre depois da sua aprovação."
+      },
+      "tags": [],
+      "requires": {
+        "servers": {
+          "remote": {
+            "url": "https://mcp.atlassian.com/v1/mcp"
+          }
+        },
+        "hosts": [
+          "mcp.atlassian.com"
+        ],
+        "methods": [
+          {
+            "type": "oauth"
+          }
+        ],
+        "scopes": [],
+        "fields": [],
+        "triggers": [],
+        "actions": [],
+        "writeTools": []
+      }
+    },
+    {
+      "kind": "connection",
+      "id": "canva",
+      "version": 1,
+      "minAppVersion": "0.1.168",
+      "path": "connections/canva.json",
+      "sha256": "398ab96c820e567b42fcdaa6dc6a5c536ca1e1d634568073219dddec86d7defd",
+      "name": {
+        "en": "Canva",
+        "pt-BR": "Canva"
+      },
+      "description": {
+        "en": "Canva's official MCP server. Agents search and read designs in your account.",
+        "pt-BR": "Servidor MCP oficial do Canva. Os agents buscam e leem designs da sua conta."
+      },
+      "tags": [],
+      "requires": {
+        "servers": {
+          "remote": {
+            "url": "https://mcp.canva.com/mcp"
+          }
+        },
+        "hosts": [
+          "mcp.canva.com"
+        ],
+        "methods": [
+          {
+            "type": "oauth"
+          }
+        ],
+        "scopes": [],
+        "fields": [],
+        "triggers": [],
+        "actions": [],
+        "writeTools": []
+      }
+    },
+    {
+      "kind": "connection",
+      "id": "figma",
+      "version": 1,
+      "minAppVersion": "0.1.168",
+      "path": "connections/figma.json",
+      "sha256": "582e536f060009c2cb77593257f2cd8024db604839c8fa6b09afb3b521423051",
+      "name": {
+        "en": "Figma",
+        "pt-BR": "Figma"
+      },
+      "description": {
+        "en": "Figma's remote MCP server. Agents read frames and variables to compare screens with the design.",
+        "pt-BR": "Servidor MCP remoto do Figma. Os agents leem frames e variáveis para comparar tela com design."
+      },
+      "tags": [],
+      "requires": {
+        "servers": {
+          "remote": {
+            "url": "https://mcp.figma.com/mcp"
+          }
+        },
+        "hosts": [
+          "mcp.figma.com"
+        ],
+        "methods": [
+          {
+            "type": "oauth"
+          }
+        ],
+        "scopes": [],
+        "fields": [],
+        "triggers": [],
+        "actions": [],
+        "writeTools": []
+      }
+    },
+    {
+      "kind": "connection",
+      "id": "github",
+      "version": 1,
+      "minAppVersion": "0.1.168",
+      "path": "connections/github.json",
+      "sha256": "86174143c4c88289dc5fc6d525c0308d37fb571a618a8db339c99f7c0faf53e4",
+      "name": {
+        "en": "GitHub",
+        "pt-BR": "GitHub"
+      },
+      "description": {
+        "en": "Personal GitHub token, stored in the keychain. PR triggers and reviews use it to read the repository.",
+        "pt-BR": "Token pessoal do GitHub, guardado no keychain. É ele que os gatilhos de PR e as revisões usam para ler o repositório."
+      },
+      "tags": [],
+      "requires": {
+        "servers": {},
+        "hosts": [
+          "api.githubcopilot.com",
+          "githubcopilot.com"
+        ],
+        "methods": [
+          {
+            "type": "token"
+          },
+          {
+            "type": "cli",
+            "reader": "gh"
+          }
+        ],
+        "scopes": [],
+        "fields": [],
+        "triggers": [
+          "github-thread-reply",
+          "poll"
+        ],
+        "actions": [
+          "github.checks_wait",
+          "github.react",
+          "github.resolve_thread",
+          "github.review_comment",
+          "github.review_reply"
+        ],
+        "writeTools": []
+      }
+    },
+    {
+      "kind": "connection",
+      "id": "grafana",
+      "version": 1,
+      "minAppVersion": "0.1.170",
+      "path": "connections/grafana.json",
+      "sha256": "8a55a83307da027a6da2056c8bdbfa65b9564b9af5e8bb7d9cb8dcd70923fc86",
+      "name": {
+        "en": "Grafana",
+        "pt-BR": "Grafana"
+      },
+      "description": {
+        "en": "Grafana's official MCP server, through Docker. Register each instance (dev, prod) with its address and a service account token.",
+        "pt-BR": "Servidor MCP oficial do Grafana, pelo Docker. Cadastre cada instância (dev, prod) com o endereço e um token de service account."
+      },
+      "tags": [],
+      "requires": {
+        "servers": {
+          "local": {
+            "image": "mcp/grafana@sha256:9362bcf6aa0e44e61f645b905cec03fb346a946a34a4dafecd7f3e28d3724014"
+          }
+        },
+        "hosts": [],
+        "methods": [
+          {
+            "type": "token"
+          }
+        ],
+        "scopes": [],
+        "fields": [
+          "url"
+        ],
+        "triggers": [],
+        "actions": [],
+        "writeTools": []
+      }
+    },
+    {
+      "kind": "connection",
+      "id": "intercom",
+      "version": 1,
+      "minAppVersion": "0.1.168",
+      "path": "connections/intercom.json",
+      "sha256": "6d42ce24cb34880224701358541f069d9a78b146ff7f668d9475a0c6eeb9acac",
+      "name": {
+        "en": "Intercom",
+        "pt-BR": "Intercom"
+      },
+      "description": {
+        "en": "Intercom's official MCP server. Agents search conversations and contacts in the authorized workspace.",
+        "pt-BR": "Servidor MCP oficial do Intercom. Os agents buscam conversas e contatos do workspace autorizado."
+      },
+      "tags": [],
+      "requires": {
+        "servers": {
+          "remote": {
+            "url": "https://mcp.intercom.com/mcp"
+          }
+        },
+        "hosts": [
+          "mcp.intercom.com"
+        ],
+        "methods": [
+          {
+            "type": "oauth"
+          }
+        ],
+        "scopes": [],
+        "fields": [],
+        "triggers": [],
+        "actions": [],
+        "writeTools": []
+      }
+    },
+    {
+      "kind": "connection",
+      "id": "linear",
+      "version": 1,
+      "minAppVersion": "0.1.168",
+      "path": "connections/linear.json",
+      "sha256": "4054c79c9045aae26c7ea4931bf6aa5411d87f1b7970638c07e4d6e87b52ed2e",
+      "name": {
+        "en": "Linear",
+        "pt-BR": "Linear"
+      },
+      "description": {
+        "en": "Linear's official MCP server. Agents search, read and comment on issues in the authorized workspace.",
+        "pt-BR": "Servidor MCP oficial do Linear. Os agents buscam, leem e comentam issues do workspace autorizado."
+      },
+      "tags": [],
+      "requires": {
+        "servers": {
+          "remote": {
+            "url": "https://mcp.linear.app/mcp"
+          }
+        },
+        "hosts": [
+          "mcp.linear.app"
+        ],
+        "methods": [
+          {
+            "type": "oauth"
+          }
+        ],
+        "scopes": [],
+        "fields": [],
+        "triggers": [],
+        "actions": [],
+        "writeTools": []
+      }
+    },
+    {
+      "kind": "connection",
+      "id": "miro",
+      "version": 1,
+      "minAppVersion": "0.1.168",
+      "path": "connections/miro.json",
+      "sha256": "4e5003d42da4f1f03bdf7ad787aa718a6689d05bfe81d87c5940890c8c098abe",
+      "name": {
+        "en": "Miro",
+        "pt-BR": "Miro"
+      },
+      "description": {
+        "en": "Miro's official MCP server. Agents read and draw on the boards you allow.",
+        "pt-BR": "Servidor MCP oficial do Miro. Os agents leem e desenham em quadros que você liberar."
+      },
+      "tags": [],
+      "requires": {
+        "servers": {
+          "remote": {
+            "url": "https://mcp.miro.com/"
+          }
+        },
+        "hosts": [
+          "mcp.miro.com"
+        ],
+        "methods": [
+          {
+            "type": "oauth"
+          }
+        ],
+        "scopes": [],
+        "fields": [],
+        "triggers": [],
+        "actions": [],
+        "writeTools": []
+      }
+    },
+    {
+      "kind": "connection",
+      "id": "newrelic",
+      "version": 1,
+      "minAppVersion": "0.1.168",
+      "path": "connections/newrelic.json",
+      "sha256": "ab424bb1ff4861552e42c422b0d65fa21bf2e94cb9459cf7dc3274630ce966d8",
+      "name": {
+        "en": "New Relic",
+        "pt-BR": "New Relic"
+      },
+      "description": {
+        "en": "New Relic's official MCP server. Agents run NRQL, read logs and look up incidents in the authorized account.",
+        "pt-BR": "Servidor MCP oficial do New Relic. Os agents rodam NRQL, leem logs e consultam incidentes da conta autorizada."
+      },
+      "tags": [],
+      "requires": {
+        "servers": {
+          "remote": {
+            "url": "https://mcp.newrelic.com/mcp"
+          }
+        },
+        "hosts": [
+          "mcp.newrelic.com"
+        ],
+        "methods": [
+          {
+            "type": "oauth"
+          }
+        ],
+        "scopes": [],
+        "fields": [],
+        "triggers": [],
+        "actions": [],
+        "writeTools": []
+      }
+    },
+    {
+      "kind": "connection",
+      "id": "notion",
+      "version": 1,
+      "minAppVersion": "0.1.168",
+      "path": "connections/notion.json",
+      "sha256": "cb4e28a0ba3e339a9e52bd6e8d85e9884fb055b51a5b0c37ec785d611810dea6",
+      "name": {
+        "en": "Notion",
+        "pt-BR": "Notion"
+      },
+      "description": {
+        "en": "Notion's official MCP server. Agents search and read the pages and databases you allow during authorization.",
+        "pt-BR": "Servidor MCP oficial do Notion. Os agents buscam e leem páginas e bases que você liberar na autorização."
+      },
+      "tags": [],
+      "requires": {
+        "servers": {
+          "remote": {
+            "url": "https://mcp.notion.com/mcp"
+          }
+        },
+        "hosts": [
+          "mcp.notion.com"
+        ],
+        "methods": [
+          {
+            "type": "oauth"
+          }
+        ],
+        "scopes": [],
+        "fields": [],
+        "triggers": [],
+        "actions": [],
+        "writeTools": []
+      }
+    },
+    {
+      "kind": "connection",
+      "id": "posthog",
+      "version": 1,
+      "minAppVersion": "0.1.168",
+      "path": "connections/posthog.json",
+      "sha256": "2c0a0619e1a58a198d58a086a5cad7f2fc471e0e6a428d635effd88edb4eb047",
+      "name": {
+        "en": "PostHog",
+        "pt-BR": "PostHog"
+      },
+      "description": {
+        "en": "PostHog's official MCP server. Agents query events, insights and flags in the authorized project.",
+        "pt-BR": "Servidor MCP oficial do PostHog. Os agents consultam eventos, insights e flags do projeto autorizado."
+      },
+      "tags": [],
+      "requires": {
+        "servers": {
+          "remote": {
+            "url": "https://mcp.posthog.com/mcp"
+          }
+        },
+        "hosts": [
+          "mcp.posthog.com"
+        ],
+        "methods": [
+          {
+            "type": "oauth"
+          }
+        ],
+        "scopes": [],
+        "fields": [],
+        "triggers": [],
+        "actions": [],
+        "writeTools": []
+      }
+    },
+    {
+      "kind": "connection",
+      "id": "prelo",
+      "version": 1,
+      "minAppVersion": "0.1.170",
+      "path": "connections/prelo.json",
+      "sha256": "424d0014e8c11698570b195c9e60880f568ba42f06278beb536b02aaa25f7336",
+      "name": {
+        "en": "Prelo",
+        "pt-BR": "Prelo"
+      },
+      "description": {
+        "en": "Prelo's own MCP server, on the Mac or in Docker at home. Agents check the printer, preview a piece and print notes, checklists, labels, QR codes, notebook pages and the daily newspaper; by default every print waits in the queue for your approval.",
+        "pt-BR": "Servidor MCP do próprio Prelo, no Mac ou no Docker de casa. Os agents conferem a impressora, veem a prévia e imprimem recados, listas, etiquetas, QR codes, folhas de caderno e o jornal do dia; por padrão cada impressão espera na Fila pela sua aprovação."
+      },
+      "tags": [],
+      "requires": {
+        "servers": {
+          "remote": {
+            "urlField": "url"
+          }
+        },
+        "hosts": [],
+        "methods": [
+          {
+            "type": "token"
+          },
+          {
+            "type": "none"
+          }
+        ],
+        "scopes": [],
+        "fields": [
+          "url"
+        ],
+        "triggers": [],
+        "actions": [],
+        "writeTools": []
+      }
+    },
+    {
+      "kind": "connection",
+      "id": "sentry",
+      "version": 1,
+      "minAppVersion": "0.1.168",
+      "path": "connections/sentry.json",
+      "sha256": "2ee9566f6684f4c7f5442034ea7093b4d55a0bc2a93157f168dfb03c54681117",
+      "name": {
+        "en": "Sentry",
+        "pt-BR": "Sentry"
+      },
+      "description": {
+        "en": "Sentry's official MCP server. Agents search errors, events and stack traces in the authorized organizations.",
+        "pt-BR": "Servidor MCP oficial do Sentry. Os agents buscam erros, eventos e stack traces das organizações autorizadas."
+      },
+      "tags": [],
+      "requires": {
+        "servers": {
+          "remote": {
+            "url": "https://mcp.sentry.dev/mcp"
+          }
+        },
+        "hosts": [
+          "mcp.sentry.dev"
+        ],
+        "methods": [
+          {
+            "type": "oauth"
+          }
+        ],
+        "scopes": [],
+        "fields": [],
+        "triggers": [],
+        "actions": [],
+        "writeTools": []
+      }
+    },
+    {
+      "kind": "connection",
+      "id": "shortcut",
+      "version": 1,
+      "minAppVersion": "0.1.168",
+      "path": "connections/shortcut.json",
+      "sha256": "067222b8efc9c90ae67f50ef5a7ca9f0b15155ae1fc49f993b249d1947a63a77",
+      "name": {
+        "en": "Shortcut",
+        "pt-BR": "Shortcut"
+      },
+      "description": {
+        "en": "Shortcut's official MCP server. Agents read and update stories and epics in the workspace you authorize.",
+        "pt-BR": "Servidor MCP oficial do Shortcut. Os agents leem e atualizam stories e épicos do workspace que você autorizar."
+      },
+      "tags": [],
+      "requires": {
+        "servers": {
+          "remote": {
+            "url": "https://mcp.shortcut.com/mcp"
+          }
+        },
+        "hosts": [
+          "mcp.shortcut.com"
+        ],
+        "methods": [
+          {
+            "type": "oauth"
+          }
+        ],
+        "scopes": [],
+        "fields": [],
+        "triggers": [],
+        "actions": [],
+        "writeTools": []
+      }
+    },
+    {
+      "kind": "connection",
+      "id": "slack",
+      "version": 1,
+      "minAppVersion": "0.1.168",
+      "path": "connections/slack.json",
+      "sha256": "1efe2dfdade52c6983c6b36707304a92e5a773d5d083c070aa9b266cb55cd23e",
+      "name": {
+        "en": "Slack",
+        "pt-BR": "Slack"
+      },
+      "description": {
+        "en": "Channels Locum reads through Slack's official server, with an app created in your workspace, or through another MCP server you already have.",
+        "pt-BR": "Canais que o Locum lê pelo servidor oficial do Slack, com um app criado no seu workspace, ou por outro servidor MCP que você já tenha."
+      },
+      "tags": [],
+      "requires": {
+        "servers": {},
+        "hosts": [
+          "mcp.slack.com"
+        ],
+        "methods": [
+          {
+            "type": "oauth"
+          }
+        ],
+        "scopes": [],
+        "fields": [],
+        "triggers": [
+          "slack-channel",
+          "slack-inbox"
+        ],
+        "actions": [
+          "slack.post",
+          "slack.react"
+        ],
+        "writeTools": []
+      }
+    },
+    {
+      "kind": "connection",
+      "id": "teams",
+      "version": 1,
+      "minAppVersion": "0.1.168",
+      "path": "connections/teams.json",
+      "sha256": "83cec71130b91a141d50268e23e6ab8a70f92bb54e12122198d7986e814d427b",
+      "name": {
+        "en": "Microsoft Teams",
+        "pt-BR": "Microsoft Teams"
+      },
+      "description": {
+        "en": "Teams through a Microsoft 365 MCP server or an app in Entra. Wakes agents on mentions and chat messages, and a proposed reply goes out under your name after you approve it.",
+        "pt-BR": "Teams por um servidor MCP do Microsoft 365 ou por um app no Entra. Acorda agents com menções e mensagens de chat, e a resposta proposta sai com o seu nome depois da sua aprovação."
+      },
+      "tags": [],
+      "requires": {
+        "servers": {},
+        "hosts": [],
+        "methods": [
+          {
+            "type": "oauth"
+          }
+        ],
+        "scopes": [],
+        "fields": [],
+        "triggers": [
+          "teams-inbox"
+        ],
+        "actions": [
+          "teams.post",
+          "teams.react"
+        ],
+        "writeTools": []
+      }
+    },
+    {
+      "kind": "connection",
+      "id": "vercel",
+      "version": 1,
+      "minAppVersion": "0.1.168",
+      "path": "connections/vercel.json",
+      "sha256": "5882de9365acc59ffc62a9e7bbf95fbf62d627cb61604afebac60c32640ced74",
+      "name": {
+        "en": "Vercel",
+        "pt-BR": "Vercel"
+      },
+      "description": {
+        "en": "Vercel's official MCP server. Agents look up projects, deployments and build logs.",
+        "pt-BR": "Servidor MCP oficial da Vercel. Os agents consultam projetos, deploys e logs de build."
+      },
+      "tags": [],
+      "requires": {
+        "servers": {
+          "remote": {
+            "url": "https://mcp.vercel.com"
+          }
+        },
+        "hosts": [
+          "mcp.vercel.com"
+        ],
+        "methods": [
+          {
+            "type": "oauth"
+          }
+        ],
+        "scopes": [],
+        "fields": [],
+        "triggers": [],
+        "actions": [],
+        "writeTools": []
+      }
+    },
     {
       "kind": "template",
       "id": "morning-briefing",
