@@ -108,16 +108,19 @@ The schema is [`schemas/connection.schema.json`](schemas/connection.schema.json)
   the local one, in more than one place of the same server or outside the
   place the `token` method declares; a marker that is neither `${credential}`
   nor `${field:<key>}` of a declared field; `path` without `urlField`.
-- In a type from a third party, a `text` field used in the server that
-  receives `${credential}`. Free text in a variable, an argument or a header
+- In any type, official ones included, a `text` field used in the server
+  that receives `${credential}`. Free text in a variable, an argument or a header
   can point the server to another host (`--base-url`, `API_HOST`) without the
   origin check the app applies to a `url` field. Use a `url` field.
 - A trigger kind, tracker kind or action the core does not have
   ([`scripts/lib/core-kinds.json`](scripts/lib/core-kinds.json) and the
   triggers in the template schema), a trigger that reads another type, and an
   action or a scope key without the type id as prefix.
-- A host, alias, package, tracker or action that another type already claims,
-  official types included, and an alias equal to the id of another type.
+- A host, alias, package (the one of a local server included), tracker or
+  action that another type already claims, official types included, and an
+  alias equal to the id of another type.
+- A display name equal to that of an official type or of `proprio`, in any
+  case or accent: the app ignores the type that takes it.
 - On local servers: an image without digest or with a tag next to it, runtime
   flags that widen the container (`--privileged`, `-v`, `--network`...), env
   names that change how the process loads code or reaches the network
@@ -174,7 +177,8 @@ first release that reads types from the index. Raise it when the type uses
 something older apps do not have, a method, reader, trigger kind, action or
 schema field: they will show the type as needing an update and keep the
 installed one running. `path` and the `${field:<key>}` markers came into the
-app schema in `0.1.170`, which is the floor of Grafana and Prelo.
+app schema in `0.1.170`: a type that uses them needs `0.1.170` or newer, as
+Grafana and Prelo do, and the validator refuses less.
 
 ## Templates and packages
 

@@ -55,6 +55,19 @@ const MACHINE_METHODS = new Set(["cli", "session"]);
  */
 export const CONNECTION_MIN_APP_VERSION = "0.1.168";
 
+/** The first app version whose schema takes `servers.remote.path` and the `${field:<key>}` markers. */
+export const MARKERS_MIN_APP_VERSION = "0.1.170";
+
+/** A display name as the app compares it with the official ones: without accents or format characters, in lowercase. */
+const normalizedName = (name) => name.normalize("NFKC").normalize("NFD").replace(/[\p{M}\p{Cf}]/gu, "").toLowerCase().trim();
+
+/** The display names of the official types and of the reserved `proprio`, which the app refuses in another type. */
+const OFFICIAL_NAMES = new Map(
+  [...Object.entries(officialList.official), ...Object.entries(officialList.reservedNames ?? {}).map(([id, names]) => [id, { names }])].flatMap(([id, o]) =>
+    (o.names ?? []).map((name) => [normalizedName(name), id]),
+  ),
+);
+
 const versionParts = (v) => v.split(".").map(Number);
 /** Compares two x.y.z versions as numbers: negative, zero or positive. */
 function compareVersions(a, b) {
@@ -102,8 +115,20 @@ export function itemRules(item, expected) {
     } else if (OFFICIAL_ALIASES.has(item.id)) {
       errors.push({ field: "id", message: `"${item.id}" is an alias of the official type "${OFFICIAL_ALIASES.get(item.id)}": the app would match its servers to this id` });
     }
-    if (typeof item.minAppVersion === "string" && /^\d+\.\d+\.\d+$/.test(item.minAppVersion) && compareVersions(item.minAppVersion, CONNECTION_MIN_APP_VERSION) < 0) {
-      errors.push({ field: "minAppVersion", message: `a connection type needs minAppVersion ${CONNECTION_MIN_APP_VERSION} or newer: older apps do not install connection types` });
+    if (typeof item.minAppVersion === "string" && /^\d+\.\d+\.\d+$/.test(item.minAppVersion)) {
+      if (compareVersions(item.minAppVersion, CONNECTION_MIN_APP_VERSION) < 0) {
+        errors.push({ field: "minAppVersion", message: `a connection type needs minAppVersion ${CONNECTION_MIN_APP_VERSION} or newer: older apps do not install connection types` });
+      } else if (usesMarkers(item.manifest) && compareVersions(item.minAppVersion, MARKERS_MIN_APP_VERSION) < 0) {
+        errors.push({ field: "minAppVersion", message: `servers.remote.path and \${field:<key>} need minAppVersion ${MARKERS_MIN_APP_VERSION} or newer: older apps refuse them` });
+      }
+    }
+    if (isObject(item.name)) {
+      for (const [language, name] of Object.entries(item.name)) {
+        const official = typeof name === "string" ? OFFICIAL_NAMES.get(normalizedName(name)) : undefined;
+        if (official !== undefined && official !== item.id) {
+          errors.push({ field: field("name", language), message: `"${name}" is the name of the official type "${official}": the app ignores a type that takes it` });
+        }
+      }
     }
     if (isObject(item.manifest)) errors.push(...connectionRules(item.manifest, item.id));
   }
@@ -111,6 +136,14 @@ export function itemRules(item, expected) {
     errors.push(...packageRules(item.package, item.kind));
   }
   return errors;
+}
+
+/** Whether the servers use what came into the app schema in 0.1.170: a path after urlField or a field marker. */
+function usesMarkers(manifest) {
+  const servers = isObject(manifest) ? manifest.servers : undefined;
+  if (!isObject(servers)) return false;
+  if (isObject(servers.remote) && servers.remote.path !== undefined) return true;
+  return JSON.stringify([servers.remote?.url, servers.remote?.headers, servers.local?.args, servers.local?.env]).includes("${field:");
 }
 
 /** Why a host name is not public, or undefined when it is. IPv4 in any notation comes normalized by URL. */
@@ -134,7 +167,7 @@ function connectionRules(manifest, id) {
     errors.push({ field: path, message: "scripts and commands are not accepted: an item is data, and the app never runs code it downloads" });
   }
   errors.push(...credentialPlacement(manifest));
-  errors.push(...markerRules(manifest, id));
+  errors.push(...markerRules(manifest));
 
   const methods = Array.isArray(manifest.methods) ? manifest.methods : [];
   const methodTypes = new Set();
@@ -280,10 +313,11 @@ function pathRegion(url) {
 /**
  * The markers in the values of the servers, with the rules of the app (ADR 0018, "Marcadores nos valores"): only
  * `${credential}` and `${field:<key>}` of a declared field, the field only in the path of the url, the credential in one
- * place of each server and where the token method says. In a type from a third party, a free text field in the server
- * that receives the credential is refused: it could point the server to another host without the origin check of a url.
+ * place of each server and where the token method says. A free text field in the server that receives the credential is
+ * refused in every type, as the app does with every type of the index: it could point the server to another host
+ * without the origin check of a url.
  */
-function markerRules(manifest, id) {
+function markerRules(manifest) {
   const servers = manifest.servers;
   if (!isObject(servers)) return [];
   const errors = [];
@@ -349,7 +383,7 @@ function markerRules(manifest, id) {
         });
       }
     }
-    if (server.credentials > 0 && !OFFICIAL_CONNECTIONS.has(id)) {
+    if (server.credentials > 0) {
       for (const key of new Set(server.keys)) {
         if (fields.get(key)?.format === "text") {
           errors.push({
@@ -517,6 +551,8 @@ export function connectionClaims(item) {
   for (const host of list(m.hosts)) if (URL.canParse(`https://${host}/`)) claims.push({ space: "host", key: canonicalHost(host), field: "manifest.hosts" });
   for (const alias of list(m.aliases)) claims.push({ space: "alias", key: alias, field: "manifest.aliases" });
   for (const pkg of list(m.packages)) claims.push({ space: "package", key: pkg, field: "manifest.packages" });
+  const local = m.servers?.local?.package?.name;
+  if (typeof local === "string" && !list(m.packages).includes(local)) claims.push({ space: "package", key: local, field: "manifest.servers.local.package.name" });
   for (const tracker of list(m.trackers)) claims.push({ space: "tracker", key: tracker, field: "manifest.trackers" });
   for (const action of list(m.actions)) claims.push({ space: "action", key: action, field: "manifest.actions" });
   return claims;

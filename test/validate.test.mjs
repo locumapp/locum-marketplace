@@ -390,14 +390,16 @@ const urlField = { key: "url", label: { en: "Address", "pt-BR": "Endereço" }, f
 const textField = (key) => ({ key, label: { en: "Value", "pt-BR": "Valor" }, format: "text", required: true });
 
 test("a remote server takes a path after the address the person fills, and field markers in the url path and headers", async () => {
-  const withPath = connection((_, m) => {
+  const withPath = connection((item, m) => {
+    item.minAppVersion = "0.1.170";
     m.fields = [urlField];
     m.methods = [{ type: "token", header: "Authorization" }, { type: "none" }];
     m.servers = { remote: { urlField: "url", path: "/api/mcp", headers: { Authorization: "Bearer ${credential}", "X-Origin": "${field:url}" } } };
     delete m.hosts;
   });
   assert.deepEqual(await validateFile(withPath.file), []);
-  const inPath = connection((_, m) => {
+  const inPath = connection((item, m) => {
+    item.minAppVersion = "0.1.170";
     m.fields = [textField("workspace")];
     m.servers.remote = { url: "https://mcp.example.com/w/${field:workspace}/mcp", headers: { "X-Workspace": "${field:workspace}" } };
   });
@@ -511,13 +513,51 @@ for (const [name, change, at, message] of markerLocal) {
   });
 }
 
-test("an official type may take a free text field in the server that receives the credential", async () => {
+test("an official type is refused with a free text field in the server that receives the credential, as in the app", async () => {
   const { file } = connection((item, m) => {
     item.id = "grafana";
+    item.minAppVersion = "0.1.170";
     m.fields = [urlField, textField("org")];
     m.servers.local.env = { GRAFANA_URL: "${field:url}", GRAFANA_ORG: "${field:org}", EXAMPLE_TOKEN: "${credential}" };
   }, "example-docker");
-  assert.deepEqual(await validateFile(file), []);
+  const hit = await errorAt(file, "manifest.servers.local");
+  assert.match(hit.message, /free text/);
+});
+
+test("a path or a field marker needs minAppVersion 0.1.170, the first app whose schema takes them", async () => {
+  const withPath = (version) =>
+    connection((item, m) => {
+      item.minAppVersion = version;
+      m.fields = [urlField];
+      m.servers = { remote: { urlField: "url", path: "/mcp" } };
+      delete m.hosts;
+    }).file;
+  assert.match((await errorAt(withPath("0.1.169"), "minAppVersion")).message, /0\.1\.170/);
+  assert.deepEqual(await validateFile(withPath("0.1.170")), []);
+  const withMarker = connection((_, m) => {
+    m.fields = [textField("workspace")];
+    m.servers.remote.url = "https://mcp.example.com/w/${field:workspace}/mcp";
+  }).file;
+  assert.match((await errorAt(withMarker, "minAppVersion")).message, /0\.1\.170/);
+});
+
+test("a community type cannot take the display name of an official or reserved type, in any case or accent", async () => {
+  const named = (en, pt) => connection((item) => (item.name = { en, "pt-BR": pt })).file;
+  assert.match((await errorAt(named("Example", "github"), "name.pt-BR")).message, /official type "github"/);
+  assert.match((await errorAt(named("Microsoft Teams", "Exemplo"), "name.en")).message, /official type "teams"/);
+  assert.match((await errorAt(named("Example", "Servidor Proprio"), "name.pt-BR")).message, /"proprio"/);
+  assert.deepEqual(await validateFile(named("GitHub helper", "Ajudante do GitHub")), []);
+});
+
+test("the package of a local server identifies the type, like the packages list", async () => {
+  const catalog = tempCatalog("connections");
+  connection(() => {}, "example-npm", catalog);
+  connection((_, m) => (m.packages = ["example-mcp"]), "example-remote", catalog);
+  const { errors } = await validateCatalog(catalog, { localServers: true });
+  assert.deepEqual(errors.map((e) => [e.file.split("/").pop(), e.field]).sort(), [
+    ["example-npm.json", "manifest.servers.local.package.name"],
+    ["example-remote.json", "manifest.packages"],
+  ]);
 });
 
 test("in the catalog, an official type may run an image pinned by digest; a package or a community local server waits", async () => {
@@ -540,6 +580,9 @@ test("every official type that shipped in the app is published, and argocd, whic
   const official = JSON.parse(readFileSync(join(root, "scripts/lib/official-connections.json"), "utf8")).official;
   const published = items.filter((i) => i.kind === "connection").map((i) => i.id);
   assert.deepEqual(published, Object.keys(official).filter((id) => id !== "argocd").sort());
+  for (const item of items.filter((i) => i.kind === "connection")) {
+    assert.deepEqual([...new Set(Object.values(item.item.name))].sort(), [...official[item.id].names].sort(), item.id);
+  }
 });
 
 test("two connection types cannot claim the same host or alias, and the error points to both files", async () => {

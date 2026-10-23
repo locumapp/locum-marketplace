@@ -7,12 +7,18 @@
     "amplitude": {
       "hosts": [
         "mcp.amplitude.com"
+      ],
+      "names": [
+        "Amplitude"
       ]
     },
     "argocd": {},
     "asana": {
       "hosts": [
         "mcp.asana.com"
+      ],
+      "names": [
+        "Asana"
       ]
     },
     "atlassian": {
@@ -22,16 +28,25 @@
       "trackers": [
         "jira",
         "jira-atlassian"
+      ],
+      "names": [
+        "Atlassian"
       ]
     },
     "canva": {
       "hosts": [
         "mcp.canva.com"
+      ],
+      "names": [
+        "Canva"
       ]
     },
     "figma": {
       "hosts": [
         "mcp.figma.com"
+      ],
+      "names": [
+        "Figma"
       ]
     },
     "github": {
@@ -41,43 +56,75 @@
       ],
       "trackers": [
         "github-issues"
+      ],
+      "names": [
+        "GitHub"
       ]
     },
-    "grafana": {},
+    "grafana": {
+      "names": [
+        "Grafana"
+      ]
+    },
     "intercom": {
       "hosts": [
         "mcp.intercom.com"
+      ],
+      "names": [
+        "Intercom"
       ]
     },
     "linear": {
       "hosts": [
         "mcp.linear.app"
+      ],
+      "names": [
+        "Linear"
       ]
     },
     "miro": {
       "hosts": [
         "mcp.miro.com"
+      ],
+      "names": [
+        "Miro"
       ]
     },
     "newrelic": {
       "hosts": [
         "mcp.newrelic.com"
+      ],
+      "names": [
+        "New Relic"
       ]
     },
     "notion": {
       "hosts": [
         "mcp.notion.com"
+      ],
+      "names": [
+        "Notion"
       ]
     },
     "posthog": {
       "hosts": [
         "mcp.posthog.com"
+      ],
+      "names": [
+        "PostHog"
       ]
     },
-    "prelo": {},
+    "prelo": {
+      "names": [
+        "Prelo"
+      ]
+    },
     "sentry": {
       "hosts": [
         "mcp.sentry.dev"
+      ],
+      "names": [
+        "Sentry"
       ]
     },
     "shortcut": {
@@ -86,11 +133,17 @@
       ],
       "trackers": [
         "shortcut"
+      ],
+      "names": [
+        "Shortcut"
       ]
     },
     "slack": {
       "hosts": [
         "mcp.slack.com"
+      ],
+      "names": [
+        "Slack"
       ]
     },
     "teams": {
@@ -101,12 +154,24 @@
       ],
       "packages": [
         "@softeria/ms-365-mcp-server"
+      ],
+      "names": [
+        "Microsoft Teams"
       ]
     },
     "vercel": {
       "hosts": [
         "mcp.vercel.com"
+      ],
+      "names": [
+        "Vercel"
       ]
     }
+  },
+  "reservedNames": {
+    "proprio": [
+      "Custom server",
+      "Servidor próprio"
+    ]
   }
 }

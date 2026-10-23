@@ -109,8 +109,8 @@ esquema é o [`schemas/connection.schema.json`](schemas/connection.schema.json).
   mais de um lugar do mesmo servidor ou fora do lugar que o método `token`
   declara; marcador que não é `${credential}` nem `${field:<key>}` de campo
   declarado; `path` sem `urlField`.
-- Em tipo de terceiro, campo `text` citado no servidor que recebe
-  `${credential}`. Um texto livre numa variável, num argumento ou num
+- Em qualquer tipo, oficial incluído, campo `text` citado no servidor que
+  recebe `${credential}`. Um texto livre numa variável, num argumento ou num
   cabeçalho pode apontar o servidor para outro host (`--base-url`,
   `API_HOST`) sem passar pela regra de origem que o app aplica ao campo `url`.
   Use um campo `url`.
@@ -118,8 +118,10 @@ esquema é o [`schemas/connection.schema.json`](schemas/connection.schema.json).
   ([`scripts/lib/core-kinds.json`](scripts/lib/core-kinds.json) e os gatilhos
   do esquema de template), gatilho que lê outro tipo, e ação ou chave de escopo
   sem o id do tipo como prefixo.
-- Host, apelido, pacote, tracker ou ação que outro tipo já usa, oficiais
-  incluídos, e apelido igual ao id de outro tipo.
+- Host, apelido, pacote (o do servidor local incluído), tracker ou ação que
+  outro tipo já usa, oficiais incluídos, e apelido igual ao id de outro tipo.
+- Nome de exibição igual ao de um tipo oficial ou do `proprio`, em qualquer
+  caixa ou acento: o app ignora o tipo que o usa.
 - Em servidor local: imagem sem digest ou com tag junto, flag de runtime que
   alarga o contêiner (`--privileged`, `-v`, `--network`...), variável que muda
   como o processo carrega código ou sai para a rede (`NODE_OPTIONS`,
@@ -174,7 +176,8 @@ primeira release que lê tipos do índice. Suba o valor quando o tipo usar algo
 que app mais velho não tem, método, leitor, tipo de gatilho, ação ou campo do
 esquema: ele vai mostrar o tipo como "precisa atualizar" e manter o instalado
 rodando. O `path` e os marcadores `${field:<key>}` entraram no esquema do app
-em `0.1.170`, que é o piso do Grafana e do Prelo.
+em `0.1.170`: tipo que os usa precisa de `0.1.170` ou mais nova, como o
+Grafana e o Prelo, e o validador recusa menos.
 
 ## Templates e pacotes
 
