@@ -35,7 +35,7 @@ Todo item é `<pasta>/<id>.json`:
 | `version` | inteiro, começa em 1 e sobe a cada mudança; a CI confere contra a base do PR |
 | `name`, `description` | `{"en": "...", "pt-BR": "..."}`, os dois idiomas obrigatórios |
 | `tags` | opcional, kebab-case |
-| `minAppVersion` | opcional, em template ou conexão: a versão mais antiga do Locum que o instala, `x.y.z`; o README diz quando declarar |
+| `minAppVersion` | a versão mais antiga do Locum que instala o item, `x.y.z`: obrigatória em conexão, opcional em template; o README diz quando declarar |
 | `manifest` ou `package` | o corpo, abaixo |
 
 Os esquemas estão em [`schemas/`](schemas/): `envelope.schema.json` e um por
@@ -88,22 +88,29 @@ esquema é o [`schemas/connection.schema.json`](schemas/connection.schema.json).
 
 - `command`, `npx`, `uvx` ou qualquer jeito de rodar script.
 - `url` remota que não é https, traz usuário ou senha, tem placeholder
-  (`${credential}` incluído, que pararia em log) ou aponta para endereço IP,
-  `localhost`, nome sem ponto ou sufixo local (`.local`, `.internal`,
-  `.localhost`, `.home.arpa`, `.lan`). O mesmo vale para `hosts`.
+  (`${credential}` incluído, que pararia em log), escreve o host diferente da
+  forma canônica (ASCII minúsculo, punycode, sem ponto final, o que pega
+  homógrafo) ou aponta para endereço IP, `localhost`, nome sem ponto ou sufixo
+  privado (`.local`, `.localhost`, `.localdomain`, `.internal`, `.intranet`,
+  `.corp`, `.private`, `.home`, `.home.arpa`, `.lan`, `.test`, `.example`,
+  `.invalid`). O mesmo vale para `hosts`.
 - `${credential}` fora de header do servidor remoto ou do `env` do local, e
   qualquer outro placeholder em header.
-- Tipo de gatilho que o núcleo não tem, ou que lê outro tipo; ação ou chave de
-  escopo sem o id do tipo como prefixo.
+- Tipo de gatilho, tipo de tracker ou ação que o núcleo não tem
+  ([`scripts/lib/core-kinds.json`](scripts/lib/core-kinds.json) e os gatilhos
+  do esquema de template), gatilho que lê outro tipo, e ação ou chave de escopo
+  sem o id do tipo como prefixo.
 - Host, apelido, pacote, tracker ou ação que outro tipo já usa, oficiais
   incluídos, e apelido igual ao id de outro tipo.
 - Em servidor local: imagem sem digest ou com tag junto, flag de runtime que
   alarga o contêiner (`--privileged`, `-v`, `--network`...), variável que muda
-  como o processo carrega código ou sai para a rede (`NODE_OPTIONS`, `LD_*`,
-  `DYLD_*`, `PATH`, `PYTHONPATH`, proxies...), e entrada de lockfile sem
+  como o processo carrega código ou sai para a rede (`NODE_OPTIONS`,
+  `NODE_TLS_REJECT_UNAUTHORIZED`, `ELECTRON_RUN_AS_NODE`, `SSLKEYLOGFILE`,
+  `LD_*`, `DYLD_*`, `PATH`, `PYTHONPATH`, proxies...), e entrada de lockfile sem
   `integrity`, resolvida fora de `https://registry.npmjs.org/` ou com script
   de instalação.
-- Os ids `locum` e `proprio`, que o app reserva.
+- Os ids `locum` e `proprio`, que o app reserva, e id igual a apelido de tipo
+  oficial (o app casa o nome do servidor primeiro pelo id).
 
 ### Ids oficiais
 
@@ -112,27 +119,31 @@ Os ids de [`scripts/lib/official-connections.json`](scripts/lib/official-connect
 vinham dentro do app) só quem mantém publica. O
 [`.github/CODEOWNERS`](.github/CODEOWNERS) dá cada `connections/<id>.json`
 deles aos donos do próprio CODEOWNERS, e o `npm run validate` falha quando um
-falta ou tem outro dono. Com a proteção de branch exigindo review de code
-owner, PR que mexe num desses arquivos só entra com a aprovação de quem
-mantém. Nenhum outro tipo pode usar os hosts, apelidos, pacotes e trackers
+falta ou tem outro dono. Os donos só seguram o merge quando a proteção da
+`main` exigir review de code owner, o que ainda não está ligado (veja o
+[docs/connections-pending.md](docs/connections-pending.md)). Nenhum outro tipo pode usar os hosts, apelidos, pacotes e trackers
 listados para eles.
 
-### Como o app recebe, e as versões
+### Como o app vai receber, e as versões
 
-O app lê os tipos de conexão do índice assinado, o embutido nele e o da rede.
-Tipo instalado fica preso ao commit e ao `sha256` do arquivo. Quando `version`
-sobe, o app mostra a atualização com o que mudou:
+Nada disto vale no app ainda: nenhuma versão publicada instala tipo de conexão
+do catálogo. O app vai ler os tipos de conexão do índice assinado, o embutido
+nele e o da rede (ADR 0018, fatia 2). Tipo instalado vai ficar preso ao commit
+e ao `sha256` do arquivo. Quando `version` subir, o app vai mostrar a
+atualização com o que mudou (fatia 5):
 
 - mudança que não amplia o que o tipo pede (texto, ícone, campo, ferramenta de
-  leitura) entra sozinha, a não ser que a pessoa tenha desligado "atualizar
-  sozinha" naquela conexão;
+  leitura) vai entrar sozinha, a não ser que a pessoa tenha desligado
+  "atualizar sozinha" naquela conexão;
 - mudança que amplia (host, escopo, método, ferramenta de escrita, imagem ou
-  pacote novos) sempre espera o aceite da pessoa, e a credencial nunca segue
-  para um host novo antes disso.
+  pacote novos) vai sempre esperar o aceite da pessoa, e a credencial nunca vai
+  seguir para um host novo antes disso.
 
-Declare `minAppVersion` quando o tipo usa método, leitor, tipo de gatilho ou
-ação que app mais velho não tem: ele mostra o tipo como "precisa atualizar" e
-mantém o instalado rodando.
+`minAppVersion` é obrigatório em tipo de conexão. Enquanto a release que lê
+tipos de conexão não existe, qualquer `x.y.z` passa; depois dela, o piso vai
+ser essa versão. Suba o valor quando o tipo usar método, leitor, tipo de
+gatilho ou ação que app mais velho não tem: ele vai mostrar o tipo como
+"precisa atualizar" e manter o instalado rodando.
 
 ## Templates e pacotes
 

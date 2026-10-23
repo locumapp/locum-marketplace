@@ -132,25 +132,30 @@ export async function validateCatalog(root, { localServers = false } = {}) {
   return { items: items.filter((i) => !out.has(i)), errors };
 }
 
-/** Each host, alias, package, tracker and action belongs to one connection type, and an alias is never the id of another. */
+/**
+ * Each host, alias, package, tracker and action belongs to one connection type, and an alias is never the id of
+ * another. A conflict between two items points to both files.
+ */
 function identityErrors(connections) {
-  const owners = new Map(officialClaims().map((c) => [`${c.space}:${c.key}`, c.owner]));
+  const owners = new Map(officialClaims().map((c) => [`${c.space}:${c.key}`, { id: c.owner }]));
   const ids = new Set([...OFFICIAL_CONNECTIONS.keys(), ...RESERVED_CONNECTION_IDS, ...connections.map((c) => c.id)]);
   const errors = [];
   for (const item of connections) {
-    const mine = [];
     for (const claim of connectionClaims(item.item)) {
-      const owner = owners.get(`${claim.space}:${claim.key}`);
-      if (owner !== undefined && owner !== item.id) {
-        errors.push({ item, field: claim.field, message: `${claim.space} "${claim.key}" is already claimed by ${owner}` });
+      const key = `${claim.space}:${claim.key}`;
+      const owner = owners.get(key);
+      if (owner !== undefined && owner.id !== item.id) {
+        const where = owner.item === undefined ? "" : ` (${owner.item.path})`;
+        errors.push({ item, field: claim.field, message: `${claim.space} "${claim.key}" is already claimed by ${owner.id}${where}` });
+        if (owner.item !== undefined) {
+          errors.push({ item: owner.item, field: owner.field, message: `${claim.space} "${claim.key}" is also claimed by ${item.id} (${item.path})` });
+        }
       } else if (claim.space === "alias" && claim.key !== item.id && ids.has(claim.key)) {
         errors.push({ item, field: claim.field, message: `alias "${claim.key}" is the id of another type` });
-      } else {
-        mine.push(claim);
+      } else if (owner === undefined) {
+        owners.set(key, { id: item.id, item, field: claim.field });
       }
     }
-    if (errors.some((e) => e.item === item)) continue;
-    for (const claim of mine) owners.set(`${claim.space}:${claim.key}`, item.id);
   }
   return errors;
 }

@@ -336,6 +336,11 @@ const badLocal = [
   ["an image with a tag and a digest", (_, m) => (m.servers.local.image = `ghcr.io/example/example-mcp:latest@sha256:${"0".repeat(64)}`), "manifest.servers.local.image", /tag/],
   ["an argument that widens the container", (_, m) => (m.servers.local.args = ["--privileged"]), "manifest.servers.local.args.0", /container/],
   ["a volume argument", (_, m) => (m.servers.local.args = ["-v", "/:/host"]), "manifest.servers.local.args.0", /container/],
+  ["a volume argument with the value attached", (_, m) => (m.servers.local.args = ["-v/:/host"]), "manifest.servers.local.args.0", /container/],
+  ["a long volume argument with its value", (_, m) => (m.servers.local.args = ["--volume=/:/host"]), "manifest.servers.local.args.0", /container/],
+  ["NODE_TLS_REJECT_UNAUTHORIZED", (_, m) => (m.servers.local.env = { NODE_TLS_REJECT_UNAUTHORIZED: "0" }), "manifest.servers.local.env.NODE_TLS_REJECT_UNAUTHORIZED", /loads code/],
+  ["SSLKEYLOGFILE", (_, m) => (m.servers.local.env = { SSLKEYLOGFILE: "/tmp/keys" }), "manifest.servers.local.env.SSLKEYLOGFILE", /loads code/],
+  ["ELECTRON_RUN_AS_NODE", (_, m) => (m.servers.local.env = { ELECTRON_RUN_AS_NODE: "1" }), "manifest.servers.local.env.ELECTRON_RUN_AS_NODE", /loads code/],
 ];
 
 for (const [name, change, at, message] of badLocal) {
@@ -381,25 +386,67 @@ test("a remote server whose address the person fills passes, with the field decl
   assert.deepEqual(await validateFile(file), []);
 });
 
-test("two connection types cannot claim the same host, alias, package, tracker or action", async () => {
+test("two connection types cannot claim the same host or alias, and the error points to both files", async () => {
   const { catalog } = connection((item, m) => {
     item.id = "example-a";
     m.aliases = ["shared-name"];
-    m.trackers = ["shared-tracker"];
   });
   connection((item, m) => {
     item.id = "example-b";
     m.servers.remote.url = "https://other.example.com/mcp";
     m.aliases = ["shared-name", "example-a"];
-    m.trackers = ["shared-tracker"];
   }, "example-remote", catalog);
   const { items, errors } = await validateCatalog(catalog);
-  assert.deepEqual(items.map((i) => i.id), ["example-a"]);
-  const messages = errors.map((e) => `${e.field}: ${e.message}`);
-  assert.ok(messages.some((m) => /^manifest\.hosts: host "api\.example\.com" is already claimed by example-a/.test(m)), messages.join("\n"));
-  assert.ok(messages.some((m) => /^manifest\.aliases: alias "shared-name" is already claimed by example-a/.test(m)), messages.join("\n"));
-  assert.ok(messages.some((m) => /^manifest\.aliases: alias "example-a" is the id of another type/.test(m)), messages.join("\n"));
-  assert.ok(messages.some((m) => /^manifest\.trackers: tracker "shared-tracker" is already claimed by example-a/.test(m)), messages.join("\n"));
+  assert.deepEqual(items, []);
+  const messages = errors.map((e) => `${e.file.split("/").slice(-2).join("/")}: ${e.field}: ${e.message}`);
+  const has = (re) => assert.ok(messages.some((m) => re.test(m)), messages.join("\n"));
+  has(/^connections\/example-b\.json: manifest\.hosts: host "api\.example\.com" is already claimed by example-a \(connections\/example-a\.json\)/);
+  has(/^connections\/example-a\.json: manifest\.hosts: host "api\.example\.com" is also claimed by example-b \(connections\/example-b\.json\)/);
+  has(/^connections\/example-b\.json: manifest\.aliases: alias "shared-name" is already claimed by example-a/);
+  has(/^connections\/example-a\.json: manifest\.aliases: alias "shared-name" is also claimed by example-b/);
+  has(/^connections\/example-b\.json: manifest\.aliases: alias "example-a" is the id of another type/);
+});
+
+test("a community type cannot take an alias of an official one as its id", async () => {
+  const errors = await validateFile(connection((item) => (item.id = "ms365")).file);
+  const hit = errors.find((e) => e.field === "id");
+  assert.ok(hit, JSON.stringify(errors));
+  assert.match(hit.message, /alias of the official type "teams"/);
+});
+
+test("a connection type must declare minAppVersion", async () => {
+  const errors = await validateFile(connection((item) => delete item.minAppVersion).file);
+  assert.ok(errors.some((e) => e.field === "minAppVersion" && /required/.test(e.message)), JSON.stringify(errors));
+});
+
+for (const [name, url] of [
+  ["a homograph host", "https://mcp.sl\u0430ck.com/mcp"],
+  ["a host with a trailing dot", "https://mcp.slack.com./mcp"],
+  ["a host in capitals", "https://MCP.example.com/mcp"],
+]) {
+  test(`a remote connection is refused with ${name}, written differently from its canonical form`, async () => {
+    const errors = await validateFile(connection(remote(url)).file);
+    const hit = errors.find((e) => e.field === "manifest.servers.remote.url");
+    assert.ok(hit, JSON.stringify(errors));
+    assert.match(hit.message, /canonical/);
+  });
+}
+
+for (const suffix of ["corp", "intranet", "private", "home", "test", "example", "invalid", "localdomain"]) {
+  test(`a remote connection is refused on the private suffix .${suffix}`, async () => {
+    const hit = (await validateFile(connection(remote(`https://mcp.${suffix}/mcp`)).file)).find((e) => e.field === "manifest.servers.remote.url");
+    assert.ok(hit);
+    assert.match(hit.message, /public/);
+  });
+}
+
+test("trackers and actions must be kinds the app core has", async () => {
+  const errors = await validateFile(connection((_, m) => {
+    m.trackers = ["no-such-tracker"];
+    m.actions = ["example-remote.post"];
+  }).file);
+  assert.match(errors.find((e) => e.field === "manifest.trackers.0")?.message ?? "", /unknown tracker kind/);
+  assert.match(errors.find((e) => e.field === "manifest.actions.0")?.message ?? "", /unknown action/);
 });
 
 test("a community type cannot claim what belongs to an official one", async () => {

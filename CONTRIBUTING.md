@@ -35,7 +35,7 @@ Every item is `<folder>/<id>.json`:
 | `version` | integer, starts at 1 and goes up on every change; CI checks it against the base of the PR |
 | `name`, `description` | `{"en": "...", "pt-BR": "..."}`, both languages required |
 | `tags` | optional, kebab-case |
-| `minAppVersion` | optional, in a template or a connection: the oldest Locum version that installs it, `x.y.z`; see the README for when to declare it |
+| `minAppVersion` | the oldest Locum version that installs the item, `x.y.z`: required in a connection, optional in a template; see the README for when to declare it |
 | `manifest` or `package` | the body, below |
 
 The schemas are in [`schemas/`](schemas/): `envelope.schema.json` and one per
@@ -86,22 +86,30 @@ The schema is [`schemas/connection.schema.json`](schemas/connection.schema.json)
 
 - `command`, `npx`, `uvx` or any other way of running a script.
 - A remote `url` that is not https, carries a user or password, has a
-  placeholder (`${credential}` included, it would end up in logs) or points to
-  an IP address, `localhost`, a single-label name or a local suffix (`.local`,
-  `.internal`, `.localhost`, `.home.arpa`, `.lan`). The same holds for `hosts`.
+  placeholder (`${credential}` included, it would end up in logs), writes the
+  host differently from its canonical form (lowercase ASCII, punycode, no
+  trailing dot, which catches homographs) or points to an IP address,
+  `localhost`, a single-label name or a private suffix (`.local`, `.localhost`,
+  `.localdomain`, `.internal`, `.intranet`, `.corp`, `.private`, `.home`,
+  `.home.arpa`, `.lan`, `.test`, `.example`, `.invalid`). The same holds for
+  `hosts`.
 - `${credential}` anywhere but a header of the remote server or the `env` of
   the local one, and any other placeholder in a header.
-- A trigger kind the core does not have, or one that reads another type; an
+- A trigger kind, tracker kind or action the core does not have
+  ([`scripts/lib/core-kinds.json`](scripts/lib/core-kinds.json) and the
+  triggers in the template schema), a trigger that reads another type, and an
   action or a scope key without the type id as prefix.
 - A host, alias, package, tracker or action that another type already claims,
   official types included, and an alias equal to the id of another type.
 - On local servers: an image without digest or with a tag next to it, runtime
   flags that widen the container (`--privileged`, `-v`, `--network`...), env
   names that change how the process loads code or reaches the network
-  (`NODE_OPTIONS`, `LD_*`, `DYLD_*`, `PATH`, `PYTHONPATH`, proxies...), and
+  (`NODE_OPTIONS`, `NODE_TLS_REJECT_UNAUTHORIZED`, `ELECTRON_RUN_AS_NODE`,
+  `SSLKEYLOGFILE`, `LD_*`, `DYLD_*`, `PATH`, `PYTHONPATH`, proxies...), and
   lockfile entries without `integrity`, resolved outside
   `https://registry.npmjs.org/` or with an install script.
-- The ids `locum` and `proprio`, which the app reserves.
+- The ids `locum` and `proprio`, which the app reserves, and an id equal to an
+  alias of an official type (the app matches a server name by id first).
 
 ### Official ids
 
@@ -110,28 +118,32 @@ The ids in [`scripts/lib/official-connections.json`](scripts/lib/official-connec
 shipped inside the app) are published only by the maintainers.
 [`.github/CODEOWNERS`](.github/CODEOWNERS) gives each `connections/<id>.json`
 of them to the owners of CODEOWNERS itself, and `npm run validate` fails when
-one is missing or owned by someone else. With branch protection requiring code
-owner review, a PR that touches one of those files only merges with a
-maintainer's approval. No other type may claim the hosts, aliases, packages and
+one is missing or owned by someone else. The owners only gate a merge once
+branch protection on `main` requires code owner review, which is not on yet
+(see [docs/connections-pending.md](docs/connections-pending.md)). No other type may claim the hosts, aliases, packages and
 trackers listed for them.
 
-### How the app receives it, and versions
+### How the app will receive it, and versions
 
-The app reads connection types from the signed index, the one built into it
-and the one from the network. An installed type stays pinned to the commit
-and the `sha256` of its file. When `version` goes up, the app shows the update
-with what changed:
+None of this works in the app yet: no released version installs connection
+types from the catalog. The app will read connection types from the signed
+index, the one built into it and the one from the network (ADR 0018, slice 2).
+An installed type will stay pinned to the commit and the `sha256` of its file.
+When `version` goes up, the app will show the update with what changed
+(slice 5):
 
 - a change that does not widen what the type asks for (text, icon, a field, a
-  read-only tool) comes in on its own, unless the person turned off "update on
-  its own" for that connection;
+  read-only tool) will come in on its own, unless the person turned off
+  "update on its own" for that connection;
 - a change that widens it (a new host, scope, method, write tool, image or
-  package) always waits for the person to accept, and the credential never goes
-  to a new host before that.
+  package) will always wait for the person to accept, and the credential will
+  never go to a new host before that.
 
-Declare `minAppVersion` when the type uses a method, reader, trigger kind or
-action that older apps do not have: they show the type as needing an update
-and keep the installed one running.
+`minAppVersion` is required in a connection type. Until the release that reads
+connection types exists any `x.y.z` passes; after it, the floor will be that
+version. Raise it when the type uses a method, reader, trigger kind or action
+that older apps do not have: they will show the type as needing an update and
+keep the installed one running.
 
 ## Templates and packages
 

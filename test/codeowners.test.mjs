@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { checkCodeowners } from "../scripts/lib/codeowners.mjs";
+import { checkCodeowners, ownersOf, parseCodeowners } from "../scripts/lib/codeowners.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 
@@ -28,24 +28,40 @@ test("a catalog without CODEOWNERS fails", async () => {
 });
 
 test("an official id with no owner fails, naming the file", async () => {
-  const found = await messages(withCodeowners("/.github/CODEOWNERS @example-maintainer\n/scripts/lib/official-connections.json @example-maintainer\n"));
+  const found = await messages(withCodeowners("/.github/CODEOWNERS @locumapp/maintainers\n/scripts/lib/official-connections.json @locumapp/maintainers\n"));
   assert.ok(found.some((m) => /^connections\/github\.json has no owner/.test(m)), found.join("\n"));
 });
 
 test("an official id owned by someone else than the maintainers fails, the last matching line wins", async () => {
   const text = [
     "# maintainers",
-    "/.github/CODEOWNERS @example-maintainer",
-    "/scripts/lib/official-connections.json @example-maintainer",
-    "/connections/ @example-maintainer",
+    "/.github/CODEOWNERS @locumapp/maintainers",
+    "/scripts/lib/official-connections.json @locumapp/maintainers",
+    "/connections/ @locumapp/maintainers",
     "/connections/slack.json @example-contributor",
     "",
   ].join("\n");
   assert.deepEqual(await messages(withCodeowners(text)), [
-    "connections/slack.json is owned by @example-contributor, not by the maintainers who own .github/CODEOWNERS (@example-maintainer)",
+    "connections/slack.json is owned by @example-contributor, not by the maintainers who own .github/CODEOWNERS (@locumapp/maintainers)",
   ]);
 });
 
 test("a catch-all line covers every official id", async () => {
-  assert.deepEqual(await messages(withCodeowners("* @example-maintainer\n")), []);
+  assert.deepEqual(await messages(withCodeowners("* @locumapp/maintainers\n")), []);
+});
+
+test("**/ at the start also matches at the root", () => {
+  assert.deepEqual(ownersOf(parseCodeowners("**/item.json @locumapp/maintainers\n"), "item.json"), ["@locumapp/maintainers"]);
+  assert.deepEqual(ownersOf(parseCodeowners("**/item.json @locumapp/maintainers\n"), "connections/item.json"), ["@locumapp/maintainers"]);
+});
+
+test("dir/* matches the files in the folder, not in its subfolders", () => {
+  const rules = parseCodeowners("/connections/* @locumapp/maintainers\n");
+  assert.deepEqual(ownersOf(rules, "connections/github.json"), ["@locumapp/maintainers"]);
+  assert.deepEqual(ownersOf(rules, "connections/sub/github.json"), []);
+});
+
+test("owners compare without regard to case, as GitHub does", async () => {
+  const text = "/.github/CODEOWNERS @LocumApp/Maintainers\n/scripts/ @locumapp/maintainers\n/connections/ @locumapp/MAINTAINERS\n";
+  assert.deepEqual(await messages(withCodeowners(text)), []);
 });

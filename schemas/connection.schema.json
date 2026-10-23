@@ -5,11 +5,11 @@
   "description": "A connection type manifest, data only: which mechanisms of the app core it uses (authentication methods, trigger kinds, actions), the fields the person fills, and the MCP servers. The app takes the type id and name from the envelope.",
   "type": "object",
   "$ref": "envelope.schema.json",
-  "required": ["manifest"],
+  "required": ["manifest", "minAppVersion"],
   "properties": {
     "kind": { "const": "connection" },
     "minAppVersion": {
-      "description": "The oldest Locum version that installs this connection type, as x.y.z. Declare it when the type uses a method, a reader, a trigger kind or an action that older versions do not have; an older app shows the type as needing an update and keeps the installed one running.",
+      "description": "The oldest Locum version that installs this connection type, as x.y.z. Required: no released version installs connection types yet. Raise it when the type uses a method, a reader, a trigger kind or an action that older versions do not have; an older app shows the type as needing an update and keeps the installed one running.",
       "type": "string",
       "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
     },

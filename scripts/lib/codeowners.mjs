@@ -7,16 +7,23 @@ import { OFFICIAL_CONNECTIONS } from "./rules.mjs";
 export const CODEOWNERS = ".github/CODEOWNERS";
 const OFFICIAL_LIST = "scripts/lib/official-connections.json";
 
-/** A CODEOWNERS pattern as a regular expression over a repository path, with the gitignore rules GitHub uses. */
+/**
+ * A CODEOWNERS pattern as a regular expression over a repository path, as GitHub reads it: a leading `**\/` also
+ * matches at the root, a pattern ending in a wildcard (`dir/*`) does not go into subfolders, and any other pattern
+ * also covers what is under it.
+ */
 function patternToRegExp(pattern) {
   const directory = pattern.endsWith("/");
   const body = pattern.replace(/^\//, "").replace(/\/$/, "");
   const anchored = pattern.startsWith("/") || body.includes("/");
+  const lastSegment = body.split("/").pop();
   const source = body
-    .split(/(\*\*|\*|\?)/)
-    .map((part) => (part === "**" ? ".*" : part === "*" ? "[^/]*" : part === "?" ? "[^/]" : part.replace(/[.+^${}()|[\]\\]/g, "\\$&")))
+    .replace(/^\*\*\//, "\0")
+    .split(/(\0|\*\*|\*|\?)/)
+    .map((part) => (part === "\0" ? "(.*/)?" : part === "**" ? ".*" : part === "*" ? "[^/]*" : part === "?" ? "[^/]" : part.replace(/[.+^${}()|[\]\\]/g, "\\$&")))
     .join("");
-  return new RegExp(`^${anchored ? "" : "(.*/)?"}${source}${directory ? "/.*" : "(/.*)?"}$`);
+  const below = directory ? "/.*" : /[*?]/.test(lastSegment) ? "" : "(/.*)?";
+  return new RegExp(`^${anchored ? "" : "(.*/)?"}${source}${below}$`);
 }
 
 export function parseCodeowners(text) {
@@ -26,11 +33,11 @@ export function parseCodeowners(text) {
     .filter((line) => line !== "" && !line.startsWith("#"))
     .map((line) => {
       const [pattern, ...owners] = line.split(/\s+/);
-      return { match: patternToRegExp(pattern), owners: owners.sort() };
+      return { match: patternToRegExp(pattern), owners: owners.map((o) => o.toLowerCase()).sort() };
     });
 }
 
-/** The owners of a path: those of the last line that matches it. */
+/** The owners of a path, in lowercase: those of the last line that matches it. */
 export function ownersOf(rules, path) {
   return rules.findLast((rule) => rule.match.test(path))?.owners ?? [];
 }

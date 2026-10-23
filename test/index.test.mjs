@@ -81,7 +81,7 @@ test("remote connections reach the index, local ones wait; a connection requires
   assert.deepEqual(requires["example-docker"], {
     servers: { local: { image: "ghcr.io/example/example-mcp@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" } },
     hosts: [],
-    methods: ["token"],
+    methods: [{ type: "token" }],
     scopes: [],
     fields: [],
     triggers: [],
@@ -92,7 +92,7 @@ test("remote connections reach the index, local ones wait; a connection requires
   assert.deepEqual(requires["example-remote"], {
     servers: { remote: { url: "https://mcp.example.com/mcp" } },
     hosts: ["api.example.com", "mcp.example.com"],
-    methods: ["oauth"],
+    methods: [{ type: "oauth" }],
     scopes: ["read", "write"],
     fields: [],
     triggers: [],
@@ -105,17 +105,20 @@ test("a connection whose address the person fills requires the field, and carrie
   const catalog = mkdtempSync(join(tmpdir(), "catalog-"));
   mkdirSync(join(catalog, "connections"));
   const item = JSON.parse(readFileSync(join(root, "test/fixtures/connections/example-remote.json"), "utf8"));
+  item.id = "grafana";
   item.minAppVersion = "0.2.0";
   item.manifest.fields = [{ key: "url", label: { en: "Address", "pt-BR": "Endereço" }, format: "url", required: true }];
   item.manifest.servers = { remote: { urlField: "url" } };
   item.manifest.triggers = ["mcp-poll"];
-  writeFileSync(join(catalog, "connections/example-remote.json"), JSON.stringify(item));
+  item.manifest.methods.push({ type: "session", reader: "browser-cookie" });
+  writeFileSync(join(catalog, "connections/grafana.json"), JSON.stringify(item));
   const [entry] = JSON.parse(await buildIndex(catalog, AT)).items;
   assert.equal(entry.minAppVersion, "0.2.0");
   assert.deepEqual(entry.requires.servers, { remote: { urlField: "url" } });
   assert.deepEqual(entry.requires.hosts, ["api.example.com"]);
   assert.deepEqual(entry.requires.fields, ["url"]);
   assert.deepEqual(entry.requires.triggers, ["mcp-poll"]);
+  assert.deepEqual(entry.requires.methods, [{ type: "oauth" }, { type: "session", reader: "browser-cookie" }]);
 });
 
 test("an invalid catalog does not become an index", async () => {

@@ -2,6 +2,7 @@
   "kind": "connection",
   "id": "root-extra-dependency",
   "version": 1,
+  "minAppVersion": "0.1.0",
   "description": {
     "en": "Example connection type.",
     "pt-BR": "Tipo de conexão de exemplo."

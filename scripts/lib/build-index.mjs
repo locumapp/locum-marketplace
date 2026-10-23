@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { relative } from "node:path";
-import { TRIGGER_KINDS } from "./rules.mjs";
+import { TRIGGER_KINDS, canonicalHost } from "./rules.mjs";
 import { validateCatalog } from "./validate.mjs";
 
 export const INDEX_FORMAT = "locum-marketplace-index";
@@ -18,8 +18,8 @@ function connectionRequires(manifest) {
   if (local !== undefined) servers.local = local.image !== undefined ? { image: local.image } : { package: `${local.package.name}@${local.package.version}` };
   return {
     servers,
-    hosts: sorted([...(remote?.url !== undefined ? [new URL(remote.url).hostname] : []), ...(manifest.hosts ?? [])]),
-    methods: manifest.methods.map((m) => m.type),
+    hosts: sorted([...(remote?.url !== undefined ? [new URL(remote.url).hostname] : []), ...(manifest.hosts ?? [])].map(canonicalHost)),
+    methods: manifest.methods.map((m) => (m.reader === undefined ? { type: m.type } : { type: m.type, reader: m.reader })),
     scopes: sorted(manifest.methods.flatMap((m) => m.scopes ?? [])),
     fields: (manifest.fields ?? []).map((f) => f.key),
     triggers: sorted(manifest.triggers ?? []),

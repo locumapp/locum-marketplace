@@ -1,28 +1,28 @@
 # The official connection ids (scripts/lib/official-connections.json) are published only by the maintainers.
 # npm run validate checks that every one of them is listed here with the owners of this file.
 
-/.github/ @RabahZeineddine
-/keys/ @RabahZeineddine
-/schemas/ @RabahZeineddine
-/scripts/ @RabahZeineddine
+/.github/ @locumapp/maintainers
+/keys/ @locumapp/maintainers
+/schemas/ @locumapp/maintainers
+/scripts/ @locumapp/maintainers
 
-/connections/amplitude.json @RabahZeineddine
-/connections/argocd.json @RabahZeineddine
-/connections/asana.json @RabahZeineddine
-/connections/atlassian.json @RabahZeineddine
-/connections/canva.json @RabahZeineddine
-/connections/figma.json @RabahZeineddine
-/connections/github.json @RabahZeineddine
-/connections/grafana.json @RabahZeineddine
-/connections/intercom.json @RabahZeineddine
-/connections/linear.json @RabahZeineddine
-/connections/miro.json @RabahZeineddine
-/connections/newrelic.json @RabahZeineddine
-/connections/notion.json @RabahZeineddine
-/connections/posthog.json @RabahZeineddine
-/connections/prelo.json @RabahZeineddine
-/connections/sentry.json @RabahZeineddine
-/connections/shortcut.json @RabahZeineddine
-/connections/slack.json @RabahZeineddine
-/connections/teams.json @RabahZeineddine
-/connections/vercel.json @RabahZeineddine
+/connections/amplitude.json @locumapp/maintainers
+/connections/argocd.json @locumapp/maintainers
+/connections/asana.json @locumapp/maintainers
+/connections/atlassian.json @locumapp/maintainers
+/connections/canva.json @locumapp/maintainers
+/connections/figma.json @locumapp/maintainers
+/connections/github.json @locumapp/maintainers
+/connections/grafana.json @locumapp/maintainers
+/connections/intercom.json @locumapp/maintainers
+/connections/linear.json @locumapp/maintainers
+/connections/miro.json @locumapp/maintainers
+/connections/newrelic.json @locumapp/maintainers
+/connections/notion.json @locumapp/maintainers
+/connections/posthog.json @locumapp/maintainers
+/connections/prelo.json @locumapp/maintainers
+/connections/sentry.json @locumapp/maintainers
+/connections/shortcut.json @locumapp/maintainers
+/connections/slack.json @locumapp/maintainers
+/connections/teams.json @locumapp/maintainers
+/connections/vercel.json @locumapp/maintainers

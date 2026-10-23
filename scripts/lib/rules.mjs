@@ -2,7 +2,13 @@
 import { readFileSync } from "node:fs";
 import { isIP } from "node:net";
 
-const officialList = JSON.parse(readFileSync(new URL("./official-connections.json", import.meta.url), "utf8"));
+const readJson = (path) => JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));
+const officialList = readJson("./official-connections.json");
+const coreKinds = readJson("./core-kinds.json");
+
+/** Tracker kinds and flow actions the app core has, from `core-kinds.json`. */
+export const CORE_TRACKERS = new Set(coreKinds.trackers);
+export const CORE_ACTIONS = new Set(coreKinds.actions);
 
 /** Ids nobody publishes: `locum` for the core and `proprio` for servers registered by hand. */
 export const RESERVED_CONNECTION_IDS = new Set(officialList.reserved);
@@ -13,6 +19,9 @@ export const RESERVED_CONNECTION_IDS = new Set(officialList.reserved);
  * (ADR 0018, decision 4), and no other type may claim what identifies them.
  */
 export const OFFICIAL_CONNECTIONS = new Map(Object.entries(officialList.official));
+
+/** Each alias of an official type, with the type. The app matches a server name by id before alias, so no other id may take one. */
+const OFFICIAL_ALIASES = new Map([...OFFICIAL_CONNECTIONS].flatMap(([id, o]) => (o.aliases ?? []).map((alias) => [alias, id])));
 
 /** Runners that fetch and run a package on the spot, without a lockfile. */
 const ONE_SHOT_RUNNERS = new Set(["npx", "pnpx", "bunx", "uvx", "pipx", "dlx"]);
@@ -27,11 +36,11 @@ const PLACEHOLDER = /\$\{[^}]*\}/g;
 /** Where `${credential}` may go: a header of the remote server or the env of the local one. */
 const CREDENTIAL_PLACES = /^manifest\.servers\.(remote\.headers|local\.env)\.[^.]+$/;
 /** Variables that change how a process loads code, which certificates it trusts or where its traffic goes. */
-const LOADER_ENV = /^(NODE_OPTIONS|NODE_PATH|NODE_EXTRA_CA_CERTS|LD_.*|DYLD_.*|PATH|PYTHONPATH|PYTHONHOME|PYTHONSTARTUP|PERL5LIB|PERL5OPT|RUBYOPT|RUBYLIB|JAVA_TOOL_OPTIONS|_JAVA_OPTIONS|JDK_JAVA_OPTIONS|BASH_ENV|ENV|NPM_CONFIG_.*|GIT_.*|SSL_CERT_FILE|SSL_CERT_DIR|REQUESTS_CA_BUNDLE|CURL_CA_BUNDLE|HTTPS?_PROXY|ALL_PROXY|NO_PROXY)$/i;
+const LOADER_ENV = /^(NODE_OPTIONS|NODE_PATH|NODE_EXTRA_CA_CERTS|LD_.*|DYLD_.*|ELECTRON_RUN_AS_NODE|NODE_TLS_REJECT_UNAUTHORIZED|SSLKEYLOGFILE|PATH|PYTHONPATH|PYTHONHOME|PYTHONSTARTUP|PERL5LIB|PERL5OPT|RUBYOPT|RUBYLIB|JAVA_TOOL_OPTIONS|_JAVA_OPTIONS|JDK_JAVA_OPTIONS|BASH_ENV|ENV|NPM_CONFIG_.*|GIT_.*|SSL_CERT_FILE|SSL_CERT_DIR|REQUESTS_CA_BUNDLE|CURL_CA_BUNDLE|HTTPS?_PROXY|ALL_PROXY|NO_PROXY)$/i;
 /** Container runtime flags that widen what the server reaches. The app puts args after the image; this is defense in depth. */
-const CONTAINER_FLAGS = /^(--privileged|--cap-add|--pid|--ipc|--uts|--userns|--cgroupns|--network|--net|--device|--security-opt|--volume|--mount|--volumes-from|-v)(=.*)?$/;
+const CONTAINER_FLAGS = /^(--privileged|--cap-add|--pid|--ipc|--uts|--userns|--cgroupns|--network|--net|--device|--security-opt|--volume|--mount|--volumes-from)(=.*)?$|^-v/;
 /** Names that never resolve to a public host. */
-const LOCAL_SUFFIXES = [".local", ".localhost", ".internal", ".home.arpa", ".lan"];
+const LOCAL_SUFFIXES = [".local", ".localhost", ".localdomain", ".internal", ".intranet", ".corp", ".private", ".home", ".home.arpa", ".lan", ".test", ".example", ".invalid"];
 /** Methods whose reader takes a credential from another tool or a session on the machine: only official types use them. */
 const MACHINE_METHODS = new Set(["cli", "session"]);
 
@@ -71,6 +80,8 @@ export function itemRules(item, expected) {
   if (item.kind === "connection") {
     if (RESERVED_CONNECTION_IDS.has(item.id)) {
       errors.push({ field: "id", message: `"${item.id}" is reserved by the app and cannot be published` });
+    } else if (OFFICIAL_ALIASES.has(item.id)) {
+      errors.push({ field: "id", message: `"${item.id}" is an alias of the official type "${OFFICIAL_ALIASES.get(item.id)}": the app would match its servers to this id` });
     }
     if (isObject(item.manifest)) errors.push(...connectionRules(item.manifest, item.id));
   }
@@ -134,8 +145,17 @@ function connectionRules(manifest, id) {
   });
 
   (Array.isArray(manifest.actions) ? manifest.actions : []).forEach((action, i) => {
-    if (typeof action === "string" && !action.startsWith(`${id}.`)) {
+    if (typeof action !== "string") return;
+    if (!action.startsWith(`${id}.`)) {
       errors.push({ field: field("manifest.actions", i), message: `action must start with "${id}.", the type that owns it` });
+    } else if (!CORE_ACTIONS.has(action)) {
+      errors.push({ field: field("manifest.actions", i), message: `unknown action "${action}": the app core has ${[...CORE_ACTIONS].join(", ")}` });
+    }
+  });
+
+  (Array.isArray(manifest.trackers) ? manifest.trackers : []).forEach((tracker, i) => {
+    if (typeof tracker === "string" && !CORE_TRACKERS.has(tracker)) {
+      errors.push({ field: field("manifest.trackers", i), message: `unknown tracker kind "${tracker}": the app core has ${[...CORE_TRACKERS].join(", ")}` });
     }
   });
 
@@ -225,11 +245,26 @@ function urlRules(value, at) {
     return [{ field: at, message: "not a valid url" }];
   }
   if (url.protocol !== "https:") return [{ field: at, message: "the server must be https" }];
+  const written = writtenHost(value);
+  if (written !== url.hostname || url.hostname.endsWith(".")) {
+    return [{ field: at, message: `write the host in its canonical form, lowercase ASCII without a trailing dot: "${written}" is read as "${canonicalHost(url.hostname)}"` }];
+  }
   const errors = [];
   if (url.username !== "" || url.password !== "") errors.push({ field: at, message: "the url must not carry a user or password; the credential goes in a header" });
   const why = notPublic(url.hostname);
   if (why !== undefined) errors.push({ field: at, message: `the server must be on a public host name, found ${why}` });
   return errors;
+}
+
+/** The host as written in the url, without user, port or path. */
+function writtenHost(value) {
+  const authority = value.replace(/^[a-z]+:\/\//i, "").split(/[/?#]/)[0];
+  return authority.slice(authority.lastIndexOf("@") + 1).replace(/:\d*$/, "");
+}
+
+/** The host as the app compares it: lowercase ASCII (punycode), without a trailing dot. */
+export function canonicalHost(host) {
+  return new URL(`https://${host}/`).hostname.replace(/\.$/, "");
 }
 
 function localRules(server) {
@@ -349,8 +384,8 @@ export function connectionClaims(item) {
   const list = (value) => (Array.isArray(value) ? value.filter((v) => typeof v === "string") : []);
   const claims = [];
   const url = m.servers?.remote?.url;
-  if (typeof url === "string" && URL.canParse(url)) claims.push({ space: "host", key: new URL(url).hostname, field: "manifest.servers.remote.url" });
-  for (const host of list(m.hosts)) claims.push({ space: "host", key: host, field: "manifest.hosts" });
+  if (typeof url === "string" && URL.canParse(url)) claims.push({ space: "host", key: canonicalHost(new URL(url).hostname), field: "manifest.servers.remote.url" });
+  for (const host of list(m.hosts)) if (URL.canParse(`https://${host}/`)) claims.push({ space: "host", key: canonicalHost(host), field: "manifest.hosts" });
   for (const alias of list(m.aliases)) claims.push({ space: "alias", key: alias, field: "manifest.aliases" });
   for (const pkg of list(m.packages)) claims.push({ space: "package", key: pkg, field: "manifest.packages" });
   for (const tracker of list(m.trackers)) claims.push({ space: "tracker", key: tracker, field: "manifest.trackers" });
