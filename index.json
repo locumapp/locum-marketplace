@@ -1,8 +1,8 @@
 {
   "format": "locum-marketplace-index",
   "version": 1,
-  "commit": "e70a6b34ee1d6fd2d2fe828a6e9f0bf753986446",
-  "committedAt": 1792791649,
+  "commit": "911294cc400df97da5f0b4d1456cf33fd3128bf8",
+  "committedAt": 1792799454,
   "items": [
     {
       "kind": "connection",
@@ -719,6 +719,60 @@
         "triggers": [],
         "actions": [],
         "writeTools": []
+      }
+    },
+    {
+      "kind": "template",
+      "id": "inbox-triage",
+      "version": 1,
+      "minAppVersion": "0.1.175",
+      "path": "templates/inbox-triage.json",
+      "sha256": "f5f2c197e869268104544ae012d816be6a6215bac13d85028e6df7d44af86c05",
+      "name": {
+        "en": "Inbox triage",
+        "pt-BR": "Triagem da caixa de entrada"
+      },
+      "description": {
+        "en": "Joins the mentions and direct messages you received on Slack or Teams for half an hour and delivers to the queue only what needs your attention: one digest per trigger per window. The Teams chats are chosen on install.",
+        "pt-BR": "Junta as menções e mensagens diretas que chegaram no Slack ou no Teams por meia hora e entrega na fila só o que pede a sua atenção: um digest por gatilho a cada janela. Os chats do Teams são escolhidos na instalação."
+      },
+      "tags": [
+        "digest",
+        "slack",
+        "teams"
+      ],
+      "requires": {
+        "connections": [
+          "slack",
+          "teams"
+        ],
+        "servers": [],
+        "providers": [
+          {
+            "provider": "claude-code",
+            "models": [
+              "claude-sonnet-5"
+            ]
+          }
+        ],
+        "skills": [],
+        "actions": [
+          "digest.deliver"
+        ],
+        "triggers": [
+          {
+            "kind": "slack-inbox",
+            "choose": [
+              "myUserId"
+            ]
+          },
+          {
+            "kind": "teams-inbox",
+            "choose": [
+              "chats"
+            ]
+          }
+        ]
       }
     },
     {
