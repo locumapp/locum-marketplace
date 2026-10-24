@@ -63,10 +63,14 @@
                     ],
                     "properties": {
                       "channel": {
-                        "type": "string"
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "\\S"
                       },
                       "subject": {
-                        "type": "string"
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "\\S"
                       },
                       "kind": {
                         "enum": [
@@ -76,10 +80,14 @@
                         ]
                       },
                       "summary": {
-                        "type": "string"
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "\\S"
                       },
                       "threadTs": {
-                        "type": "string"
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "\\S"
                       }
                     }
                   }

@@ -259,6 +259,15 @@ test("every trigger kind in the schema says what the person chooses, and how a t
   }
 });
 
+test("x-pending-choice marks only what the app holds, the pendingChoice of app/src/config/types.ts", () => {
+  // Marking a field the app does not hold lets batch through on a trigger the app drops: change both together.
+  const schema = JSON.parse(readFileSync(join(root, "schemas/template.schema.json"), "utf8"));
+  const held = Object.fromEntries(
+    schema.$defs.trigger.allOf.filter((b) => b.then["x-pending-choice"] !== undefined).map((b) => [b.if.properties.kind.const, b.then["x-pending-choice"]]),
+  );
+  assert.deepEqual(held, { "slack-channel": ["channels"] });
+});
+
 test("a template may declare the minimum app version as x.y.z", async () => {
   assert.deepEqual(await validateFile(variant((item) => (item.minAppVersion = "0.1.10"))), []);
 });
