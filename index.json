@@ -1,8 +1,8 @@
 {
   "format": "locum-marketplace-index",
   "version": 1,
-  "commit": "911294cc400df97da5f0b4d1456cf33fd3128bf8",
-  "committedAt": 1792799454,
+  "commit": "01707dbb182bc7fd1927de25b48a4ee889fb45cf",
+  "committedAt": 1792803154,
   "items": [
     {
       "kind": "connection",
@@ -1018,6 +1018,52 @@
             "choose": [
               "owner",
               "repoMatch"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "kind": "template",
+      "id": "slack-digest",
+      "version": 1,
+      "minAppVersion": "0.1.177",
+      "path": "templates/slack-digest.json",
+      "sha256": "d302c7cc87a3239041497847be6df6ae91c011c2fb590ccaf14ebd39b17346a1",
+      "name": {
+        "en": "Slack digest",
+        "pt-BR": "Digest do Slack"
+      },
+      "description": {
+        "en": "Joins the messages of the watched Slack channels for two hours and builds one digest, which arrives in the queue as reading. The channels are chosen on install, and the trigger stays stopped until they are.",
+        "pt-BR": "Junta as mensagens dos canais observados do Slack por duas horas e monta um digest, que chega na fila como leitura. Os canais são escolhidos na instalação, e o gatilho fica parado até isso."
+      },
+      "tags": [
+        "digest",
+        "slack"
+      ],
+      "requires": {
+        "connections": [
+          "slack"
+        ],
+        "servers": [],
+        "providers": [
+          {
+            "provider": "claude-code",
+            "models": [
+              "claude-sonnet-5"
+            ]
+          }
+        ],
+        "skills": [],
+        "actions": [
+          "digest.deliver"
+        ],
+        "triggers": [
+          {
+            "kind": "slack-channel",
+            "choose": [
+              "channels"
             ]
           }
         ]
