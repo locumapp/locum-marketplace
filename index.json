@@ -1,8 +1,8 @@
 {
   "format": "locum-marketplace-index",
   "version": 1,
-  "commit": "01707dbb182bc7fd1927de25b48a4ee889fb45cf",
-  "committedAt": 1792803154,
+  "commit": "064b938d1e5c2fbf6cf9c7f42cb2277bf050eae5",
+  "committedAt": 1792813623,
   "items": [
     {
       "kind": "connection",
