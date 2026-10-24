@@ -1,8 +1,8 @@
 {
   "format": "locum-marketplace-index",
   "version": 1,
-  "commit": "7f182cf5afff36d68d011a1ebcc4c684993eab73",
-  "committedAt": 1792825296,
+  "commit": "f7da5d3b1e862cb4b2cd39dc89efaa0e864f33fd",
+  "committedAt": 1792861995,
   "items": [
     {
       "kind": "connection",
@@ -39,7 +39,8 @@
         "triggers": [],
         "actions": [],
         "writeTools": []
-      }
+      },
+      "official": true
     },
     {
       "kind": "connection",
@@ -76,7 +77,8 @@
         "triggers": [],
         "actions": [],
         "writeTools": []
-      }
+      },
+      "official": true
     },
     {
       "kind": "connection",
@@ -113,7 +115,8 @@
         "triggers": [],
         "actions": [],
         "writeTools": []
-      }
+      },
+      "official": true
     },
     {
       "kind": "connection",
@@ -150,7 +153,8 @@
         "triggers": [],
         "actions": [],
         "writeTools": []
-      }
+      },
+      "official": true
     },
     {
       "kind": "connection",
@@ -187,7 +191,8 @@
         "triggers": [],
         "actions": [],
         "writeTools": []
-      }
+      },
+      "official": true
     },
     {
       "kind": "connection",
@@ -234,7 +239,8 @@
           "github.review_reply"
         ],
         "writeTools": []
-      }
+      },
+      "official": true
     },
     {
       "kind": "connection",
@@ -271,7 +277,8 @@
         "triggers": [],
         "actions": [],
         "writeTools": []
-      }
+      },
+      "official": true
     },
     {
       "kind": "connection",
@@ -308,7 +315,8 @@
         "triggers": [],
         "actions": [],
         "writeTools": []
-      }
+      },
+      "official": true
     },
     {
       "kind": "connection",
@@ -345,7 +353,8 @@
         "triggers": [],
         "actions": [],
         "writeTools": []
-      }
+      },
+      "official": true
     },
     {
       "kind": "connection",
@@ -382,7 +391,8 @@
         "triggers": [],
         "actions": [],
         "writeTools": []
-      }
+      },
+      "official": true
     },
     {
       "kind": "connection",
@@ -419,7 +429,8 @@
         "triggers": [],
         "actions": [],
         "writeTools": []
-      }
+      },
+      "official": true
     },
     {
       "kind": "connection",
@@ -456,7 +467,8 @@
         "triggers": [],
         "actions": [],
         "writeTools": []
-      }
+      },
+      "official": true
     },
     {
       "kind": "connection",
@@ -493,7 +505,8 @@
         "triggers": [],
         "actions": [],
         "writeTools": []
-      }
+      },
+      "official": true
     },
     {
       "kind": "connection",
@@ -570,7 +583,8 @@
         "triggers": [],
         "actions": [],
         "writeTools": []
-      }
+      },
+      "official": true
     },
     {
       "kind": "connection",
@@ -607,7 +621,8 @@
         "triggers": [],
         "actions": [],
         "writeTools": []
-      }
+      },
+      "official": true
     },
     {
       "kind": "connection",
@@ -646,7 +661,8 @@
           "slack.react"
         ],
         "writeTools": []
-      }
+      },
+      "official": true
     },
     {
       "kind": "connection",
@@ -682,7 +698,8 @@
           "teams.react"
         ],
         "writeTools": []
-      }
+      },
+      "official": true
     },
     {
       "kind": "connection",
@@ -719,7 +736,8 @@
         "triggers": [],
         "actions": [],
         "writeTools": []
-      }
+      },
+      "official": true
     },
     {
       "kind": "template",
