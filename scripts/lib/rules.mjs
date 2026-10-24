@@ -58,6 +58,9 @@ export const CONNECTION_MIN_APP_VERSION = "0.1.168";
 /** The first app version whose schema takes `servers.remote.path` and the `${field:<key>}` markers. */
 export const MARKERS_MIN_APP_VERSION = "0.1.170";
 
+/** The first app version whose catalog schema takes `placeholder` in a field and `healthCheck` (ADR 0018, slice 4a). */
+export const HEALTH_CHECK_MIN_APP_VERSION = "0.1.182";
+
 /** The first app version with `batch` in a trigger (ADR 0019, slice 7a). */
 export const BATCH_MIN_APP_VERSION = "0.1.175";
 
@@ -152,7 +155,8 @@ export function itemRules(item, expected) {
       if (compareVersions(item.minAppVersion, CONNECTION_MIN_APP_VERSION) < 0) {
         errors.push({ field: "minAppVersion", message: `a connection type needs minAppVersion ${CONNECTION_MIN_APP_VERSION} or newer: older apps do not install connection types` });
       } else if (usesMarkers(item.manifest) && compareVersions(item.minAppVersion, MARKERS_MIN_APP_VERSION) < 0) {
-        errors.push({ field: "minAppVersion", message: `servers.remote.path and \${field:<key>} need minAppVersion ${MARKERS_MIN_APP_VERSION} or newer: older apps refuse them` });
+        errors.push({ field: "minAppVersion", message: `servers.remote.path and \${field:<key>} need minAppVersion ${MARKERS_MIN_APP_VERSION} or newer: older apps refuse them` });      } else if (usesPlaceholderOrHealthCheck(item.manifest) && compareVersions(item.minAppVersion, HEALTH_CHECK_MIN_APP_VERSION) < 0) {
+        errors.push({ field: "minAppVersion", message: `placeholder and healthCheck need minAppVersion ${HEALTH_CHECK_MIN_APP_VERSION} or newer: older apps refuse them and show the type as invalid` });
       }
     }
     if (isObject(item.name)) {
@@ -196,6 +200,13 @@ function usesMarkers(manifest) {
   if (!isObject(servers)) return false;
   if (isObject(servers.remote) && servers.remote.path !== undefined) return true;
   return JSON.stringify([servers.remote?.url, servers.remote?.headers, servers.local?.args, servers.local?.env]).includes("${field:");
+}
+
+/** Whether the manifest uses what came into the app catalog schema in 0.1.182: a field placeholder or healthCheck. */
+function usesPlaceholderOrHealthCheck(manifest) {
+  if (!isObject(manifest)) return false;
+  if (manifest.healthCheck !== undefined) return true;
+  return Array.isArray(manifest.fields) && manifest.fields.some((f) => isObject(f) && f.placeholder !== undefined);
 }
 
 /** Why a host name is not public, or undefined when it is. IPv4 in any notation comes normalized by URL. */

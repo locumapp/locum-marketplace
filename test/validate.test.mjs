@@ -654,13 +654,14 @@ const healthCheck = [
 ];
 
 test("a field takes a placeholder, and a remote server takes a health check, at a fixed url or at the one the person fills", async () => {
-  const fixed = connection((_, m) => {
+  const fixed = connection((item, m) => {
+    item.minAppVersion = "0.1.182";
     m.fields = [{ ...textField("team"), required: false, placeholder: { en: "e.g. core", "pt-BR": "ex.: core" } }];
     m.healthCheck = healthCheck;
   });
   assert.deepEqual(await validateFile(fixed.file), []);
   const filled = connection((item, m) => {
-    item.minAppVersion = "0.1.170";
+    item.minAppVersion = "0.1.182";
     m.fields = [{ ...urlField, placeholder: { en: "https://example.com", "pt-BR": "https://exemplo.com" } }];
     m.methods = [{ type: "token", header: "Authorization" }];
     m.servers = { remote: { urlField: "url", path: "/mcp", headers: { Authorization: "Bearer ${credential}" } } };
@@ -668,6 +669,21 @@ test("a field takes a placeholder, and a remote server takes a health check, at 
     delete m.hosts;
   });
   assert.deepEqual(await validateFile(filled.file), []);
+});
+
+test("placeholder and healthCheck need the app that reads them: older apps would show the type as invalid", async () => {
+  for (const change of [
+    (_, m) => (m.fields = [{ ...textField("team"), placeholder: { en: "core", "pt-BR": "core" } }]),
+    (_, m) => (m.healthCheck = healthCheck),
+  ]) {
+    const errors = await validateFile(connection((item, m) => {
+      item.minAppVersion = "0.1.181";
+      change(item, m);
+    }).file);
+    const hit = errors.find((e) => e.field === "minAppVersion");
+    assert.ok(hit, `expected an error at minAppVersion, got ${JSON.stringify(errors)}`);
+    assert.match(hit.message, /0\.1\.182/);
+  }
 });
 
 const get = (path, ...keys) => ({ path, fields: (keys.length > 0 ? keys : ["version"]).map((key) => ({ key, label: { en: key, "pt-BR": key } })) });
