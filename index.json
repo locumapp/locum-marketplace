@@ -1,8 +1,8 @@
 {
   "format": "locum-marketplace-index",
   "version": 1,
-  "commit": "3fd5c90b17ffc3468e7a9e632056820ebb0076f9",
-  "committedAt": 1792821504,
+  "commit": "7f182cf5afff36d68d011a1ebcc4c684993eab73",
+  "committedAt": 1792825296,
   "items": [
     {
       "kind": "connection",
@@ -498,17 +498,17 @@
     {
       "kind": "connection",
       "id": "prelo",
-      "version": 1,
-      "minAppVersion": "0.1.170",
+      "version": 2,
+      "minAppVersion": "0.1.182",
       "path": "connections/prelo.json",
-      "sha256": "424d0014e8c11698570b195c9e60880f568ba42f06278beb536b02aaa25f7336",
+      "sha256": "ae2135d0a8007f58fb6597aa8440bf611aecf9d2b1d8e36eb627e6a7a23b7bad",
       "name": {
         "en": "Prelo",
         "pt-BR": "Prelo"
       },
       "description": {
-        "en": "Prelo's own MCP server, on the Mac or in Docker at home. Agents check the printer, preview a piece and print notes, checklists, labels, QR codes, notebook pages and the daily newspaper; by default every print waits in the queue for your approval.",
-        "pt-BR": "Servidor MCP do próprio Prelo, no Mac ou no Docker de casa. Os agents conferem a impressora, veem a prévia e imprimem recados, listas, etiquetas, QR codes, folhas de caderno e o jornal do dia; por padrão cada impressão espera na Fila pela sua aprovação."
+        "en": "Prelo's own MCP server, running on this Mac (http://127.0.0.1:8640) or at a public address. Agents check the printer, preview a piece and print notes, checklists, labels, QR codes, notebook pages and the daily newspaper; by default every print waits in the queue for your approval.",
+        "pt-BR": "Servidor MCP do próprio Prelo, rodando neste Mac (http://127.0.0.1:8640) ou num endereço público. Os agents conferem a impressora, veem a prévia e imprimem recados, listas, etiquetas, QR codes, folhas de caderno e o jornal do dia; por padrão cada impressão espera na Fila pela sua aprovação."
       },
       "tags": [],
       "requires": {
