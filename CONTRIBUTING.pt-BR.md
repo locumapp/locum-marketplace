@@ -226,11 +226,16 @@ o tem: leia cada evento dentro de `{{event.items}}`. `batch` em tipo sem
 ou mais nova, a primeira versão do app com lote. A janela e o máximo ficam
 escritos no template, nunca a cargo do app. Também é recusado:
 
-- `batch` em gatilho que deixa de fora um campo de `x-required-to-run`
-  (`channels` no `slack-channel`, `repoMatch` no `poll`): sem ele o app não
-  cria o gatilho na instalação e o descarta inteiro, com o lote junto, até a
-  pessoa escolher. Gatilho segurado por `x-held-by` ou com entrada em
-  `omitidos` é criado com a configuração inteira e mantém o lote;
+- `batch` em gatilho que deixa de fora um campo de `x-required-to-run` que não
+  está em `x-pending-choice` (`repoMatch` no `poll`): sem ele o app não cria o
+  gatilho na instalação e o descarta inteiro, com o lote junto, até a pessoa
+  escolher. Gatilho segurado por `x-held-by` ou com entrada em `omitidos` é
+  criado com a configuração inteira e mantém o lote. O campo que também está
+  em `x-pending-choice` (`channels` no `slack-channel`) segura o gatilho a
+  partir do app `0.1.177`, com a configuração inteira, até a pessoa escolher:
+  template com `batch` nesse gatilho precisa de `minAppVersion` `0.1.177` ou
+  mais nova, porque o app anterior o descarta. Pacote não declara
+  `minAppVersion`, então nele o lote continua recusado;
 - template em que um gatilho que entrega evento tem `batch` e outro não: o run
   de cada um lê um evento diferente, e nenhum prompt serve aos dois.
 

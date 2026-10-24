@@ -468,7 +468,7 @@
       ]
     },
     "trigger": {
-      "description": "A trigger without what belongs to the person (channels, chats, owner, authors): they choose it on import. Each kind says what it reads (x-reads-connection; x-reads-server, the field that names the server), whether it brings no event (x-no-event), and the fields the person picks when installing (x-person-chooses), with the values that would take everything and so count as not chosen (x-catch-all). A template leaves each of those out in one way: the app needs the field to create the trigger (x-required-to-run), an entry in omitidos with the code in x-omitted-code at gatilho:<position>, or the field in x-held-by that holds the trigger until the person chooses. A kind with filter also takes batch ($defs.batch).",
+      "description": "A trigger without what belongs to the person (channels, chats, owner, authors): they choose it on import. Each kind says what it reads (x-reads-connection; x-reads-server, the field that names the server), whether it brings no event (x-no-event), and the fields the person picks when installing (x-person-chooses), with the values that would take everything and so count as not chosen (x-catch-all). A template leaves each of those out in one way: the app needs the field to create the trigger (x-required-to-run; in x-pending-choice too when the app, from 0.1.177, creates the trigger held with its whole config until the person chooses), an entry in omitidos with the code in x-omitted-code at gatilho:<position>, or the field in x-held-by that holds the trigger until the person chooses. A kind with filter also takes batch ($defs.batch).",
       "type": "object",
       "required": [
         "kind"
@@ -652,6 +652,9 @@
               "channels"
             ],
             "x-required-to-run": [
+              "channels"
+            ],
+            "x-pending-choice": [
               "channels"
             ]
           }

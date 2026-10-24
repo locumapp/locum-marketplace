@@ -61,6 +61,9 @@ export const MARKERS_MIN_APP_VERSION = "0.1.170";
 /** The first app version with `batch` in a trigger (ADR 0019, slice 7a). */
 export const BATCH_MIN_APP_VERSION = "0.1.175";
 
+/** The first app version that creates held, with its whole config, a trigger missing a field in `x-pending-choice`. */
+export const HELD_TRIGGER_MIN_APP_VERSION = "0.1.177";
+
 /** A display name as the app compares it with the official ones: without accents or format characters, in lowercase. */
 const normalizedName = (name) => name.normalize("NFKC").normalize("NFD").replace(/[\p{M}\p{Cf}]/gu, "").toLowerCase().trim();
 
@@ -80,7 +83,7 @@ function compareVersions(a, b) {
 }
 
 /** Annotations the schema keeps on each trigger kind and on the batch, read by the rules and the index. */
-export const TRIGGER_ANNOTATIONS = ["x-reads-connection", "x-reads-server", "x-no-event", "x-person-chooses", "x-required-to-run", "x-omitted-code", "x-held-by", "x-catch-all", "x-event-fields"];
+export const TRIGGER_ANNOTATIONS = ["x-reads-connection", "x-reads-server", "x-no-event", "x-person-chooses", "x-required-to-run", "x-pending-choice", "x-omitted-code", "x-held-by", "x-catch-all", "x-event-fields"];
 
 const templateSchema = JSON.parse(readFileSync(new URL("../../schemas/template.schema.json", import.meta.url), "utf8"));
 
@@ -98,6 +101,7 @@ export const TRIGGER_KINDS = new Map(
       takesBatch: branch.then.properties.batch !== undefined,
       chooses: branch.then["x-person-chooses"],
       requiredToRun: branch.then["x-required-to-run"] ?? [],
+      pendingChoice: branch.then["x-pending-choice"] ?? [],
       catchAll: branch.then["x-catch-all"] ?? {},
       omittedCode: branch.then["x-omitted-code"] ?? {},
       heldBy: branch.then["x-held-by"] ?? {},
@@ -145,10 +149,25 @@ export function itemRules(item, expected) {
   if (batched && (item.minAppVersion === undefined || (typeof item.minAppVersion === "string" && /^\d+\.\d+\.\d+$/.test(item.minAppVersion) && compareVersions(item.minAppVersion, BATCH_MIN_APP_VERSION) < 0))) {
     errors.push({ field: "minAppVersion", message: `batch needs minAppVersion ${BATCH_MIN_APP_VERSION} or newer: older apps run each event on its own and the batch fields come out empty` });
   }
+  if (item.kind === "template" && (item.minAppVersion === undefined || (typeof item.minAppVersion === "string" && /^\d+\.\d+\.\d+$/.test(item.minAppVersion) && compareVersions(item.minAppVersion, HELD_TRIGGER_MIN_APP_VERSION) < 0))) {
+    for (const { trigger, held } of heldBatches(item.package)) {
+      errors.push({ field: "minAppVersion", message: `batch in a "${trigger.kind}" trigger without ${held.join(", ")} needs minAppVersion ${HELD_TRIGGER_MIN_APP_VERSION} or newer: older apps drop the whole trigger, batch included, until the person chooses` });
+    }
+  }
   if ((item.kind === "template" || item.kind === "package") && isObject(item.package)) {
     errors.push(...packageRules(item.package, item.kind));
   }
   return errors;
+}
+
+/** The batched triggers that leave out a field the app holds them for (`x-pending-choice`), with those fields. */
+function heldBatches(pkg) {
+  const triggers = Array.isArray(pkg?.automacao?.gatilhos) ? pkg.automacao.gatilhos : [];
+  return triggers.flatMap((trigger) => {
+    const reads = isObject(trigger) && trigger.batch !== undefined ? TRIGGER_KINDS.get(trigger.kind) : undefined;
+    const held = reads === undefined ? [] : reads.pendingChoice.filter((f) => trigger[f] === undefined);
+    return held.length === 0 ? [] : [{ trigger, held }];
+  });
 }
 
 /** Whether the servers use what came into the app schema in 0.1.170: a path after urlField or a field marker. */
@@ -637,7 +656,9 @@ function triggerRules(pkg, kind) {
     if (trigger.batch !== undefined && !reads.takesBatch) {
       errors.push({ field: field(at, "batch"), message: `a "${trigger.kind}" trigger has no filter, so it has no batch either: the app joins only the events that pass a trigger filter` });
     } else if (trigger.batch !== undefined) {
-      const waiting = reads.requiredToRun.filter((f) => trigger[f] === undefined);
+      // A template holds the trigger from the app version it declares; a package declares none, so every app reads it.
+      const held = kind === "template" ? reads.pendingChoice : [];
+      const waiting = reads.requiredToRun.filter((f) => trigger[f] === undefined && !held.includes(f));
       if (waiting.length > 0) {
         errors.push({ field: field(at, "batch"), message: `a "${trigger.kind}" trigger without ${waiting.join(", ")} is not created on install: the app drops the whole trigger, batch included, until the person chooses, and the one they make by hand has no batch` });
       }
