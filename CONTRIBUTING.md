@@ -230,11 +230,16 @@ and a template with `batch` needs `minAppVersion` `0.1.175` or newer, the first
 app with batch. The window and the maximum are written in the template, never
 left to the app. Also refused:
 
-- `batch` in a trigger that leaves out a field in `x-required-to-run`
-  (`channels` in `slack-channel`, `repoMatch` in `poll`): without it the app
-  does not create the trigger on install, and drops it whole, batch included,
-  until the person chooses. A trigger held by `x-held-by` or with an entry in
-  `omitidos` is created with its whole config, and keeps its batch;
+- `batch` in a trigger that leaves out a field in `x-required-to-run` that is
+  not in `x-pending-choice` (`repoMatch` in `poll`): without it the app does
+  not create the trigger on install, and drops it whole, batch included, until
+  the person chooses. A trigger held by `x-held-by` or with an entry in
+  `omitidos` is created with its whole config, and keeps its batch. A field
+  also in `x-pending-choice` (`channels` in `slack-channel`) holds the trigger
+  from app `0.1.177` on, with its whole config, until the person chooses: a
+  template with `batch` in that trigger needs `minAppVersion` `0.1.177` or
+  newer, because older apps drop it. A package declares no `minAppVersion`, so
+  there the batch is still refused;
 - a template where one trigger that brings an event has `batch` and another
   has not: a run of each reads a different event, and no prompt serves both.
 

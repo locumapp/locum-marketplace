@@ -19,7 +19,7 @@ test("the catalog in the repository is valid, with the migrated templates", asyn
   assert.deepEqual(errors, []);
   const templates = items.filter((i) => i.kind === "template").map((i) => i.id);
   assert.ok(templates.includes("pr-review"));
-  assert.equal(templates.length, 9);
+  assert.equal(templates.length, 10);
 });
 
 test("good connection fixtures pass: image with digest, npm package with lockfile, remote server", async () => {
@@ -254,7 +254,18 @@ test("every trigger kind in the schema says what the person chooses, and how a t
     const ways = [branch.then["x-required-to-run"] ?? [], Object.keys(branch.then["x-omitted-code"] ?? {}), Object.keys(branch.then["x-held-by"] ?? {})];
     for (const f of chooses) assert.equal(ways.filter((w) => w.includes(f)).length, 1, `${kind}.${f}`);
     assert.deepEqual(ways.flat().sort(), [...chooses].sort(), kind);
+    // The app holds a trigger only for a field it needs to run it.
+    for (const f of branch.then["x-pending-choice"] ?? []) assert.ok(ways[0].includes(f), `${kind}.${f}`);
   }
+});
+
+test("x-pending-choice marks only what the app holds, the pendingChoice of app/src/config/types.ts", () => {
+  // Marking a field the app does not hold lets batch through on a trigger the app drops: change both together.
+  const schema = JSON.parse(readFileSync(join(root, "schemas/template.schema.json"), "utf8"));
+  const held = Object.fromEntries(
+    schema.$defs.trigger.allOf.filter((b) => b.then["x-pending-choice"] !== undefined).map((b) => [b.if.properties.kind.const, b.then["x-pending-choice"]]),
+  );
+  assert.deepEqual(held, { "slack-channel": ["channels"] });
 });
 
 test("a template may declare the minimum app version as x.y.z", async () => {
@@ -326,14 +337,45 @@ test("batch needs minAppVersion 0.1.175, the first app with batch", async () => 
   }
 });
 
-test("batch on a trigger the app only creates after the person chooses fails at batch, because the app drops it whole", async () => {
-  const file = batched((item) => {
+/** slack-reply with a batched slack-channel trigger that leaves the channels to choose. */
+const channelBatched = (minAppVersion) =>
+  batched((item) => {
+    item.minAppVersion = minAppVersion;
     item.package.automacao.gatilhos = [{ kind: "slack-channel", everyMinutes: 5, batch: { windowMinutes: 60, max: 50 } }];
     item.package.omitidos = [];
   });
+
+test("batch on a trigger the app holds until the person chooses passes from the app that holds it", async () => {
+  assert.deepEqual(await validateFile(channelBatched("0.1.177")), []);
+});
+
+test("batch on a trigger the app holds until the person chooses needs minAppVersion 0.1.177, because older apps drop it whole", async () => {
+  const hit = await errorAt(channelBatched("0.1.176"), "minAppVersion");
+  assert.match(hit.message, /without channels needs minAppVersion 0\.1\.177/);
+  assert.match(hit.message, /drop the whole trigger, batch included/);
+});
+
+test("batch on a trigger the app only creates after the person chooses fails at batch, because the app drops it whole", async () => {
+  const file = batched((item) => {
+    item.minAppVersion = "0.1.177";
+    item.package.automacao.gatilhos = [{ kind: "poll", source: "github", everyMinutes: 5, batch: { windowMinutes: 60, max: 50 } }];
+    item.package.requisitos.conexoes = [{ id: "github", nome: "GitHub" }];
+    item.package.omitidos = [{ codigo: "dono-do-github", onde: "gatilho:0" }];
+  });
+  const hit = await errorAt(file, "package.automacao.gatilhos.0.batch");
+  assert.match(hit.message, /without repoMatch/);
+  assert.match(hit.message, /drops the whole trigger, batch included/);
+});
+
+test("a package keeps batch out of a trigger the app holds, because a package declares no minAppVersion", async () => {
+  const file = variant((item) => {
+    item.kind = "package";
+    delete item.minAppVersion;
+    item.package.automacao.gatilhos = [{ kind: "slack-channel", everyMinutes: 5, batch: { windowMinutes: 60, max: 50 } }];
+    item.package.omitidos = [];
+  }, "packages");
   const hit = await errorAt(file, "package.automacao.gatilhos.0.batch");
   assert.match(hit.message, /without channels/);
-  assert.match(hit.message, /drops the whole trigger, batch included/);
 });
 
 test("a held trigger and one with an omitted entry keep batch: the app creates them with the whole config", async () => {
