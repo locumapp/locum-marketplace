@@ -169,3 +169,11 @@ test("the index carries minAppVersion when the item declares it, right after ver
   assert.deepEqual(Object.keys(byId["slack-reply"]).slice(0, 4), ["kind", "id", "version", "minAppVersion"]);
   assert.equal("minAppVersion" in byId["teams-reply"], false);
 });
+
+test("the index marks as official the connections on the maintainers' list, and no other item", async () => {
+  const items = JSON.parse(await buildIndex(root, AT)).items;
+  const marked = items.filter((i) => "official" in i);
+  assert.ok(marked.every((i) => i.kind === "connection" && i.official === true));
+  assert.deepEqual(marked.map((i) => i.id), ["amplitude", "asana", "atlassian", "canva", "figma", "github", "grafana", "intercom", "linear", "miro", "newrelic", "notion", "posthog", "sentry", "shortcut", "slack", "teams", "vercel"]);
+  assert.equal("official" in items.find((i) => i.id === "prelo"), false);
+});

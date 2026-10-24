@@ -103,8 +103,8 @@ has a rule in `scripts/lib/rules.mjs` or `scripts/lib/validate.mjs` and a test.
 - **Address typed by the person** (`urlField`): the catalog cannot see it. The
   app will have to refuse, when the instance is saved, a non-https, local or
   private address for a type from a third party. That rule is for third-party
-  types: an official type in the `home` category may accept http to the
-  person's own machine, as the prelo type does today.
+  types, with one way in: an address on this machine that the person types, as
+  for prelo. An official type may also reach the home network.
 - **Names that resolve to a private address**: the catalog checks names, not
   DNS. The app will have to check the resolved address when it connects, and
   not follow a redirect to another host.
@@ -146,13 +146,12 @@ has a rule in `scripts/lib/rules.mjs` or `scripts/lib/validate.mjs` and a test.
   `execution-service.ts`), and the catalog does not keep it. It can be derived
   from `methods` and `servers` (`oauth` with a fixed remote url, `panel` with
   fields and servers), except `github`, which only comes out of the id.
-- **Who is official without `embutidos.json`**: slice 4 of the app still
-  needs to know which types are official, for `official-id`,
-  `official-alias`, the name conflict and the home network in the `urlField`
-  of Prelo, which only an official type in the `home` category may accept.
-  The catalog keeps that in `scripts/lib/official-connections.json` and
-  CODEOWNERS, which do not reach the index. The ways out are a fixed list in
-  the app or a mark signed in the index. Not decided.
+- **Who is official without `embutidos.json`**: decided. The signed index
+  marks `"official": true` on the entry of each type whose id is in
+  `scripts/lib/official-connections.json`, and an item file cannot declare
+  it. Slice 4 of the app reads the mark for `official-id`, `official-alias`,
+  the name conflict and the trust of an official type. Prelo left the list:
+  it is a third-party type that the maintainers publish.
 
 ## Outside the code
 

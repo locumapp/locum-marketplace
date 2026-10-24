@@ -114,11 +114,6 @@
         "PostHog"
       ]
     },
-    "prelo": {
-      "names": [
-        "Prelo"
-      ]
-    },
     "sentry": {
       "hosts": [
         "mcp.sentry.dev"

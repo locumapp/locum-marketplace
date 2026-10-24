@@ -805,26 +805,54 @@ test("the package of a local server identifies the type, like the packages list"
 test("in the catalog, an official type may run an image pinned by digest; a package or a community local server waits", async () => {
   const catalog = tempCatalog("connections");
   connection((item) => (item.id = "grafana"), "example-docker", catalog);
-  connection((item) => (item.id = "prelo"), "example-npm", catalog);
+  connection((item) => (item.id = "teams"), "example-npm", catalog);
   connection(() => {}, "example-docker", catalog);
   const { items, errors } = await validateCatalog(catalog);
   assert.deepEqual(items.map((i) => i.id), ["grafana"]);
   assert.deepEqual(errors.map((e) => [e.file.split("/").pop(), e.field]), [
     ["example-docker.json", "manifest.servers.local"],
-    ["prelo.json", "manifest.servers.local"],
+    ["teams.json", "manifest.servers.local"],
   ]);
   assert.match(errors[0].message, /not accepted yet/);
   assert.match(errors[1].message, /package/);
 });
 
-test("every official type that shipped in the app is published, and argocd, which never did, is not", async () => {
+test("every official type that shipped in the app is published, argocd, which never did, is not, and prelo is a third-party type", async () => {
   const { items } = await validateCatalog(root);
   const official = JSON.parse(readFileSync(join(root, "scripts/lib/official-connections.json"), "utf8")).official;
   const published = items.filter((i) => i.kind === "connection").map((i) => i.id);
-  assert.deepEqual(published, Object.keys(official).filter((id) => id !== "argocd").sort());
-  for (const item of items.filter((i) => i.kind === "connection")) {
+  assert.deepEqual(published, [...Object.keys(official).filter((id) => id !== "argocd"), "prelo"].sort());
+  for (const item of items.filter((i) => i.kind === "connection" && i.id !== "prelo")) {
     assert.deepEqual([...new Set(Object.values(item.item.name))].sort(), [...official[item.id].names].sort(), item.id);
   }
+});
+
+test("prelo validates as a third-party type: a method that only official types use is refused", async () => {
+  const preloWith = (methods) => {
+    const item = JSON.parse(readFileSync(join(root, "connections/prelo.json"), "utf8"));
+    item.manifest.methods = methods;
+    const file = join(tempCatalog("connections"), "connections/prelo.json");
+    writeFileSync(file, JSON.stringify(item));
+    return file;
+  };
+  assert.deepEqual(await validateFile(preloWith([{ type: "token" }, { type: "none" }])), []);
+  const hit = (await validateFile(preloWith([{ type: "token" }, { type: "cli", reader: "gh" }]))).find((e) => e.field === "manifest.methods.1");
+  assert.ok(hit);
+  assert.match(hit.message, /only official/);
+});
+
+test("an item cannot declare itself official: the index marks it from the maintainers' list", async () => {
+  for (const value of [true, false]) {
+    const { file } = connection((item) => {
+      item.id = "github";
+      item.official = value;
+    });
+    const errors = await validateFile(file);
+    assert.deepEqual(errors.map((e) => e.field), ["official"]);
+    assert.match(errors[0].message, /official-connections\.json/);
+  }
+  const errors = await validateFile(variant((item) => (item.official = true)));
+  assert.deepEqual(errors.map((e) => e.field), ["official"]);
 });
 
 test("two connection types cannot claim the same host or alias, and the error points to both files", async () => {
