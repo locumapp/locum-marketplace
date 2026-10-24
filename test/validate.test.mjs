@@ -648,6 +648,66 @@ for (const [name, change, at, message] of markerConnections) {
   });
 }
 
+const healthCheck = [
+  { path: "/api/health", fields: [{ key: "version", label: { en: "Version", "pt-BR": "Versão" } }] },
+  { path: "/api/user", fields: [{ key: "login", label: { en: "User", "pt-BR": "Usuário" } }, { key: "org_id", label: { en: "Organization", "pt-BR": "Organização" } }] },
+];
+
+test("a field takes a placeholder, and a remote server takes a health check, at a fixed url or at the one the person fills", async () => {
+  const fixed = connection((_, m) => {
+    m.fields = [{ ...textField("team"), required: false, placeholder: { en: "e.g. core", "pt-BR": "ex.: core" } }];
+    m.healthCheck = healthCheck;
+  });
+  assert.deepEqual(await validateFile(fixed.file), []);
+  const filled = connection((item, m) => {
+    item.minAppVersion = "0.1.170";
+    m.fields = [{ ...urlField, placeholder: { en: "https://example.com", "pt-BR": "https://exemplo.com" } }];
+    m.methods = [{ type: "token", header: "Authorization" }];
+    m.servers = { remote: { urlField: "url", path: "/mcp", headers: { Authorization: "Bearer ${credential}" } } };
+    m.healthCheck = [healthCheck[0]];
+    delete m.hosts;
+  });
+  assert.deepEqual(await validateFile(filled.file), []);
+});
+
+const get = (path, ...keys) => ({ path, fields: (keys.length > 0 ? keys : ["version"]).map((key) => ({ key, label: { en: key, "pt-BR": key } })) });
+
+const badHealthChecks = [
+  ["a .. segment in the path", (_, m) => (m.healthCheck = [get("/api/../admin")]), "manifest.healthCheck.0.path", /\.\./],
+  ["a . segment in the path", (_, m) => (m.healthCheck = [get("/./health")]), "manifest.healthCheck.0.path", /\.\./],
+  ["a path without the leading slash", (_, m) => (m.healthCheck = [get("api/health")]), "manifest.healthCheck.0.path", /pattern/],
+  ["a full url as the path", (_, m) => (m.healthCheck = [get("https://other.example.com/health")]), "manifest.healthCheck.0.path", /pattern/],
+  ["a query in the path", (_, m) => (m.healthCheck = [get("/health?verbose=1")]), "manifest.healthCheck.0.path", /pattern/],
+  ["a fragment in the path", (_, m) => (m.healthCheck = [get("/health#top")]), "manifest.healthCheck.0.path", /pattern/],
+  ["a marker in the path", (_, m) => (m.healthCheck = [get("/${field:url}")]), "manifest.healthCheck.0.path", /pattern/],
+  ["an empty list", (_, m) => (m.healthCheck = []), "manifest.healthCheck", /fewer than 1/],
+  ["more than three GETs", (_, m) => (m.healthCheck = ["/a", "/b", "/c", "/d"].map((p) => get(p))), "manifest.healthCheck", /more than 3/],
+  ["the same path twice", (_, m) => (m.healthCheck = [get("/health"), get("/health", "status")]), "manifest.healthCheck.1.path", /twice/],
+  ["a GET without fields", (_, m) => (m.healthCheck = [{ path: "/health", fields: [] }]), "manifest.healthCheck.0.fields", /fewer than 1/],
+  ["more than ten fields", (_, m) => (m.healthCheck = [get("/health", ...Array.from({ length: 11 }, (_, i) => `f${i}`))]), "manifest.healthCheck.0.fields", /more than 10/],
+  ["the same field twice in a GET", (_, m) => (m.healthCheck = [get("/health", "version", "version")]), "manifest.healthCheck.0.fields.1.key", /twice/],
+  ["a nested field key", (_, m) => (m.healthCheck = [get("/health", "build.version")]), "manifest.healthCheck.0.fields.0.key", /pattern/],
+  ["a field without a label", (_, m) => (m.healthCheck = [{ path: "/health", fields: [{ key: "version" }] }]), "manifest.healthCheck.0.fields.0.label", /required/],
+  ["an unknown key in a GET", (_, m) => (m.healthCheck = [{ ...get("/health"), method: "POST" }]), "manifest.healthCheck.0.method", /unknown field/],
+  ["a placeholder that is not a text in both languages", (_, m) => (m.fields = [{ ...textField("team"), placeholder: "core" }]), "manifest.fields.0.placeholder", /object/],
+];
+
+for (const [name, change, at, message] of badHealthChecks) {
+  test(`a health check or a placeholder is refused with ${name}`, async () => {
+    const errors = await validateFile(connection(change).file);
+    const hit = errors.find((e) => e.field === at);
+    assert.ok(hit, `expected an error at ${at}, got ${JSON.stringify(errors)}`);
+    assert.match(hit.message, message);
+  });
+}
+
+test("a health check without servers.remote is refused: the base of the GET is the address of the remote server", async () => {
+  const errors = await validateFile(connection((_, m) => (m.healthCheck = [get("/health")]), "example-docker").file);
+  const hit = errors.find((e) => e.field === "manifest.healthCheck");
+  assert.ok(hit, `expected an error at manifest.healthCheck, got ${JSON.stringify(errors)}`);
+  assert.match(hit.message, /servers\.remote/);
+});
+
 const markerLocal = [
   ["an unknown placeholder in an argument", (_, m) => (m.servers.local.args = ["--org", "${org}"]), "manifest.servers.local.args.1", /placeholder/],
   ["an unknown placeholder in env", (_, m) => (m.servers.local.env.EXAMPLE_ORG = "${org}"), "manifest.servers.local.env.EXAMPLE_ORG", /placeholder/],
@@ -875,6 +935,8 @@ const hiddenText = [
   ["a zero width space in the description", (item) => (item.description["pt-BR"] = "Tipo\u200Bde exemplo."), "description.pt-BR"],
   ["an isolate in a field label", (_, m) => (m.fields = [{ key: "url", label: { en: "Address\u2066", "pt-BR": "Endereço" }, format: "url", required: false }]), "manifest.fields.0.label.en"],
   ["a control character in a field help", (_, m) => (m.fields = [{ key: "url", label: { en: "Address", "pt-BR": "Endereço" }, help: { en: "x", "pt-BR": "x\u0007" }, format: "url", required: false }]), "manifest.fields.0.help.pt-BR"],
+  ["a right-to-left override in a field placeholder", (_, m) => (m.fields = [{ key: "team", label: { en: "Team", "pt-BR": "Time" }, placeholder: { en: "core", "pt-BR": "\u202Ecore" }, format: "text", required: false }]), "manifest.fields.0.placeholder.pt-BR"],
+  ["a zero width space in a health check label", (_, m) => (m.healthCheck = [{ path: "/health", fields: [{ key: "version", label: { en: "Ver\u200Bsion", "pt-BR": "Vers\u00E3o" } }] }]), "manifest.healthCheck.0.fields.0.label.en"],
   ["a byte order mark in a scope", (_, m) => (m.methods[0].scopes = ["read", "\uFEFFwrite"]), "manifest.methods.0.scopes.1"],
   ["a right-to-left mark in a write tool", (_, m) => (m.writeTools = ["post\u200F_message"]), "manifest.writeTools.0"],
   ["an Arabic letter mark in a scope key description", (_, m) => (m.scopeKeys = [{ key: "example-remote.repo", normalize: "exact", description: { en: "Repo\u061C", "pt-BR": "Repo" } }]), "manifest.scopeKeys.0.description.en"],

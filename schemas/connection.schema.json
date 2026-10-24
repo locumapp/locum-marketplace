@@ -51,6 +51,13 @@
         "fields": { "description": "The form an instance fills, besides its name.", "type": "array", "items": { "$ref": "#/$defs/field" } },
         "scopeKeys": { "type": "array", "items": { "$ref": "#/$defs/scopeKey" } },
         "servers": { "$ref": "#/$defs/servers" },
+        "healthCheck": {
+          "description": "Up to three GETs that the instance test makes on the base of the remote server (the value of urlField, or servers.remote.url), and the fields of the JSON answer to show. Only with servers.remote.",
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "items": { "$ref": "#/$defs/healthCheckGet" }
+        },
         "triggers": {
           "description": "Trigger kinds of the app core that read this connection, or that read one of its servers (mcp-poll).",
           "type": "array",
@@ -124,8 +131,32 @@
         "key": { "$ref": "#/$defs/fieldKey" },
         "label": { "$ref": "#/$defs/text" },
         "help": { "description": "A line under the field, shown as plain text.", "$ref": "#/$defs/text" },
+        "placeholder": { "description": "Hint shown in the empty field, like the default address. Never saved as the value.", "$ref": "#/$defs/text" },
         "format": { "enum": ["url", "text"] },
         "required": { "type": "boolean" }
+      }
+    },
+    "healthCheckGet": {
+      "type": "object",
+      "required": ["path", "fields"],
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "description": "Path added to the end of the base: relative, starting with /, without . or .. segments, scheme, host, query, fragment or markers.",
+          "type": "string",
+          "pattern": "^(/[A-Za-z0-9._~-]+)+$"
+        },
+        "fields": { "type": "array", "minItems": 1, "maxItems": 10, "items": { "$ref": "#/$defs/healthCheckField" } }
+      }
+    },
+    "healthCheckField": {
+      "description": "A field of the JSON answer, at the first level, with the label the screen shows.",
+      "type": "object",
+      "required": ["key", "label"],
+      "additionalProperties": false,
+      "properties": {
+        "key": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*$" },
+        "label": { "$ref": "#/$defs/text" }
       }
     },
     "scopeKey": {

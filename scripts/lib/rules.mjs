@@ -244,7 +244,10 @@ function connectionRules(manifest, id) {
     if (fieldKeys.has(f.key)) errors.push({ field: field("manifest.fields", i, "key"), message: `field "${f.key}" appears twice` });
     fieldKeys.add(f.key);
     errors.push(...hiddenLocalized(f.label, field("manifest.fields", i, "label")), ...hiddenLocalized(f.help, field("manifest.fields", i, "help")));
+    errors.push(...hiddenLocalized(f.placeholder, field("manifest.fields", i, "placeholder")));
   });
+
+  if (Array.isArray(manifest.healthCheck)) errors.push(...healthCheckRules(manifest.healthCheck, manifest.servers));
 
   const scopeKeys = new Set();
   (Array.isArray(manifest.scopeKeys) ? manifest.scopeKeys : []).forEach((s, i) => {
@@ -298,6 +301,34 @@ function connectionRules(manifest, id) {
   if (isObject(servers.remote)) errors.push(...remoteRules(servers.remote, fields));
   if (isObject(servers.local)) errors.push(...localRules(servers.local));
   errors.push(...declaredHostRules(manifest));
+  return errors;
+}
+
+/** The GETs of the instance test, as the app checks them: on the base of the remote server, each path and each field once. */
+function healthCheckRules(gets, servers) {
+  const errors = [];
+  const at = "manifest.healthCheck";
+  if (!isObject(servers) || !isObject(servers.remote)) {
+    errors.push({ field: at, message: "healthCheck goes only with servers.remote: the GET is made on the address of the remote server" });
+  }
+  const paths = new Set();
+  gets.forEach((get, i) => {
+    if (!isObject(get)) return;
+    if (typeof get.path === "string") {
+      if (get.path.split("/").some((s) => s === "." || s === "..")) {
+        errors.push({ field: field(at, i, "path"), message: "path takes no . or .. segment, which the url parser turns into another route" });
+      }
+      if (paths.has(get.path)) errors.push({ field: field(at, i, "path"), message: `GET "${get.path}" appears twice` });
+      paths.add(get.path);
+    }
+    const keys = new Set();
+    (Array.isArray(get.fields) ? get.fields : []).forEach((f, j) => {
+      if (!isObject(f)) return;
+      if (keys.has(f.key)) errors.push({ field: field(at, i, "fields", j, "key"), message: `field "${f.key}" appears twice in the GET` });
+      keys.add(f.key);
+      errors.push(...hiddenLocalized(f.label, field(at, i, "fields", j, "label")));
+    });
+  });
   return errors;
 }
 

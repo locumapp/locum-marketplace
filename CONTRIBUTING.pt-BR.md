@@ -71,7 +71,10 @@ app já tem e nunca traz código:
   `cli` e `session` leem credencial da máquina da pessoa, então só tipo
   oficial os usa.
 - `fields`: o formulário que a instância preenche além do nome, cada campo com
-  `key`, `label`, `help` opcional, `format` (`url` ou `text`) e `required`;
+  `key`, `label`, `help` opcional, `placeholder` opcional (a dica do campo
+  vazio, como o endereço padrão, que nunca vira valor gravado), `format`
+  (`url` ou `text`) e `required`. `help` e `placeholder` são texto nos dois
+  idiomas, como o `label`;
 - `servers`, com ao menos um de:
   - `remote`: `{"url": "https://..."}` para endereço fixo, ou
     `{"urlField": "<key>"}` quando a pessoa digita o endereço num campo `url`
@@ -90,6 +93,20 @@ app já tem e nunca traz código:
   `${credential}` vai num lugar só de cada servidor, um cabeçalho do remoto ou
   uma variável do local, e é o lugar que o método `token` declara em `header`
   ou `env`, quando declara.
+- `healthCheck`: o teste da instância, até três GETs na base do servidor
+  remoto (o endereço do `urlField`, ou o `servers.remote.url`), cada um com um
+  `path` e os `fields` da resposta JSON a mostrar, de 1 a 10, cada um com uma
+  `key` do primeiro nível e um `label`:
+
+  ```json
+  "healthCheck": [
+    { "path": "/api/health", "fields": [{ "key": "version", "label": { "en": "Version", "pt-BR": "Versão" } }] }
+  ]
+  ```
+
+  O `path` é relativo e somado ao fim da base: começa com `/` e não tem
+  segmento `.` ou `..`, esquema, host, consulta, âncora nem marcador. Só vale
+  com `servers.remote`;
 - `triggers`: tipos de gatilho do núcleo que leem este tipo (`poll` lê
   `github`, `slack-inbox` lê `slack`...) ou um servidor dele (`mcp-poll`);
 - `actions`: ações de fluxo do núcleo que precisam do tipo, como
@@ -116,12 +133,16 @@ esquema é o [`schemas/connection.schema.json`](schemas/connection.schema.json).
   o app não instala o tipo, porque o token iria para um host que a pessoa não
   viu. Sem `hosts`, não há o que comparar; a porta não conta.
 - Os mesmos caracteres recusados em `name` e `description` (veja o envelope)
-  em `label` e `help` de campo, `description` de chave de escopo, `scopes` do
-  método `oauth` e `writeTools`.
+  em `label`, `help` e `placeholder` de campo, `label` de campo do
+  `healthCheck`, `description` de chave de escopo, `scopes` do método `oauth` e
+  `writeTools`.
 - `${credential}` fora de header do servidor remoto ou do `env` do local, em
   mais de um lugar do mesmo servidor ou fora do lugar que o método `token`
   declara; marcador que não é `${credential}` nem `${field:<key>}` de campo
   declarado; `path` sem `urlField`.
+- `healthCheck` sem `servers.remote`; `path` de GET que não é relativo e limpo
+  (como o `path` do servidor remoto) ou que aparece duas vezes; chave de campo
+  repetida no mesmo GET.
 - Em qualquer tipo, oficial incluído, campo `text` citado no servidor que
   recebe `${credential}`. Um texto livre numa variável, num argumento ou num
   cabeçalho pode apontar o servidor para outro host (`--base-url`,

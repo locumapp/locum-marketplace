@@ -71,7 +71,10 @@ has and never brings code:
   `cli` and `session` read a credential from the person's machine, so only
   official types use them.
 - `fields`: the form an instance fills besides its name, each with `key`,
-  `label`, optional `help`, `format` (`url` or `text`) and `required`;
+  `label`, optional `help`, optional `placeholder` (the hint shown in the
+  empty field, like the default address, never saved as the value), `format`
+  (`url` or `text`) and `required`. `help` and `placeholder` are texts in both
+  languages, like `label`;
 - `servers`, at least one of:
   - `remote`: `{"url": "https://..."}` for a fixed address, or
     `{"urlField": "<key>"}` when the person types the address in a required
@@ -90,6 +93,20 @@ has and never brings code:
   goes in one place of each server, a header of the remote one or a variable of
   the local one, and it is the place the `token` method declares in `header` or
   `env`, when it does.
+- `healthCheck`: the instance test, up to three GETs on the base of the remote
+  server (the address in `urlField`, or `servers.remote.url`), each with a
+  `path` and the `fields` of the JSON answer to show, from 1 to 10, each with a
+  first level `key` and a `label`:
+
+  ```json
+  "healthCheck": [
+    { "path": "/api/health", "fields": [{ "key": "version", "label": { "en": "Version", "pt-BR": "Versão" } }] }
+  ]
+  ```
+
+  The `path` is relative and added to the end of the base: it starts with `/`
+  and has no `.` or `..` segment, scheme, host, query, fragment or marker.
+  Only with `servers.remote`;
 - `triggers`: trigger kinds of the core that read this type (`poll` reads
   `github`, `slack-inbox` reads `slack`...) or one of its servers (`mcp-poll`);
 - `actions`: flow actions of the core that need the type, as `<id>.<action>`;
@@ -117,12 +134,16 @@ The schema is [`schemas/connection.schema.json`](schemas/connection.schema.json)
   host the person did not see. Without `hosts` there is nothing to compare;
   the port does not count.
 - The same characters refused in `name` and `description` (see the envelope)
-  in the `label` and `help` of a field, the `description` of a scope key, the
-  `scopes` of the `oauth` method and `writeTools`.
+  in the `label`, `help` and `placeholder` of a field, the `label` of a
+  `healthCheck` field, the `description` of a scope key, the `scopes` of the
+  `oauth` method and `writeTools`.
 - `${credential}` anywhere but a header of the remote server or the `env` of
   the local one, in more than one place of the same server or outside the
   place the `token` method declares; a marker that is neither `${credential}`
   nor `${field:<key>}` of a declared field; `path` without `urlField`.
+- `healthCheck` without `servers.remote`; a GET `path` that is not relative
+  and clean (as the `path` of the remote server) or that appears twice; a field
+  key repeated in the same GET.
 - In any type, official ones included, a `text` field used in the server
   that receives `${credential}`. Free text in a variable, an argument or a header
   can point the server to another host (`--base-url`, `API_HOST`) without the
