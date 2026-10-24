@@ -42,10 +42,10 @@ Os esquemas estão em [`schemas/`](schemas/): `envelope.schema.json` e um por
 kind.
 
 Em `name` e `description`, de qualquer kind, o validador recusa caractere que
-esconde ou inverte o que a pessoa lê, como o app recusa: controle de direção
-(U+061C, U+200E, U+200F, U+202A a U+202E, U+2066 a U+2069), largura zero
-isolada (U+200B, U+2060, U+FEFF) e caractere de controle fora quebra de linha
-e tabulação. ZWJ (U+200D), ZWNJ (U+200C) e o hífen suave (U+00AD) passam:
+esconde ou inverte o que a pessoa lê: controle de direção (U+061C, U+200E,
+U+200F, U+202A a U+202E, U+2066 a U+2069), largura zero isolada (U+200B,
+U+2060, U+FEFF) e caractere de controle fora `\n` e `\t`. Em tipo de conexão
+o app também recusa; em template e pacote, só o catálogo confere. ZWJ (U+200D), ZWNJ (U+200C) e o hífen suave (U+00AD) passam:
 compõem emoji, como `👩‍💻`, e palavra.
 
 ## Tipos de conexão

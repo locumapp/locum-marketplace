@@ -42,10 +42,11 @@ The schemas are in [`schemas/`](schemas/): `envelope.schema.json` and one per
 kind.
 
 In `name` and `description`, of any kind, the validator refuses a character
-that hides or reorders what the person reads, as the app refuses it: bidi
-controls (U+061C, U+200E, U+200F, U+202A to U+202E, U+2066 to U+2069), a zero
-width character on its own (U+200B, U+2060, U+FEFF) and control characters
-other than line break and tab. ZWJ (U+200D), ZWNJ (U+200C) and the soft hyphen
+that hides or reorders what the person reads: bidi controls (U+061C, U+200E,
+U+200F, U+202A to U+202E, U+2066 to U+2069), a zero width character on its own
+(U+200B, U+2060, U+FEFF) and control characters other than `\n` and `\t`. In
+a connection type the app refuses them too; in a template or a package only
+the catalog checks. ZWJ (U+200D), ZWNJ (U+200C) and the soft hyphen
 (U+00AD) pass: they compose emoji, like `👩‍💻`, and words.
 
 ## Connection types

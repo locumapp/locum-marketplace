@@ -113,9 +113,9 @@ const isObject = (v) => typeof v === "object" && v !== null && !Array.isArray(v)
 const field = (...parts) => parts.join(".");
 
 /**
- * What hides or reorders the text the person reads, as the app refuses it: bidi controls, a zero width space or word
- * joiner on its own, and control characters other than line break and tab. ZWJ, ZWNJ and the soft hyphen compose emoji
- * and words, and pass.
+ * What hides or reorders the text the person reads, the characters the app refuses in a connection type: bidi controls,
+ * a zero width space or word joiner on its own, and control characters other than \n and \t. ZWJ, ZWNJ and the soft
+ * hyphen compose emoji and words, and pass.
  */
 const HIDES_TEXT = /[\u061C\u200E\u200F\u202A-\u202E\u2066-\u2069\u200B\u2060\uFEFF\u0000-\u0008\u000B-\u001F\u007F-\u009F]/u;
 
@@ -309,8 +309,8 @@ function connectionRules(manifest, id) {
 function declaredHostRules(manifest) {
   const url = isObject(manifest.servers) && isObject(manifest.servers.remote) ? manifest.servers.remote.url : undefined;
   if (!Array.isArray(manifest.hosts) || typeof url !== "string") return [];
-  // A marker outside the path has its own error from markerRules.
-  if (!markersOf(url).every((m) => m.kind === "field") || !URL.canParse(url.replace(MARKER, "x"))) return [];
+  // A marker before the path would make up the host; markerRules already refuses it.
+  if (markersOf(url).some((m) => m.index < pathRegion(url).start) || !URL.canParse(url.replace(MARKER, "x"))) return [];
   const host = new URL(url.replace(MARKER, "x")).hostname;
   if (manifest.hosts.includes(host)) return [];
   return [{ field: "manifest.servers.remote.url", message: `the host "${host}" is not in manifest.hosts: the app does not install a type whose server is on a host it does not declare` }];

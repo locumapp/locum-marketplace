@@ -71,6 +71,17 @@ has a rule in `scripts/lib/rules.mjs` or `scripts/lib/validate.mjs` and a test.
 - **Machine credentials**: `cli` and `session` read a credential from the
   person's machine and are accepted only in official ids, whose files
   CODEOWNERS gives to the maintainers.
+- **Remote host declared**: with a fixed `servers.remote.url` and `hosts`, the
+  host of the url must be in `hosts`, as the app checks on install
+  (`remote-host-not-declared`). Without `hosts` there is nothing to compare,
+  and the port does not count.
+- **Text that misleads the reader**: bidi controls, a zero width space, word
+  joiner or BOM on its own, and control characters other than `\n` and `\t`
+  are refused in the shown text of a connection type (name, description, field
+  label and help, scope key description, `scopes` and `writeTools`), as
+  `tipos-do-indice.ts` refuses them. The catalog also refuses them in the name
+  and description of templates and packages, which the app does not check.
+  ZWJ, ZWNJ and the soft hyphen pass.
 
 ## Left to the app (later slices of ADR 0018)
 

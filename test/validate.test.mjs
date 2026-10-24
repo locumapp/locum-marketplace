@@ -871,14 +871,14 @@ for (const [name, change] of declaredHosts) {
 }
 
 const hiddenText = [
-  ["a right-to-left override in the name", (item) => (item.name.en = "Example ‮etomer"), "name.en"],
-  ["a zero width space in the description", (item) => (item.description["pt-BR"] = "Tipo​de exemplo."), "description.pt-BR"],
-  ["an isolate in a field label", (_, m) => (m.fields = [{ key: "url", label: { en: "Address⁦", "pt-BR": "Endereço" }, format: "url", required: false }]), "manifest.fields.0.label.en"],
+  ["a right-to-left override in the name", (item) => (item.name.en = "Example \u202Eetomer"), "name.en"],
+  ["a zero width space in the description", (item) => (item.description["pt-BR"] = "Tipo\u200Bde exemplo."), "description.pt-BR"],
+  ["an isolate in a field label", (_, m) => (m.fields = [{ key: "url", label: { en: "Address\u2066", "pt-BR": "Endereço" }, format: "url", required: false }]), "manifest.fields.0.label.en"],
   ["a control character in a field help", (_, m) => (m.fields = [{ key: "url", label: { en: "Address", "pt-BR": "Endereço" }, help: { en: "x", "pt-BR": "x\u0007" }, format: "url", required: false }]), "manifest.fields.0.help.pt-BR"],
-  ["a byte order mark in a scope", (_, m) => (m.methods[0].scopes = ["read", "﻿write"]), "manifest.methods.0.scopes.1"],
-  ["a right-to-left mark in a write tool", (_, m) => (m.writeTools = ["post‏_message"]), "manifest.writeTools.0"],
-  ["an Arabic letter mark in a scope key description", (_, m) => (m.scopeKeys = [{ key: "example-remote.repo", normalize: "exact", description: { en: "Repo؜", "pt-BR": "Repo" } }]), "manifest.scopeKeys.0.description.en"],
-  ["a word joiner in the name", (item) => (item.name["pt-BR"] = "Exemplo⁠remoto"), "name.pt-BR"],
+  ["a byte order mark in a scope", (_, m) => (m.methods[0].scopes = ["read", "\uFEFFwrite"]), "manifest.methods.0.scopes.1"],
+  ["a right-to-left mark in a write tool", (_, m) => (m.writeTools = ["post\u200F_message"]), "manifest.writeTools.0"],
+  ["an Arabic letter mark in a scope key description", (_, m) => (m.scopeKeys = [{ key: "example-remote.repo", normalize: "exact", description: { en: "Repo\u061C", "pt-BR": "Repo" } }]), "manifest.scopeKeys.0.description.en"],
+  ["a word joiner in the name", (item) => (item.name["pt-BR"] = "Exemplo\u2060remoto"), "name.pt-BR"],
   ["a DEL in the description", (item) => (item.description.en = "Example\u007F"), "description.en"],
 ];
 
@@ -893,8 +893,8 @@ for (const [name, change, at] of hiddenText) {
 
 test("text with an emoji joined by ZWJ, a ZWNJ, a soft hyphen, line breaks and tabs passes", async () => {
   const errors = await validateFile(connection((item, m) => {
-    item.name.en = "Example 👩‍💻";
-    item.name["pt-BR"] = "Exem­plo re‌moto";
+    item.name.en = "Example \u{1F469}\u200D\u{1F4BB}";
+    item.name["pt-BR"] = "Exem\u00ADplo re\u200Cmoto";
     item.description.en = "Example connection type.\n\tSecond line.";
     m.writeTools = ["post_message"];
   }).file);
@@ -902,12 +902,23 @@ test("text with an emoji joined by ZWJ, a ZWNJ, a soft hyphen, line breaks and t
 });
 
 test("a template and a package with hidden text in the name or description are refused", async () => {
-  const template = await validateFile(variant((item) => (item.name.en = "Reply ‮ylper")));
+  const template = await validateFile(variant((item) => (item.name.en = "Reply \u202Eylper")));
   assert.match(template.find((e) => e.field === "name.en")?.message ?? "", /U\+202E/);
   const pkg = await validateFile(variant((item) => {
     item.kind = "package";
-    item.description["pt-BR"] = "Responde​ no canal.";
+    item.description["pt-BR"] = "Responde\u200B no canal.";
   }, "packages"));
   assert.match(pkg.find((e) => e.field === "description.pt-BR")?.message ?? "", /U\+200B/);
-  assert.deepEqual(await validateFile(variant((item) => (item.name.en = "Reply 👩‍💻"))), []);
+  assert.deepEqual(await validateFile(variant((item) => (item.name.en = "Reply \u{1F469}\u200D\u{1F4BB}"))), []);
+});
+
+test("a field marker before the path gets only the marker error, not one about a host nobody wrote", async () => {
+  const errors = await validateFile(connection((item, m) => {
+    item.minAppVersion = "0.1.170";
+    m.fields = [{ key: "sub", label: { en: "Subdomain", "pt-BR": "Subdomínio" }, format: "url", required: true }];
+    m.servers.remote.url = "https://${field:sub}.example.com/mcp";
+  }).file);
+  const atUrl = errors.filter((e) => e.field === "manifest.servers.remote.url");
+  assert.equal(atUrl.length, 1, JSON.stringify(atUrl));
+  assert.match(atUrl[0].message, /only in the path/);
 });
