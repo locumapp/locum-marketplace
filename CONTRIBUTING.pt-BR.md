@@ -171,7 +171,7 @@ esquema é o [`schemas/connection.schema.json`](schemas/connection.schema.json).
 ### Ids oficiais
 
 Os ids de [`scripts/lib/official-connections.json`](scripts/lib/official-connections.json)
-(`github`, `slack`, `teams`, `grafana`, `prelo`, `argocd` e os outros que
+(`github`, `slack`, `teams`, `grafana`, `argocd` e os outros que
 vinham dentro do app) só quem mantém publica. O
 [`.github/CODEOWNERS`](.github/CODEOWNERS) dá cada `connections/<id>.json`
 deles aos donos do próprio CODEOWNERS, e o `npm run validate` falha quando um
@@ -184,6 +184,18 @@ Os tipos que vinham dentro do app estão em `connections/`, com o mesmo
 conteúdo que o app usa hoje. O `argocd` está na lista para ninguém tomar o id
 nem o nome do servidor que os templates pedem, mas não tem tipo no app: fica
 sem arquivo até ter.
+
+Ser oficial é uma marca no índice assinado, não algo que o item diz. O
+`npm run build-index` põe `"official": true` na entrada de cada tipo de
+conexão cujo id está em `official` dessa lista, e arquivo de item que declara
+`official` é recusado. A partir da versão do app que lê a marca (ADR 0018,
+fatia 4), o tipo oficial tem a confiança que os tipos de dentro do app têm
+hoje: a rede de casa, os métodos que só tipo oficial usa (`cli` e `session`) e
+o token do GitHub. Tipo de terceiro só alcança endereço público, e endereço
+desta máquina só quando a pessoa digita. App anterior ignora a marca. O
+`prelo` é publicado por quem mantém, e o CODEOWNERS deixa o arquivo com eles,
+mas é tipo de terceiro: não está na lista, e a entrada dele no índice não tem
+a marca.
 
 ### Como o app recebe, e as versões
 

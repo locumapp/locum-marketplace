@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { relative } from "node:path";
-import { TRIGGER_KINDS, canonicalHost } from "./rules.mjs";
+import { OFFICIAL_CONNECTIONS, TRIGGER_KINDS, canonicalHost } from "./rules.mjs";
 import { validateCatalog } from "./validate.mjs";
 
 export const INDEX_FORMAT = "locum-marketplace-index";
@@ -69,6 +69,8 @@ export async function buildIndex(root, { commit, committedAt, localServers = fal
       description: item.description,
       tags: item.tags ?? [],
       requires: kind === "connection" ? connectionRequires(item.manifest) : packageRequires(item.package),
+      // The mark comes from the maintainers' list, never from the item file; the app trusts it because the index is signed.
+      ...(kind === "connection" && OFFICIAL_CONNECTIONS.has(id) ? { official: true } : {}),
     }));
   const index = { format: INDEX_FORMAT, version: INDEX_VERSION, commit, committedAt, items: entries };
   return `${JSON.stringify(index, null, 2)}\n`;

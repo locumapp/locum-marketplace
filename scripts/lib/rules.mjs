@@ -139,6 +139,9 @@ export function itemRules(item, expected) {
   const errors = [];
   if (!isObject(item)) return errors;
   errors.push(...hiddenLocalized(item.name, "name"), ...hiddenLocalized(item.description, "description"));
+  if (Object.hasOwn(item, "official")) {
+    errors.push({ field: "official", message: "an item does not declare official: the index marks it from scripts/lib/official-connections.json, which only the maintainers change" });
+  }
   if (typeof item.id === "string" && item.id !== expected.id) {
     errors.push({ field: "id", message: `id must match the file name: expected "${expected.id}", found "${item.id}"` });
   }

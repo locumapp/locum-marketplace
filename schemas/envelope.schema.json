@@ -23,6 +23,10 @@
       "uniqueItems": true,
       "items": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "maxLength": 32 }
     },
+    "official": {
+      "description": "Never declared by the item: the index marks a connection type official from scripts/lib/official-connections.json, which only the maintainers change.",
+      "not": {}
+    },
     "minAppVersion": true,
     "manifest": true,
     "package": true
