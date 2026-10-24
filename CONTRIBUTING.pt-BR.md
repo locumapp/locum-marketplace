@@ -211,7 +211,10 @@ que app mais velho não tem, método, leitor, tipo de gatilho, ação ou campo d
 esquema: ele vai mostrar o tipo como "precisa atualizar" e manter o instalado
 rodando. O `path` e os marcadores `${field:<key>}` entraram no esquema do app
 em `0.1.170`: tipo que os usa precisa de `0.1.170` ou mais nova, como o
-Grafana e o Prelo, e o validador recusa menos.
+Grafana, e o validador recusa menos. O `placeholder` no campo e o
+`healthCheck` entraram no esquema do catálogo do app em `0.1.182`: tipo que os
+usa precisa de `0.1.182` ou mais nova, como o Prelo, porque o app anterior
+mostra o tipo como inválido.
 
 ## Templates e pacotes
 

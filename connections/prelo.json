@@ -1,15 +1,15 @@
 {
   "kind": "connection",
   "id": "prelo",
-  "version": 1,
-  "minAppVersion": "0.1.170",
+  "version": 2,
+  "minAppVersion": "0.1.182",
   "name": {
     "en": "Prelo",
     "pt-BR": "Prelo"
   },
   "description": {
-    "en": "Prelo's own MCP server, on the Mac or in Docker at home. Agents check the printer, preview a piece and print notes, checklists, labels, QR codes, notebook pages and the daily newspaper; by default every print waits in the queue for your approval.",
-    "pt-BR": "Servidor MCP do próprio Prelo, no Mac ou no Docker de casa. Os agents conferem a impressora, veem a prévia e imprimem recados, listas, etiquetas, QR codes, folhas de caderno e o jornal do dia; por padrão cada impressão espera na Fila pela sua aprovação."
+    "en": "Prelo's own MCP server, running on this Mac (http://127.0.0.1:8640) or at a public address. Agents check the printer, preview a piece and print notes, checklists, labels, QR codes, notebook pages and the daily newspaper; by default every print waits in the queue for your approval.",
+    "pt-BR": "Servidor MCP do próprio Prelo, rodando neste Mac (http://127.0.0.1:8640) ou num endereço público. Os agents conferem a impressora, veem a prévia e imprimem recados, listas, etiquetas, QR codes, folhas de caderno e o jornal do dia; por padrão cada impressão espera na Fila pela sua aprovação."
   },
   "manifest": {
     "category": "home",
@@ -31,6 +31,14 @@
           "pt-BR": "Endereço",
           "en": "Address"
         },
+        "help": {
+          "pt-BR": "O endereço base do Prelo, sem /mcp nem /api no fim.",
+          "en": "Prelo's base address, without /mcp or /api at the end."
+        },
+        "placeholder": {
+          "pt-BR": "http://127.0.0.1:8640",
+          "en": "http://127.0.0.1:8640"
+        },
         "format": "url",
         "required": true
       }
@@ -43,6 +51,60 @@
           "Authorization": "Bearer ${credential}"
         }
       }
-    }
+    },
+    "healthCheck": [
+      {
+        "path": "/api/health",
+        "fields": [
+          {
+            "key": "version",
+            "label": {
+              "pt-BR": "Versão",
+              "en": "Version"
+            }
+          }
+        ]
+      },
+      {
+        "path": "/api/status",
+        "fields": [
+          {
+            "key": "title",
+            "label": {
+              "pt-BR": "Título",
+              "en": "Title"
+            }
+          },
+          {
+            "key": "state",
+            "label": {
+              "pt-BR": "Estado da impressora",
+              "en": "Printer state"
+            }
+          },
+          {
+            "key": "online",
+            "label": {
+              "pt-BR": "Impressora on-line",
+              "en": "Printer online"
+            }
+          },
+          {
+            "key": "ready",
+            "label": {
+              "pt-BR": "Impressora pronta",
+              "en": "Printer ready"
+            }
+          },
+          {
+            "key": "address",
+            "label": {
+              "pt-BR": "Endereço da impressora",
+              "en": "Printer address"
+            }
+          }
+        ]
+      }
+    ]
   }
 }

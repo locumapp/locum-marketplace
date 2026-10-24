@@ -214,7 +214,10 @@ something older apps do not have, a method, reader, trigger kind, action or
 schema field: they will show the type as needing an update and keep the
 installed one running. `path` and the `${field:<key>}` markers came into the
 app schema in `0.1.170`: a type that uses them needs `0.1.170` or newer, as
-Grafana and Prelo do, and the validator refuses less.
+Grafana does, and the validator refuses less. A field `placeholder` and
+`healthCheck` came into the app catalog schema in `0.1.182`: a type that uses
+them needs `0.1.182` or newer, as Prelo does, because older apps show the type
+as invalid.
 
 ## Templates and packages
 
