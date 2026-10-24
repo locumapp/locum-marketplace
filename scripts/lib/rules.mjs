@@ -112,10 +112,30 @@ export const TRIGGER_KINDS = new Map(
 const isObject = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
 const field = (...parts) => parts.join(".");
 
+/**
+ * What hides or reorders the text the person reads, as the app refuses it: bidi controls, a zero width space or word
+ * joiner on its own, and control characters other than line break and tab. ZWJ, ZWNJ and the soft hyphen compose emoji
+ * and words, and pass.
+ */
+const HIDES_TEXT = /[\u061C\u200E\u200F\u202A-\u202E\u2066-\u2069\u200B\u2060\uFEFF\u0000-\u0008\u000B-\u001F\u007F-\u009F]/u;
+
+function hiddenText(value, at) {
+  const found = typeof value === "string" ? HIDES_TEXT.exec(value) : null;
+  if (found === null) return [];
+  const code = found[0].codePointAt(0).toString(16).toUpperCase().padStart(4, "0");
+  return [{ field: at, message: `has the invisible or control character U+${code}, which hides or reorders what the person reads` }];
+}
+
+/** The same, for each language of a `{ en, pt-BR }` text. */
+function hiddenLocalized(value, at) {
+  return isObject(value) ? Object.entries(value).flatMap(([language, text]) => hiddenText(text, field(at, language))) : [];
+}
+
 /** Errors as `{ field, message }`, for an item already parsed. `expected` holds what the file path says. */
 export function itemRules(item, expected) {
   const errors = [];
   if (!isObject(item)) return errors;
+  errors.push(...hiddenLocalized(item.name, "name"), ...hiddenLocalized(item.description, "description"));
   if (typeof item.id === "string" && item.id !== expected.id) {
     errors.push({ field: "id", message: `id must match the file name: expected "${expected.id}", found "${item.id}"` });
   }
@@ -214,6 +234,7 @@ function connectionRules(manifest, id) {
       });
     }
     if (typeof method.env === "string" && RESERVED_ENV.test(method.env)) errors.push(loaderEnvError(field("manifest.methods", i, "env"), method.env));
+    if (Array.isArray(method.scopes)) method.scopes.forEach((scope, j) => errors.push(...hiddenText(scope, field("manifest.methods", i, "scopes", j))));
   });
 
   const fields = Array.isArray(manifest.fields) ? manifest.fields : [];
@@ -222,10 +243,12 @@ function connectionRules(manifest, id) {
     if (!isObject(f)) return;
     if (fieldKeys.has(f.key)) errors.push({ field: field("manifest.fields", i, "key"), message: `field "${f.key}" appears twice` });
     fieldKeys.add(f.key);
+    errors.push(...hiddenLocalized(f.label, field("manifest.fields", i, "label")), ...hiddenLocalized(f.help, field("manifest.fields", i, "help")));
   });
 
   const scopeKeys = new Set();
   (Array.isArray(manifest.scopeKeys) ? manifest.scopeKeys : []).forEach((s, i) => {
+    if (isObject(s)) errors.push(...hiddenLocalized(s.description, field("manifest.scopeKeys", i, "description")));
     if (!isObject(s) || typeof s.key !== "string") return;
     if (!s.key.startsWith(`${id}.`)) errors.push({ field: field("manifest.scopeKeys", i, "key"), message: `scope key must start with "${id}."` });
     if (scopeKeys.has(s.key)) errors.push({ field: field("manifest.scopeKeys", i, "key"), message: `scope key "${s.key}" appears twice` });
@@ -263,6 +286,7 @@ function connectionRules(manifest, id) {
     const why = typeof host === "string" ? notPublic(host) : undefined;
     if (why !== undefined) errors.push({ field: field("manifest.hosts", i), message: `must be a public host name, found ${why}` });
   });
+  (Array.isArray(manifest.writeTools) ? manifest.writeTools : []).forEach((tool, i) => errors.push(...hiddenText(tool, field("manifest.writeTools", i))));
 
   const servers = manifest.servers;
   const triggers = Array.isArray(manifest.triggers) ? manifest.triggers : [];
@@ -273,7 +297,23 @@ function connectionRules(manifest, id) {
   if (!isObject(servers)) return errors;
   if (isObject(servers.remote)) errors.push(...remoteRules(servers.remote, fields));
   if (isObject(servers.local)) errors.push(...localRules(servers.local));
+  errors.push(...declaredHostRules(manifest));
   return errors;
+}
+
+/**
+ * The host of a fixed remote url among the hosts, when the type declares them, as the app checks on install
+ * (`remote-host-not-declared`): the token does not go to a host the person did not see. Without hosts there is nothing
+ * to compare; the port does not count, as the app compares only the host name.
+ */
+function declaredHostRules(manifest) {
+  const url = isObject(manifest.servers) && isObject(manifest.servers.remote) ? manifest.servers.remote.url : undefined;
+  if (!Array.isArray(manifest.hosts) || typeof url !== "string") return [];
+  // A marker outside the path has its own error from markerRules.
+  if (!markersOf(url).every((m) => m.kind === "field") || !URL.canParse(url.replace(MARKER, "x"))) return [];
+  const host = new URL(url.replace(MARKER, "x")).hostname;
+  if (manifest.hosts.includes(host)) return [];
+  return [{ field: "manifest.servers.remote.url", message: `the host "${host}" is not in manifest.hosts: the app does not install a type whose server is on a host it does not declare` }];
 }
 
 /** `${credential}` only where it goes to the server and nowhere it is logged: a header or the env of the local server. */

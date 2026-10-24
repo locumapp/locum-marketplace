@@ -41,6 +41,13 @@ Every item is `<folder>/<id>.json`:
 The schemas are in [`schemas/`](schemas/): `envelope.schema.json` and one per
 kind.
 
+In `name` and `description`, of any kind, the validator refuses a character
+that hides or reorders what the person reads, as the app refuses it: bidi
+controls (U+061C, U+200E, U+200F, U+202A to U+202E, U+2066 to U+2069), a zero
+width character on its own (U+200B, U+2060, U+FEFF) and control characters
+other than line break and tab. ZWJ (U+200D), ZWNJ (U+200C) and the soft hyphen
+(U+00AD) pass: they compose emoji, like `👩‍💻`, and words.
+
 ## Connection types
 
 Every connection Locum knows comes from this catalog (ADR 0018 in the app),
@@ -104,6 +111,13 @@ The schema is [`schemas/connection.schema.json`](schemas/connection.schema.json)
   `.localdomain`, `.internal`, `.intranet`, `.corp`, `.private`, `.home`,
   `.home.arpa`, `.lan`, `.test`, `.example`, `.invalid`). The same holds for
   `hosts`.
+- A fixed remote `url` on a host left out of `hosts`, when the type declares
+  `hosts`: the app does not install the type, since the token would go to a
+  host the person did not see. Without `hosts` there is nothing to compare;
+  the port does not count.
+- The same characters refused in `name` and `description` (see the envelope)
+  in the `label` and `help` of a field, the `description` of a scope key, the
+  `scopes` of the `oauth` method and `writeTools`.
 - `${credential}` anywhere but a header of the remote server or the `env` of
   the local one, in more than one place of the same server or outside the
   place the `token` method declares; a marker that is neither `${credential}`

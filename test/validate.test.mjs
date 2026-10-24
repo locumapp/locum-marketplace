@@ -534,7 +534,7 @@ test("an official type may use the cli and session readers, the core triggers th
     item.minAppVersion = "0.2.0";
     m.methods = [{ type: "token", header: "Authorization" }, { type: "cli", reader: "gh" }];
     m.servers = { remote: { url: "https://api.githubcopilot.com/mcp/", headers: { Authorization: "Bearer ${credential}" } } };
-    m.hosts = ["githubcopilot.com"];
+    m.hosts = ["api.githubcopilot.com", "githubcopilot.com"];
     m.triggers = ["poll", "github-thread-reply", "mcp-poll"];
     m.actions = ["github.react"];
     m.trackers = ["github-issues"];
@@ -759,6 +759,7 @@ test("two connection types cannot claim the same host or alias, and the error po
   connection((item, m) => {
     item.id = "example-b";
     m.servers.remote.url = "https://other.example.com/mcp";
+    m.hosts = ["api.example.com", "other.example.com"];
     m.aliases = ["shared-name", "example-a"];
   }, "example-remote", catalog);
   const { items, errors } = await validateCatalog(catalog);
@@ -829,6 +830,7 @@ test("trackers and actions must be kinds the app core has", async () => {
 test("a community type cannot claim what belongs to an official one", async () => {
   const { catalog } = connection((_, m) => {
     m.servers.remote.url = "https://mcp.slack.com/mcp";
+    delete m.hosts;
     m.aliases = ["ms365"];
     m.trackers = ["jira"];
   });
@@ -837,4 +839,75 @@ test("a community type cannot claim what belongs to an official one", async () =
   assert.ok(messages.some((m) => /^manifest\.servers\.remote\.url: host "mcp\.slack\.com" is already claimed by slack/.test(m)), messages.join("\n"));
   assert.ok(messages.some((m) => /^manifest\.aliases: alias "ms365" is already claimed by teams/.test(m)), messages.join("\n"));
   assert.ok(messages.some((m) => /^manifest\.trackers: tracker "jira" is already claimed by atlassian/.test(m)), messages.join("\n"));
+});
+
+test("a remote server on a host left out of hosts is refused, as the app refuses to install it", async () => {
+  const errors = await validateFile(connection((_, m) => (m.hosts = ["api.example.com"])).file);
+  const hit = errors.find((e) => e.field === "manifest.servers.remote.url");
+  assert.ok(hit, JSON.stringify(errors));
+  assert.match(hit.message, /"mcp\.example\.com" is not in manifest\.hosts/);
+});
+
+const declaredHosts = [
+  ["without hosts", (_, m) => delete m.hosts],
+  ["with a port in the url", (_, m) => (m.servers.remote.url = "https://mcp.example.com:8443/mcp")],
+  [
+    "with a field marker in the path",
+    (_, m) => {
+      m.fields = [{ key: "workspace", label: { en: "Workspace", "pt-BR": "Espaço" }, format: "url", required: true }];
+      m.servers.remote.url = "https://mcp.example.com/${field:workspace}/mcp";
+    },
+  ],
+];
+
+for (const [name, change] of declaredHosts) {
+  test(`a remote server whose host is declared, or with no hosts at all, passes ${name}`, async () => {
+    const errors = await validateFile(connection((item, m) => {
+      item.minAppVersion = "0.1.170";
+      change(item, m);
+    }).file);
+    assert.deepEqual(errors.filter((e) => e.field === "manifest.servers.remote.url"), []);
+  });
+}
+
+const hiddenText = [
+  ["a right-to-left override in the name", (item) => (item.name.en = "Example ‮etomer"), "name.en"],
+  ["a zero width space in the description", (item) => (item.description["pt-BR"] = "Tipo​de exemplo."), "description.pt-BR"],
+  ["an isolate in a field label", (_, m) => (m.fields = [{ key: "url", label: { en: "Address⁦", "pt-BR": "Endereço" }, format: "url", required: false }]), "manifest.fields.0.label.en"],
+  ["a control character in a field help", (_, m) => (m.fields = [{ key: "url", label: { en: "Address", "pt-BR": "Endereço" }, help: { en: "x", "pt-BR": "x\u0007" }, format: "url", required: false }]), "manifest.fields.0.help.pt-BR"],
+  ["a byte order mark in a scope", (_, m) => (m.methods[0].scopes = ["read", "﻿write"]), "manifest.methods.0.scopes.1"],
+  ["a right-to-left mark in a write tool", (_, m) => (m.writeTools = ["post‏_message"]), "manifest.writeTools.0"],
+  ["an Arabic letter mark in a scope key description", (_, m) => (m.scopeKeys = [{ key: "example-remote.repo", normalize: "exact", description: { en: "Repo؜", "pt-BR": "Repo" } }]), "manifest.scopeKeys.0.description.en"],
+  ["a word joiner in the name", (item) => (item.name["pt-BR"] = "Exemplo⁠remoto"), "name.pt-BR"],
+  ["a DEL in the description", (item) => (item.description.en = "Example\u007F"), "description.en"],
+];
+
+for (const [name, change, at] of hiddenText) {
+  test(`a connection is refused with ${name}`, async () => {
+    const errors = await validateFile(connection(change).file);
+    const hit = errors.find((e) => e.field === at);
+    assert.ok(hit, `expected an error at ${at}, got ${JSON.stringify(errors)}`);
+    assert.match(hit.message, /invisible or control character U\+[0-9A-F]{4}/);
+  });
+}
+
+test("text with an emoji joined by ZWJ, a ZWNJ, a soft hyphen, line breaks and tabs passes", async () => {
+  const errors = await validateFile(connection((item, m) => {
+    item.name.en = "Example 👩‍💻";
+    item.name["pt-BR"] = "Exem­plo re‌moto";
+    item.description.en = "Example connection type.\n\tSecond line.";
+    m.writeTools = ["post_message"];
+  }).file);
+  assert.deepEqual(errors, []);
+});
+
+test("a template and a package with hidden text in the name or description are refused", async () => {
+  const template = await validateFile(variant((item) => (item.name.en = "Reply ‮ylper")));
+  assert.match(template.find((e) => e.field === "name.en")?.message ?? "", /U\+202E/);
+  const pkg = await validateFile(variant((item) => {
+    item.kind = "package";
+    item.description["pt-BR"] = "Responde​ no canal.";
+  }, "packages"));
+  assert.match(pkg.find((e) => e.field === "description.pt-BR")?.message ?? "", /U\+200B/);
+  assert.deepEqual(await validateFile(variant((item) => (item.name.en = "Reply 👩‍💻"))), []);
 });

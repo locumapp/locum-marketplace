@@ -41,6 +41,13 @@ Todo item é `<pasta>/<id>.json`:
 Os esquemas estão em [`schemas/`](schemas/): `envelope.schema.json` e um por
 kind.
 
+Em `name` e `description`, de qualquer kind, o validador recusa caractere que
+esconde ou inverte o que a pessoa lê, como o app recusa: controle de direção
+(U+061C, U+200E, U+200F, U+202A a U+202E, U+2066 a U+2069), largura zero
+isolada (U+200B, U+2060, U+FEFF) e caractere de controle fora quebra de linha
+e tabulação. ZWJ (U+200D), ZWNJ (U+200C) e o hífen suave (U+00AD) passam:
+compõem emoji, como `👩‍💻`, e palavra.
+
 ## Tipos de conexão
 
 Toda conexão que o Locum conhece vem deste catálogo (ADR 0018 do app),
@@ -105,6 +112,12 @@ esquema é o [`schemas/connection.schema.json`](schemas/connection.schema.json).
   privado (`.local`, `.localhost`, `.localdomain`, `.internal`, `.intranet`,
   `.corp`, `.private`, `.home`, `.home.arpa`, `.lan`, `.test`, `.example`,
   `.invalid`). O mesmo vale para `hosts`.
+- `url` remota fixa num host fora de `hosts`, quando o tipo declara `hosts`:
+  o app não instala o tipo, porque o token iria para um host que a pessoa não
+  viu. Sem `hosts`, não há o que comparar; a porta não conta.
+- Os mesmos caracteres recusados em `name` e `description` (veja o envelope)
+  em `label` e `help` de campo, `description` de chave de escopo, `scopes` do
+  método `oauth` e `writeTools`.
 - `${credential}` fora de header do servidor remoto ou do `env` do local, em
   mais de um lugar do mesmo servidor ou fora do lugar que o método `token`
   declara; marcador que não é `${credential}` nem `${field:<key>}` de campo

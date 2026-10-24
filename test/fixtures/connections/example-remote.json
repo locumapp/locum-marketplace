@@ -25,7 +25,8 @@
       }
     ],
     "hosts": [
-      "api.example.com"
+      "api.example.com",
+      "mcp.example.com"
     ],
     "servers": {
       "remote": {
