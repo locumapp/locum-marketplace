@@ -122,7 +122,7 @@ test("a connection whose address the person fills requires the field, and carrie
   const [entry] = JSON.parse(await buildIndex(catalog, AT)).items;
   assert.equal(entry.minAppVersion, "0.2.0");
   assert.deepEqual(entry.requires.servers, { remote: { urlField: "url" } });
-  assert.deepEqual(entry.requires.hosts, ["api.example.com"]);
+  assert.deepEqual(entry.requires.hosts, ["api.example.com", "mcp.example.com"]);
   assert.deepEqual(entry.requires.fields, ["url"]);
   assert.deepEqual(entry.requires.triggers, ["mcp-poll"]);
   assert.deepEqual(entry.requires.methods, [{ type: "oauth" }, { type: "session", reader: "browser-cookie" }]);

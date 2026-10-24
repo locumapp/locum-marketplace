@@ -39,7 +39,7 @@
         "logo": { "description": "Logo key known to the app, or null for the generic icon.", "type": ["string", "null"], "minLength": 1 },
         "color": { "description": "Brand color without #, for the generic icon.", "type": "string", "pattern": "^[0-9A-Fa-f]{6}$" },
         "credentialOptional": { "description": "A server with no reference to the credential counts as authorized.", "const": true },
-        "hosts": { "description": "Hosts that also identify the type, besides the host of the remote server. Public DNS names only.", "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/host" } },
+        "hosts": { "description": "Hosts that identify the type. With a fixed servers.remote.url, the list must include the host of that server: the app does not install a type whose server is on a host left out. Public DNS names only.", "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/host" } },
         "aliases": { "description": "Names other tools give to the server of the type.", "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/kebab" } },
         "packages": {
           "description": "Package names (without version) of stdio servers that belong to the type.",
