@@ -19,7 +19,7 @@ test("the catalog in the repository is valid, with the migrated templates", asyn
   assert.deepEqual(errors, []);
   const templates = items.filter((i) => i.kind === "template").map((i) => i.id);
   assert.ok(templates.includes("pr-review"));
-  assert.equal(templates.length, 9);
+  assert.equal(templates.length, 10);
 });
 
 test("good connection fixtures pass: image with digest, npm package with lockfile, remote server", async () => {

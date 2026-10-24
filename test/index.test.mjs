@@ -64,11 +64,12 @@ test("the index lists every item sorted, with the hash of the file bytes and the
 test("every template says in requires the triggers it brings, in order, with what the person picks", async () => {
   const index = JSON.parse(await buildIndex(root, AT));
   const triggers = Object.fromEntries(index.items.filter((i) => i.kind === "template").map((i) => [i.id, i.requires.triggers]));
-  assert.equal(Object.keys(triggers).length, 9);
+  assert.equal(Object.keys(triggers).length, 10);
   for (const [id, list] of Object.entries(triggers)) assert.ok(list.length > 0, id);
   assert.deepEqual(triggers["support-desk"], [{ kind: "cron", choose: [] }]);
   assert.deepEqual(triggers["teams-reply"], [{ kind: "teams-inbox", choose: ["chats"] }]);
   assert.deepEqual(triggers["pr-thread-reply"], [{ kind: "github-thread-reply", choose: ["owner", "repoMatch"] }]);
+  assert.deepEqual(triggers["slack-digest"], [{ kind: "slack-channel", choose: ["channels"] }]);
   assert.deepEqual(triggers["inbox-triage"], [
     { kind: "slack-inbox", choose: ["myUserId"] },
     { kind: "teams-inbox", choose: ["chats"] },
