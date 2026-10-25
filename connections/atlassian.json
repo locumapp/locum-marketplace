@@ -1,7 +1,7 @@
 {
   "kind": "connection",
   "id": "atlassian",
-  "version": 1,
+  "version": 2,
   "minAppVersion": "0.1.168",
   "name": {
     "en": "Atlassian",
@@ -26,8 +26,8 @@
       }
     },
     "trackers": [
-      "jira",
-      "jira-atlassian"
+      "jira-atlassian",
+      "jira"
     ]
   }
 }
