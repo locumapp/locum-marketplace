@@ -1,8 +1,8 @@
 {
   "format": "locum-marketplace-index",
   "version": 1,
-  "commit": "f7da5d3b1e862cb4b2cd39dc89efaa0e864f33fd",
-  "committedAt": 1792861995,
+  "commit": "c477ff1441cba6d30db960b5c7656686b8d406ed",
+  "committedAt": 1792965169,
   "items": [
     {
       "kind": "connection",
@@ -83,10 +83,10 @@
     {
       "kind": "connection",
       "id": "atlassian",
-      "version": 1,
+      "version": 2,
       "minAppVersion": "0.1.168",
       "path": "connections/atlassian.json",
-      "sha256": "9abc99bc7672fb2fb3d63002cd4c3280e461829c66b3f46c8ba0bb78967087b9",
+      "sha256": "c68c9a388b39813e445c8c9e4a2c1adf412f2d1c2ba51a445c9c5136412be1a4",
       "name": {
         "en": "Atlassian",
         "pt-BR": "Atlassian"
