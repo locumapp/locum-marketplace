@@ -174,6 +174,6 @@ test("the index marks as official the connections on the maintainers' list, and 
   const items = JSON.parse(await buildIndex(root, AT)).items;
   const marked = items.filter((i) => "official" in i);
   assert.ok(marked.every((i) => i.kind === "connection" && i.official === true));
-  assert.deepEqual(marked.map((i) => i.id), ["amplitude", "asana", "atlassian", "canva", "figma", "github", "grafana", "intercom", "linear", "miro", "newrelic", "notion", "posthog", "sentry", "shortcut", "slack", "teams", "vercel"]);
+  assert.deepEqual(marked.map((i) => i.id), ["amplitude", "asana", "atlassian", "canva", "figma", "github", "grafana", "intercom", "linear", "miro", "newrelic", "notion", "posthog", "sentry", "shortcut", "slack", "teams", "vercel", "waroom"]);
   assert.equal("official" in items.find((i) => i.id === "prelo"), false);
 });
