@@ -1,8 +1,8 @@
 {
   "format": "locum-marketplace-index",
   "version": 1,
-  "commit": "c477ff1441cba6d30db960b5c7656686b8d406ed",
-  "committedAt": 1792965169,
+  "commit": "1094f2affab1a5455f946c28e4ea4ee650ff4f69",
+  "committedAt": 1793215963,
   "items": [
     {
       "kind": "connection",
@@ -725,6 +725,44 @@
         },
         "hosts": [
           "mcp.vercel.com"
+        ],
+        "methods": [
+          {
+            "type": "oauth"
+          }
+        ],
+        "scopes": [],
+        "fields": [],
+        "triggers": [],
+        "actions": [],
+        "writeTools": []
+      },
+      "official": true
+    },
+    {
+      "kind": "connection",
+      "id": "waroom",
+      "version": 1,
+      "minAppVersion": "0.1.195",
+      "path": "connections/waroom.json",
+      "sha256": "cca29c3d1190e7b301a128c6e99f76718a56a2f928b2b79079aadcf048ce951b",
+      "name": {
+        "en": "Waroom",
+        "pt-BR": "Waroom"
+      },
+      "description": {
+        "en": "Waroom's official MCP server. Agents look up incidents, services and alerts in the authorized organization.",
+        "pt-BR": "Servidor MCP oficial do Waroom. Os agents consultam incidentes, serviços e alertas da organização autorizada."
+      },
+      "tags": [],
+      "requires": {
+        "servers": {
+          "remote": {
+            "url": "https://api.waroom.co/mcp"
+          }
+        },
+        "hosts": [
+          "api.waroom.co"
         ],
         "methods": [
           {
