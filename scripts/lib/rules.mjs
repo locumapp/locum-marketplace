@@ -67,6 +67,9 @@ export const BATCH_MIN_APP_VERSION = "0.1.175";
 /** The first app version that creates held, with its whole config, a trigger missing a field in `x-pending-choice`. */
 export const HELD_TRIGGER_MIN_APP_VERSION = "0.1.177";
 
+/** The first app version with `settleMinutes` in the GitHub `poll` trigger, the trigger settle time. */
+export const SETTLE_MIN_APP_VERSION = "0.1.204";
+
 /** A display name as the app compares it with the official ones: without accents or format characters, in lowercase. */
 const normalizedName = (name) => name.normalize("NFKC").normalize("NFD").replace(/[\p{M}\p{Cf}]/gu, "").toLowerCase().trim();
 
@@ -175,6 +178,10 @@ export function itemRules(item, expected) {
   const batched = item.kind === "template" && (Array.isArray(item.package?.automacao?.gatilhos) ? item.package.automacao.gatilhos : []).some((t) => isObject(t) && t.batch !== undefined);
   if (batched && (item.minAppVersion === undefined || (typeof item.minAppVersion === "string" && /^\d+\.\d+\.\d+$/.test(item.minAppVersion) && compareVersions(item.minAppVersion, BATCH_MIN_APP_VERSION) < 0))) {
     errors.push({ field: "minAppVersion", message: `batch needs minAppVersion ${BATCH_MIN_APP_VERSION} or newer: older apps run each event on its own and the batch fields come out empty` });
+  }
+  const settled = item.kind === "template" && (Array.isArray(item.package?.automacao?.gatilhos) ? item.package.automacao.gatilhos : []).some((t) => isObject(t) && t.settleMinutes !== undefined);
+  if (settled && (item.minAppVersion === undefined || (typeof item.minAppVersion === "string" && /^\d+\.\d+\.\d+$/.test(item.minAppVersion) && compareVersions(item.minAppVersion, SETTLE_MIN_APP_VERSION) < 0))) {
+    errors.push({ field: "minAppVersion", message: `settleMinutes needs minAppVersion ${SETTLE_MIN_APP_VERSION} or newer: older apps drop the field and fire on every new commit` });
   }
   if (item.kind === "template" && (item.minAppVersion === undefined || (typeof item.minAppVersion === "string" && /^\d+\.\d+\.\d+$/.test(item.minAppVersion) && compareVersions(item.minAppVersion, HELD_TRIGGER_MIN_APP_VERSION) < 0))) {
     for (const { trigger, held } of heldBatches(item.package)) {

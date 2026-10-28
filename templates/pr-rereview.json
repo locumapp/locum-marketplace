@@ -1,8 +1,8 @@
 {
   "kind": "template",
   "id": "pr-rereview",
-  "version": 4,
-  "minAppVersion": "0.1.174",
+  "version": 5,
+  "minAppVersion": "0.1.204",
   "name": {
     "en": "PR re-review",
     "pt-BR": "Nova revisão de PR"
@@ -159,6 +159,7 @@
               "newCommitsSince": true
             }
           },
+          "settleMinutes": 30,
           "everyMinutes": 15
         },
         {

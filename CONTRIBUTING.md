@@ -294,6 +294,11 @@ left to the app. Also refused:
 - a template where one trigger that brings an event has `batch` and another
   has not: a run of each reads a different event, and no prompt serves both.
 
+`settleMinutes` in the `poll` trigger, the trigger settle time (a new commit
+only fires once the head has been the same for that long), needs
+`minAppVersion` `0.1.204` or newer: older apps drop the field and fire on every
+commit.
+
 `filter` (`$defs.filter`) follows the app too: at most 20 conditions, each with
 `path` (the path in the event, like `author.login`), `compare` (the comparisons
 of the `if` step) and `against` (up to 500 characters). `against` takes only
