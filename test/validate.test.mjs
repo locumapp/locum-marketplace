@@ -337,6 +337,21 @@ test("batch needs minAppVersion 0.1.175, the first app with batch", async () => 
   }
 });
 
+test("settleMinutes needs minAppVersion 0.1.204, the first app with the trigger settle time", async () => {
+  for (const version of [undefined, "0.1.203"]) {
+    const file = variant(
+      (item) => {
+        item.package.automacao.gatilhos[0].settleMinutes = 30;
+        if (version === undefined) delete item.minAppVersion;
+        else item.minAppVersion = version;
+      },
+      "templates",
+      "pr-rereview",
+    );
+    assert.match((await errorAt(file, "minAppVersion")).message, /settleMinutes needs minAppVersion 0\.1\.204/);
+  }
+});
+
 /** slack-reply with a batched slack-channel trigger that leaves the channels to choose. */
 const channelBatched = (minAppVersion) =>
   batched((item) => {

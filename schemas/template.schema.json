@@ -774,6 +774,7 @@
               "onLabels": true,
               "checksGreen": true,
               "checksGreenMaxRevisits": true,
+              "settleMinutes": true,
               "filter": {
                 "$ref": "#/$defs/filter"
               },

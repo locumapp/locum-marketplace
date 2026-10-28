@@ -288,6 +288,10 @@ escritos no template, nunca a cargo do app. Também é recusado:
 - template em que um gatilho que entrega evento tem `batch` e outro não: o run
   de cada um lê um evento diferente, e nenhum prompt serve aos dois.
 
+O `settleMinutes` do gatilho `poll`, a carência do gatilho (o commit novo só
+dispara quando o head está parado há esse tempo), precisa de `minAppVersion`
+`0.1.204` ou mais nova: o app anterior ignora o campo e dispara a cada commit.
+
 O `filter` (`$defs.filter`) também segue o app: no máximo 20 condições, cada
 uma com `path` (o caminho no evento, como `author.login`), `compare` (as
 comparações do passo `if`) e `against` (até 500 caracteres). O `against` só
