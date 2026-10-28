@@ -1,0 +1,32 @@
+{
+  "kind": "connection",
+  "id": "waroom",
+  "version": 1,
+  "minAppVersion": "0.1.195",
+  "name": {
+    "en": "Waroom",
+    "pt-BR": "Waroom"
+  },
+  "description": {
+    "en": "Waroom's official MCP server. Agents look up incidents, services and alerts in the authorized organization.",
+    "pt-BR": "Servidor MCP oficial do Waroom. Os agents consultam incidentes, serviços e alertas da organização autorizada."
+  },
+  "manifest": {
+    "category": "observability",
+    "logo": null,
+    "color": "1765C1",
+    "hosts": [
+      "api.waroom.co"
+    ],
+    "methods": [
+      {
+        "type": "oauth"
+      }
+    ],
+    "servers": {
+      "remote": {
+        "url": "https://api.waroom.co/mcp"
+      }
+    }
+  }
+}

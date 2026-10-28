@@ -161,6 +161,14 @@
       "names": [
         "Vercel"
       ]
+    },
+    "waroom": {
+      "hosts": [
+        "api.waroom.co"
+      ],
+      "names": [
+        "Waroom"
+      ]
     }
   },
   "reservedNames": {
