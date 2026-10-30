@@ -151,9 +151,9 @@ test("a trigger whose connection and server are in the requirements passes", asy
   assert.deepEqual(await validateFile(file), []);
 });
 
-async function errorAt(file, field) {
+async function errorAt(file, field, message = /./) {
   const errors = await validateFile(file);
-  const hit = errors.find((e) => e.field === field);
+  const hit = errors.find((e) => e.field === field && message.test(e.message));
   assert.ok(hit, `expected an error at ${field}, got ${JSON.stringify(fieldsOf(errors))}`);
   return hit;
 }
@@ -348,8 +348,34 @@ test("settleMinutes needs minAppVersion 0.1.204, the first app with the trigger 
       "templates",
       "pr-rereview",
     );
-    assert.match((await errorAt(file, "minAppVersion")).message, /settleMinutes needs minAppVersion 0\.1\.204/);
+    assert.match((await errorAt(file, "minAppVersion", /settleMinutes/)).message, /settleMinutes needs minAppVersion 0\.1\.204/);
   }
+});
+
+test("the event grouping needs minAppVersion 0.1.213, the first app with the grouping and its reread", async () => {
+  for (const version of [undefined, "0.1.212"]) {
+    const file = variant(
+      (item) => {
+        if (version === undefined) delete item.minAppVersion;
+        else item.minAppVersion = version;
+      },
+      "templates",
+      "pr-rereview",
+    );
+    assert.match((await errorAt(file, "minAppVersion", /event grouping/)).message, /the event grouping \(group, groupKey\) needs minAppVersion 0\.1\.213/);
+  }
+  const trigger = variant(
+    (item) => {
+      delete item.package.automacao.spec.group;
+      item.package.automacao.gatilhos[0].groupKey = "{{event.repoName}}#{{event.pull}}";
+      item.minAppVersion = "0.1.212";
+    },
+    "templates",
+    "pr-rereview",
+  );
+  assert.match((await errorAt(trigger, "minAppVersion", /event grouping/)).message, /the event grouping/);
+  const ok = variant((item) => (item.minAppVersion = "0.1.213"), "templates", "pr-rereview");
+  assert.deepEqual(await validateFile(ok), []);
 });
 
 test("the review text marks and myReview.include need minAppVersion 0.1.208", async () => {
@@ -362,7 +388,7 @@ test("the review text marks and myReview.include need minAppVersion 0.1.208", as
       "templates",
       "pr-review",
     );
-    assert.match((await errorAt(file, "minAppVersion")).message, /need minAppVersion 0\.1\.208/);
+    assert.match((await errorAt(file, "minAppVersion", /review text/)).message, /need minAppVersion 0\.1\.208/);
   }
 });
 

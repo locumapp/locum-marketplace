@@ -336,6 +336,9 @@
         },
         "layout": {
           "type": "object"
+        },
+        "group": {
+          "$ref": "#/$defs/group"
         }
       }
     },
@@ -611,6 +614,9 @@
               "batch": {
                 "$ref": "#/$defs/batch"
               },
+              "groupKey": {
+                "$ref": "#/$defs/groupKey"
+              },
               "everyMinutes": true,
               "workingHours": true
             },
@@ -643,6 +649,9 @@
               },
               "batch": {
                 "$ref": "#/$defs/batch"
+              },
+              "groupKey": {
+                "$ref": "#/$defs/groupKey"
               },
               "everyMinutes": true,
               "workingHours": true
@@ -685,6 +694,9 @@
               },
               "batch": {
                 "$ref": "#/$defs/batch"
+              },
+              "groupKey": {
+                "$ref": "#/$defs/groupKey"
               },
               "everyMinutes": true,
               "workingHours": true
@@ -736,6 +748,9 @@
               "batch": {
                 "$ref": "#/$defs/batch"
               },
+              "groupKey": {
+                "$ref": "#/$defs/groupKey"
+              },
               "everyMinutes": true,
               "workingHours": true,
               "chatsRestritos": true
@@ -780,6 +795,9 @@
               },
               "batch": {
                 "$ref": "#/$defs/batch"
+              },
+              "groupKey": {
+                "$ref": "#/$defs/groupKey"
               },
               "everyMinutes": true,
               "workingHours": true
@@ -832,6 +850,9 @@
               "batch": {
                 "$ref": "#/$defs/batch"
               },
+              "groupKey": {
+                "$ref": "#/$defs/groupKey"
+              },
               "everyMinutes": true,
               "workingHours": true
             },
@@ -876,6 +897,59 @@
           }
         }
       }
+    },
+    "group": {
+      "description": "Event grouping of the automation, as the app reads it (EventGroup, ADR 0027): events of any trigger with the same key join for windowMinutes and become one run, with the list in {{event.grouped}}. The key takes only {{event.*}} markers.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "windowMinutes",
+        "afterRun",
+        "max"
+      ],
+      "properties": {
+        "key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "principal": {
+          "description": "Ids of the triggers in the order of who owns the run. Empty is the order of the triggers in the automation.",
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "windowMinutes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "afterRun": {
+          "enum": [
+            "cover",
+            "rerun"
+          ]
+        },
+        "coverMinutes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "max": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 500
+        }
+      }
+    },
+    "groupKey": {
+      "description": "Key of the event grouping for this trigger, over the one in spec.group. Empty takes the trigger out of the grouping.",
+      "type": "string",
+      "maxLength": 500
     },
     "batch": {
       "description": "Batch of the trigger, as the app reads it (TriggerBatch): the events that pass the filter join for windowMinutes and become one run, with at most max of them. Absent, each event is one run. The run of a batch reads the batch event, with the fields in x-event-fields, and not the fields of a single event.",
