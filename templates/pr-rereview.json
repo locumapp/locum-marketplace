@@ -1,15 +1,15 @@
 {
   "kind": "template",
   "id": "pr-rereview",
-  "version": 6,
-  "minAppVersion": "0.1.208",
+  "version": 7,
+  "minAppVersion": "0.1.213",
   "name": {
     "en": "PR re-review",
     "pt-BR": "Nova revisão de PR"
   },
   "description": {
-    "en": "Checks the requests from your last review against the diff since then and the thread replies, points out new defects, waits for CI on the head commit and prepares the review, held in the queue. It runs again when the author pushes after your review, and when CI turns green on a review that went out as a comment because CI was not green.",
-    "pt-BR": "Confere os pedidos da sua última review contra o diff desde ela e as respostas nas threads, aponta defeito novo, espera a esteira no commit de cabeça e prepara a review, parada na fila. Volta quando o autor sobe commit depois da sua review e quando a esteira fica verde numa review que saiu como comentário por causa da esteira."
+    "en": "Checks the requests from your last review against the diff since then and the thread replies, points out new defects, waits for CI on the head commit and prepares the review, held in the queue. It runs again when the author pushes after your review, and when CI turns green on a review that went out as a comment because CI was not green. Grouping is on: events for the same pull request and head commit, from any trigger, wait 30 minutes and become one run (up to 20); repeats after the run are covered for 24 hours. To turn it off, clear the grouping in the automation.",
+    "pt-BR": "Confere os pedidos da sua última review contra o diff desde ela e as respostas nas threads, aponta defeito novo, espera a esteira no commit de cabeça e prepara a review, parada na fila. Volta quando o autor sobe commit depois da sua review e quando a esteira fica verde numa review que saiu como comentário por causa da esteira. O agrupamento vem ligado: eventos do mesmo pull request e commit de cabeça, de qualquer gatilho, esperam 30 minutos e viram um run só (até 20); repetidos depois do run ficam cobertos por 24 horas. Para desligar, tire o agrupamento na automação."
   },
   "tags": [
     "code-review",
@@ -146,7 +146,15 @@
               "ciNamesMax": 5
             }
           }
-        ]
+        ],
+        "group": {
+          "key": "{{event.owner}}/{{event.repoName}}#{{event.pull}}@{{event.headSha}}",
+          "principal": [],
+          "windowMinutes": 30,
+          "afterRun": "cover",
+          "coverMinutes": 1440,
+          "max": 20
+        }
       },
       "gatilhos": [
         {
