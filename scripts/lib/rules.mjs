@@ -70,6 +70,12 @@ export const HELD_TRIGGER_MIN_APP_VERSION = "0.1.177";
 /** The first app version with `settleMinutes` in the GitHub `poll` trigger, the trigger settle time. */
 export const SETTLE_MIN_APP_VERSION = "0.1.204";
 
+/** The first app version with `{{stateLabel}}`, `{{failedCount}}`, `{{pendingCount}}`, `ciNamesMax`, `ciMoreText`, `ciStateLabels` and `emptyBodyText` in the review node, and `myReview.include` in the GitHub `poll` trigger. */
+export const REVIEW_TEXT_MIN_APP_VERSION = "0.1.208";
+
+/** What a template uses that only exists from REVIEW_TEXT_MIN_APP_VERSION on. */
+const REVIEW_TEXT_MARKS = [/\{\{\s*(stateLabel|failedCount|pendingCount)\s*\}\}/, /"(ciNamesMax|ciMoreText|ciStateLabels|emptyBodyText)"\s*:/, /"myReview"\s*:\s*\{[^}]*"include"\s*:/];
+
 /** A display name as the app compares it with the official ones: without accents or format characters, in lowercase. */
 const normalizedName = (name) => name.normalize("NFKC").normalize("NFD").replace(/[\p{M}\p{Cf}]/gu, "").toLowerCase().trim();
 
@@ -182,6 +188,10 @@ export function itemRules(item, expected) {
   const settled = item.kind === "template" && (Array.isArray(item.package?.automacao?.gatilhos) ? item.package.automacao.gatilhos : []).some((t) => isObject(t) && t.settleMinutes !== undefined);
   if (settled && (item.minAppVersion === undefined || (typeof item.minAppVersion === "string" && /^\d+\.\d+\.\d+$/.test(item.minAppVersion) && compareVersions(item.minAppVersion, SETTLE_MIN_APP_VERSION) < 0))) {
     errors.push({ field: "minAppVersion", message: `settleMinutes needs minAppVersion ${SETTLE_MIN_APP_VERSION} or newer: older apps drop the field and fire on every new commit` });
+  }
+  const reviewText = item.kind === "template" && REVIEW_TEXT_MARKS.some((re) => re.test(JSON.stringify(item.package ?? {}, null, 1)));
+  if (reviewText && (item.minAppVersion === undefined || (typeof item.minAppVersion === "string" && /^\d+\.\d+\.\d+$/.test(item.minAppVersion) && compareVersions(item.minAppVersion, REVIEW_TEXT_MIN_APP_VERSION) < 0))) {
+    errors.push({ field: "minAppVersion", message: `the review text marks and params of 0.1.208 (stateLabel, failedCount, pendingCount, ciNamesMax, ciMoreText, ciStateLabels, emptyBodyText, myReview.include) need minAppVersion ${REVIEW_TEXT_MIN_APP_VERSION} or newer: older apps publish the marks as written or drop the fields` });
   }
   if (item.kind === "template" && (item.minAppVersion === undefined || (typeof item.minAppVersion === "string" && /^\d+\.\d+\.\d+$/.test(item.minAppVersion) && compareVersions(item.minAppVersion, HELD_TRIGGER_MIN_APP_VERSION) < 0))) {
     for (const { trigger, held } of heldBatches(item.package)) {
