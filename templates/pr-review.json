@@ -1,8 +1,8 @@
 {
   "kind": "template",
   "id": "pr-review",
-  "version": 3,
-  "minAppVersion": "0.1.165",
+  "version": 4,
+  "minAppVersion": "0.1.208",
   "name": {
     "en": "PR review",
     "pt-BR": "Revisão de PR"
@@ -240,7 +240,8 @@
             "params": {
               "ciFrom": "ci",
               "ifCiNotGreen": "comment",
-              "ciNotGreenText": "A esteira não estava verde ({{state}}), então a aprovação virou comentário. Falhou: {{failed}}. Pendente: {{pending}}."
+              "ciNotGreenText": "A esteira não estava verde ({{stateLabel}}), então a aprovação virou comentário. Falhou: {{failed}}. Pendente: {{pending}}.",
+              "ciNamesMax": 5
             }
           }
         ]
@@ -253,7 +254,8 @@
           "includeDrafts": false,
           "filters": {
             "myReview": {
-              "state": "none"
+              "state": "none",
+              "include": "conta"
             }
           },
           "everyMinutes": 15

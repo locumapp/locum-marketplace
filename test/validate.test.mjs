@@ -352,6 +352,20 @@ test("settleMinutes needs minAppVersion 0.1.204, the first app with the trigger 
   }
 });
 
+test("the review text marks and myReview.include need minAppVersion 0.1.208", async () => {
+  for (const version of [undefined, "0.1.207"]) {
+    const file = variant(
+      (item) => {
+        if (version === undefined) delete item.minAppVersion;
+        else item.minAppVersion = version;
+      },
+      "templates",
+      "pr-review",
+    );
+    assert.match((await errorAt(file, "minAppVersion")).message, /need minAppVersion 0\.1\.208/);
+  }
+});
+
 /** slack-reply with a batched slack-channel trigger that leaves the channels to choose. */
 const channelBatched = (minAppVersion) =>
   batched((item) => {

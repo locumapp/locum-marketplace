@@ -1,8 +1,8 @@
 {
   "kind": "template",
   "id": "pr-rereview",
-  "version": 5,
-  "minAppVersion": "0.1.204",
+  "version": 6,
+  "minAppVersion": "0.1.208",
   "name": {
     "en": "PR re-review",
     "pt-BR": "Nova revisão de PR"
@@ -142,7 +142,8 @@
             "params": {
               "ciFrom": "ci",
               "ifCiNotGreen": "comment",
-              "ciNotGreenText": "A esteira não estava verde ({{state}}), então a aprovação virou comentário. Falhou: {{failed}}. Pendente: {{pending}}."
+              "ciNotGreenText": "A esteira não estava verde ({{stateLabel}}), então a aprovação virou comentário. Falhou: {{failed}}. Pendente: {{pending}}.",
+              "ciNamesMax": 5
             }
           }
         ]
