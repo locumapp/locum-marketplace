@@ -8,8 +8,8 @@
     "pt-BR": "Revisão de PR"
   },
   "description": {
-    "en": "Triage, audit with a verdict, optional deploy context (asks for an MCP server named argocd), a wait for CI on the head commit and the review on the pull request, held in the queue for approval. An approval with CI not green goes out as a comment. Grouping is on: events for the same pull request and head commit, from any trigger, wait 30 minutes and become one run (up to 20); repeats after the run are covered for 24 hours. To turn it off, clear the grouping in the automation.",
-    "pt-BR": "Triagem, auditoria com veredito, contexto de deploy opcional (pede um servidor MCP chamado argocd), espera da esteira no commit de cabeça e a review no pull request, parada na fila para aprovação. Aprovação com a esteira fora do verde sai como comentário. O agrupamento vem ligado: eventos do mesmo pull request e commit de cabeça, de qualquer gatilho, esperam 30 minutos e viram um run só (até 20); repetidos depois do run ficam cobertos por 24 horas. Para desligar, tire o agrupamento na automação."
+    "en": "Triage, audit with a verdict, optional deploy context (asks for an MCP server named argocd), a wait for CI on the head commit and the review on the pull request, held in the queue for approval. An approval with CI not green goes out as a comment. Grouping is on: events for the same pull request and head commit, from any trigger, wait 5 minutes and become one run (up to 20); repeats after the run are covered for 24 hours. To turn it off, clear the grouping in the automation.",
+    "pt-BR": "Triagem, auditoria com veredito, contexto de deploy opcional (pede um servidor MCP chamado argocd), espera da esteira no commit de cabeça e a review no pull request, parada na fila para aprovação. Aprovação com a esteira fora do verde sai como comentário. O agrupamento vem ligado: eventos do mesmo pull request e commit de cabeça, de qualquer gatilho, esperam 5 minutos e viram um run só (até 20); repetidos depois do run ficam cobertos por 24 horas. Para desligar, tire o agrupamento na automação."
   },
   "tags": [
     "code-review",
@@ -248,7 +248,7 @@
         "group": {
           "key": "{{event.owner}}/{{event.repoName}}#{{event.pull}}@{{event.headSha}}",
           "principal": [],
-          "windowMinutes": 30,
+          "windowMinutes": 5,
           "afterRun": "cover",
           "coverMinutes": 1440,
           "max": 20
