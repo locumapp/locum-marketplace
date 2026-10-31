@@ -48,6 +48,15 @@ const CONTAINER_FLAGS = /^(--privileged|--cap-add|--pid|--ipc|--uts|--userns|--c
 const LOCAL_SUFFIXES = [".local", ".localhost", ".localdomain", ".internal", ".intranet", ".corp", ".private", ".home", ".home.arpa", ".lan", ".test", ".example", ".invalid"];
 /** Methods whose reader takes a credential from another tool or a session on the machine: only official types use them. */
 const MACHINE_METHODS = new Set(["cli", "session"]);
+/**
+ * The reader each known set of session tools works with (ADR 0032). The app registry is the authority on which sets
+ * exist and refuses the unknown ones (`tools-not-registered`), so a set missing here passes; a known one must not be
+ * paired with another reader.
+ */
+const SESSION_TOOLS_READER = new Map([
+  ["argocd", "browser-cookie"],
+  ["slack", "slack-desktop"],
+]);
 
 /**
  * The oldest app version a connection type may declare: the first one after 0.1.167, the last release that does not
@@ -271,6 +280,12 @@ function connectionRules(manifest, id) {
         message: `the "${method.type}" method reads a credential from another tool or a session on the machine; only official connection types use it`,
       });
     }
+    if (method.type === "session" && SESSION_TOOLS_READER.has(method.tools) && SESSION_TOOLS_READER.get(method.tools) !== method.reader) {
+      errors.push({
+        field: field("manifest.methods", i, "tools"),
+        message: `the "${method.tools}" tools work with the "${SESSION_TOOLS_READER.get(method.tools)}" reader, not "${method.reader}"`,
+      });
+    }
     if (typeof method.env === "string" && RESERVED_ENV.test(method.env)) errors.push(loaderEnvError(field("manifest.methods", i, "env"), method.env));
     if (Array.isArray(method.scopes)) method.scopes.forEach((scope, j) => errors.push(...hiddenText(scope, field("manifest.methods", i, "scopes", j))));
   });
@@ -332,7 +347,9 @@ function connectionRules(manifest, id) {
   const servers = manifest.servers;
   const triggers = Array.isArray(manifest.triggers) ? manifest.triggers : [];
   const actions = Array.isArray(manifest.actions) ? manifest.actions : [];
-  if (servers === undefined && triggers.length === 0 && actions.length === 0) {
+  // The session tools are the app's own server, so a session method does something with no `servers` (ADR 0032).
+  const sessionTools = methods.some((m) => isObject(m) && m.type === "session");
+  if (servers === undefined && triggers.length === 0 && actions.length === 0 && !sessionTools) {
     errors.push({ field: "manifest.servers", message: "a connection type needs servers, triggers or actions; without them it does nothing" });
   }
   if (!isObject(servers)) return errors;

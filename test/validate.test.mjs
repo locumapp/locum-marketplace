@@ -531,7 +531,7 @@ const badConnections = [
   ["the credential outside a header or env", (_, m) => (m.fields = [{ key: "url", label: { en: "${credential}", "pt-BR": "x" }, format: "url", required: true }]), "manifest.fields.0.label.en", /\$\{credential\}/],
   ["another placeholder in a header", (_, m) => (m.servers.remote.headers = { Authorization: "Bearer ${token}" }), "manifest.servers.remote.headers.Authorization", /placeholder/],
   ["a cli method outside an official type", (_, m) => m.methods.push({ type: "cli", reader: "gh" }), "manifest.methods.1", /official/],
-  ["a session method outside an official type", (_, m) => m.methods.push({ type: "session", reader: "browser-cookie" }), "manifest.methods.1", /official/],
+  ["a session method outside an official type", (_, m) => m.methods.push({ type: "session", reader: "browser-cookie", tools: "argocd" }), "manifest.methods.1", /official/],
   ["the same method twice", (_, m) => m.methods.push({ type: "oauth" }), "manifest.methods.1", /twice/],
   ["a trigger kind the app does not have", (_, m) => (m.triggers = ["no-such-kind"]), "manifest.triggers.0", /unknown trigger kind/],
   ["a trigger that reads another connection", (_, m) => (m.triggers = ["poll"]), "manifest.triggers.0", /reads the "github" connection/],
@@ -595,6 +595,33 @@ test("an official type may use the cli and session readers, the core triggers th
     m.trackers = ["github-issues"];
   });
   assert.deepEqual(await validateFile(file), []);
+});
+
+const sessionOnly = (tools, reader = "browser-cookie") =>
+  connection((item, m) => {
+    item.id = "github";
+    item.minAppVersion = "0.2.0";
+    m.methods = [{ type: "session", reader, ...(tools === undefined ? {} : { tools }) }];
+    delete m.servers;
+    delete m.hosts;
+  });
+
+test("an official type may declare session with reader and tools and no servers", async () => {
+  assert.deepEqual(await validateFile(sessionOnly("argocd").file), []);
+  assert.deepEqual(await validateFile(sessionOnly("any-new-set-9").file), []);
+});
+
+test("session needs tools in the kebab format, only in an official type, and a known set keeps its reader", async () => {
+  assert.ok((await validateFile(sessionOnly(undefined).file)).some((e) => /tools/.test(e.message) || e.field.includes("methods")));
+  assert.ok((await validateFile(sessionOnly("Argo CD").file)).length > 0);
+  const paired = await validateFile(sessionOnly("argocd", "slack-desktop").file);
+  assert.ok(paired.some((e) => e.field === "manifest.methods.0.tools" && /browser-cookie/.test(e.message)));
+  const third = connection((_, m) => {
+    m.methods = [{ type: "session", reader: "browser-cookie", tools: "argocd" }];
+    delete m.servers;
+    delete m.hosts;
+  });
+  assert.ok((await validateFile(third.file)).some((e) => e.field === "manifest.methods.0" && /official/.test(e.message)));
 });
 
 test("a remote server whose address the person fills passes, with the field declared", async () => {

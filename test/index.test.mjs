@@ -117,7 +117,7 @@ test("a connection whose address the person fills requires the field, and carrie
   item.manifest.fields = [{ key: "url", label: { en: "Address", "pt-BR": "Endereço" }, format: "url", required: true }];
   item.manifest.servers = { remote: { urlField: "url" } };
   item.manifest.triggers = ["mcp-poll"];
-  item.manifest.methods.push({ type: "session", reader: "browser-cookie" });
+  item.manifest.methods.push({ type: "session", reader: "browser-cookie", tools: "argocd" });
   writeFileSync(join(catalog, "connections/grafana.json"), JSON.stringify(item));
   const [entry] = JSON.parse(await buildIndex(catalog, AT)).items;
   assert.equal(entry.minAppVersion, "0.2.0");

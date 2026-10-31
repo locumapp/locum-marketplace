@@ -64,8 +64,10 @@ has and never brings code:
   - `token`, with optional `header` (remote server) or `env` (local server)
     that carries the credential;
   - `cli` with `reader: "gh"`, the credential of another command line tool;
-  - `session` with `reader: "browser-cookie"` or `"slack-desktop"`, the session
-    the person already has. Cookie and domain live in the reader, in the app;
+  - `session` with `reader: "browser-cookie"` or `"slack-desktop"` and `tools`
+    (a kebab id of a set of tools the app registers, like `argocd`), the
+    session the person already has. Cookie, domain and code live in the app;
+    a type whose only method is `session` declares no `servers`;
   - `none`.
 
   `cli` and `session` read a credential from the person's machine, so only
