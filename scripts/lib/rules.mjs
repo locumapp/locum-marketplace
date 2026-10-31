@@ -82,6 +82,9 @@ export const SETTLE_MIN_APP_VERSION = "0.1.204";
 /** The first app version with `{{stateLabel}}`, `{{failedCount}}`, `{{pendingCount}}`, `ciNamesMax`, `ciMoreText`, `ciStateLabels` and `emptyBodyText` in the review node, and `myReview.include` in the GitHub `poll` trigger. */
 export const REVIEW_TEXT_MIN_APP_VERSION = "0.1.208";
 
+/** The first app version whose schema takes `tools` in the `session` method (ADR 0032, slice S1); older ones show the type as invalid. */
+export const SESSION_MIN_APP_VERSION = "0.1.215";
+
 /** What a template uses that only exists from REVIEW_TEXT_MIN_APP_VERSION on. */
 const REVIEW_TEXT_MARKS = [/\{\{\s*(stateLabel|failedCount|pendingCount)\s*\}\}/, /"(ciNamesMax|ciMoreText|ciStateLabels|emptyBodyText)"\s*:/, /"myReview"\s*:\s*\{[^}]*"include"\s*:/];
 
@@ -181,6 +184,8 @@ export function itemRules(item, expected) {
       } else if (usesMarkers(item.manifest) && compareVersions(item.minAppVersion, MARKERS_MIN_APP_VERSION) < 0) {
         errors.push({ field: "minAppVersion", message: `servers.remote.path and \${field:<key>} need minAppVersion ${MARKERS_MIN_APP_VERSION} or newer: older apps refuse them` });      } else if (usesPlaceholderOrHealthCheck(item.manifest) && compareVersions(item.minAppVersion, HEALTH_CHECK_MIN_APP_VERSION) < 0) {
         errors.push({ field: "minAppVersion", message: `placeholder and healthCheck need minAppVersion ${HEALTH_CHECK_MIN_APP_VERSION} or newer: older apps refuse them and show the type as invalid` });
+      } else if (usesSession(item.manifest) && compareVersions(item.minAppVersion, SESSION_MIN_APP_VERSION) < 0) {
+        errors.push({ field: "minAppVersion", message: `the session method with tools needs minAppVersion ${SESSION_MIN_APP_VERSION} or newer: older apps refuse it and show the type as invalid` });
       }
     }
     if (isObject(item.name)) {
@@ -239,6 +244,23 @@ function usesMarkers(manifest) {
 }
 
 /** Whether the manifest uses what came into the app catalog schema in 0.1.182: a field placeholder or healthCheck. */
+function usesSession(manifest) {
+  return isObject(manifest) && Array.isArray(manifest.methods) && manifest.methods.some((m) => isObject(m) && m.type === "session");
+}
+
+/**
+ * What the rules only warn about: a set of session tools this validator does not know. The app registry is the
+ * authority and drops the method of a set it lacks, so the item still publishes, but the author should know.
+ */
+export function itemWarnings(item) {
+  const methods = isObject(item?.manifest) && Array.isArray(item.manifest.methods) ? item.manifest.methods : [];
+  return methods.flatMap((m, i) =>
+    isObject(m) && m.type === "session" && typeof m.tools === "string" && !SESSION_TOOLS_READER.has(m.tools)
+      ? [{ field: field("manifest.methods", i, "tools"), message: `the "${m.tools}" session tools are not known to this validator; an app that does not register them drops the method` }]
+      : [],
+  );
+}
+
 function usesPlaceholderOrHealthCheck(manifest) {
   if (!isObject(manifest)) return false;
   if (manifest.healthCheck !== undefined) return true;
@@ -347,9 +369,9 @@ function connectionRules(manifest, id) {
   const servers = manifest.servers;
   const triggers = Array.isArray(manifest.triggers) ? manifest.triggers : [];
   const actions = Array.isArray(manifest.actions) ? manifest.actions : [];
-  // The session tools are the app's own server, so a session method does something with no `servers` (ADR 0032).
-  const sessionTools = methods.some((m) => isObject(m) && m.type === "session");
-  if (servers === undefined && triggers.length === 0 && actions.length === 0 && !sessionTools) {
+  // The session tools are the app's own server, so a type whose only method is `session` does something with no `servers` (ADR 0032).
+  const onlySession = methods.length > 0 && methods.every((m) => isObject(m) && m.type === "session");
+  if (servers === undefined && triggers.length === 0 && actions.length === 0 && !onlySession) {
     errors.push({ field: "manifest.servers", message: "a connection type needs servers, triggers or actions; without them it does nothing" });
   }
   if (!isObject(servers)) return errors;

@@ -612,7 +612,8 @@ test("an official type may declare session with reader and tools and no servers"
 });
 
 test("session needs tools in the kebab format, only in an official type, and a known set keeps its reader", async () => {
-  assert.ok((await validateFile(sessionOnly(undefined).file)).some((e) => /tools/.test(e.message) || e.field.includes("methods")));
+  const missing = await validateFile(sessionOnly(undefined).file);
+  assert.deepEqual(missing.map(({ field, message }) => ({ field, message })), [{ field: "manifest.methods.0.tools", message: '"tools" is required' }]);
   assert.ok((await validateFile(sessionOnly("Argo CD").file)).length > 0);
   const paired = await validateFile(sessionOnly("argocd", "slack-desktop").file);
   assert.ok(paired.some((e) => e.field === "manifest.methods.0.tools" && /browser-cookie/.test(e.message)));
@@ -622,6 +623,39 @@ test("session needs tools in the kebab format, only in an official type, and a k
     delete m.hosts;
   });
   assert.ok((await validateFile(third.file)).some((e) => e.field === "manifest.methods.0" && /official/.test(e.message)));
+});
+
+test("session with tools needs minAppVersion 0.1.215 or newer", async () => {
+  const old = connection((item, m) => {
+    item.id = "github";
+    item.minAppVersion = "0.1.214";
+    m.methods = [{ type: "session", reader: "browser-cookie", tools: "argocd" }];
+    delete m.servers;
+    delete m.hosts;
+  });
+  const errors = await validateFile(old.file);
+  assert.ok(errors.some((e) => e.field === "minAppVersion" && /0\.1\.215/.test(e.message)));
+});
+
+test("a set of session tools the validator does not know is a warning, not an error", async () => {
+  const { checkFile } = await import("../scripts/lib/validate.mjs");
+  const known = await checkFile(sessionOnly("argocd").file);
+  assert.deepEqual(known.warnings, []);
+  const unknown = await checkFile(sessionOnly("any-new-set-9").file);
+  assert.deepEqual(unknown.errors, []);
+  assert.equal(unknown.warnings.length, 1);
+  assert.equal(unknown.warnings[0].field, "manifest.methods.0.tools");
+});
+
+test("session only skips the servers rule when it is the only method", async () => {
+  const withToken = connection((item, m) => {
+    item.id = "github";
+    item.minAppVersion = "0.2.0";
+    m.methods = [{ type: "token" }, { type: "session", reader: "browser-cookie", tools: "argocd" }];
+    delete m.servers;
+    delete m.hosts;
+  });
+  assert.ok((await validateFile(withToken.file)).some((e) => e.field === "manifest.servers"));
 });
 
 test("a remote server whose address the person fills passes, with the field declared", async () => {
