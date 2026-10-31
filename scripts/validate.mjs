@@ -2,7 +2,7 @@
 import { relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readFile } from "node:fs/promises";
-import { validateCatalog, validateFile } from "./lib/validate.mjs";
+import { checkFile, validateCatalog } from "./lib/validate.mjs";
 import { checkCodeowners } from "./lib/codeowners.mjs";
 import { findForbiddenTerms, parseTerms, termsPath, trackedFiles } from "./lib/forbidden-terms.mjs";
 
@@ -10,13 +10,19 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const files = process.argv.slice(2);
 
 const errors = [];
+const warnings = [];
 let count;
 if (files.length === 0) {
   const result = await validateCatalog(root);
   errors.push(...result.errors, ...(await checkCodeowners(root)));
+  warnings.push(...result.warnings);
   count = result.items.length;
 } else {
-  for (const file of files) errors.push(...(await validateFile(resolve(file), { root })));
+  for (const file of files) {
+    const checked = await checkFile(resolve(file), { root });
+    errors.push(...checked.errors);
+    warnings.push(...(checked.warnings ?? []));
+  }
   count = files.length;
 }
 
@@ -35,6 +41,7 @@ if (terms !== undefined) {
   }
 }
 
+for (const w of warnings) process.stderr.write(`warning: ${relative(process.cwd(), w.file)}: ${w.field}: ${w.message}\n`);
 for (const e of errors) {
   const where = e.line !== undefined ? `:${e.line}` : `: ${e.field === "" ? "(file)" : e.field}`;
   process.stderr.write(`${relative(process.cwd(), e.file)}${where}: ${e.message}\n`);

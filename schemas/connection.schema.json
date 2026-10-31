@@ -114,10 +114,10 @@
         {
           "if": { "properties": { "type": { "const": "session" } } },
           "then": {
-            "description": "The session the person already has in a browser or an app, read by a reader in the app code. Cookie and domain live in the reader, never here.",
-            "required": ["reader"],
+            "description": "The session the person already has in a browser or an app, read by a reader in the app code, and the set of tools the app serves on top of it (`tools`, an id the app registers; one it does not know loses only this method). Cookie, domain, command and code live in the app, never here.",
+            "required": ["reader", "tools"],
             "additionalProperties": false,
-            "properties": { "type": true, "reader": { "enum": ["browser-cookie", "slack-desktop"] } }
+            "properties": { "type": true, "reader": { "enum": ["browser-cookie", "slack-desktop"] }, "tools": { "$ref": "#/$defs/kebab" } }
           }
         },
         { "if": { "properties": { "type": { "const": "none" } } }, "then": { "additionalProperties": false, "properties": { "type": true } } }

@@ -2,7 +2,7 @@ import { lstat, readFile, readdir } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import Ajv2020Module from "ajv/dist/2020.js";
-import { OFFICIAL_CONNECTIONS, RESERVED_CONNECTION_IDS, TRIGGER_ANNOTATIONS, connectionClaims, itemRules, officialClaims } from "./rules.mjs";
+import { OFFICIAL_CONNECTIONS, RESERVED_CONNECTION_IDS, TRIGGER_ANNOTATIONS, connectionClaims, itemRules, itemWarnings, officialClaims } from "./rules.mjs";
 
 const Ajv2020 = Ajv2020Module.default ?? Ajv2020Module;
 const schemasDir = fileURLToPath(new URL("../../schemas/", import.meta.url));
@@ -93,7 +93,8 @@ export async function checkFile(file, { root, localServers = false } = {}) {
   const ruledFields = new Set(ruled.map((e) => e.field));
   const fromSchema = schemaErrors(validate).filter((e) => !ruledFields.has(e.field));
   const errors = [...ruled, ...fromSchema].map((e) => ({ file, ...e }));
-  return { bytes, item, errors };
+  const warnings = itemWarnings(item).map((e) => ({ file, ...e }));
+  return { bytes, item, errors, warnings };
 }
 
 export async function validateFile(file, options) {
@@ -108,6 +109,7 @@ export async function validateFile(file, options) {
 export async function validateCatalog(root, { localServers = false } = {}) {
   const items = [];
   const errors = [];
+  const warnings = [];
   const owners = new Map();
   for (const folder of Object.keys(FOLDERS)) {
     let names = [];
@@ -121,6 +123,7 @@ export async function validateCatalog(root, { localServers = false } = {}) {
       const file = join(root, folder, name);
       const checked = await checkFile(file, { root, localServers });
       errors.push(...checked.errors);
+      warnings.push(...(checked.warnings ?? []));
       if (checked.errors.length > 0) continue;
       const path = `${folder}/${name}`;
       const owner = owners.get(checked.item.id);
@@ -135,7 +138,7 @@ export async function validateCatalog(root, { localServers = false } = {}) {
   const refused = identityErrors(items.filter((i) => i.kind === "connection"));
   errors.push(...refused.map(({ item, ...e }) => ({ file: join(root, item.path), ...e })));
   const out = new Set(refused.map((e) => e.item));
-  return { items: items.filter((i) => !out.has(i)), errors };
+  return { items: items.filter((i) => !out.has(i)), errors, warnings };
 }
 
 /**

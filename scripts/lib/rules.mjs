@@ -48,6 +48,15 @@ const CONTAINER_FLAGS = /^(--privileged|--cap-add|--pid|--ipc|--uts|--userns|--c
 const LOCAL_SUFFIXES = [".local", ".localhost", ".localdomain", ".internal", ".intranet", ".corp", ".private", ".home", ".home.arpa", ".lan", ".test", ".example", ".invalid"];
 /** Methods whose reader takes a credential from another tool or a session on the machine: only official types use them. */
 const MACHINE_METHODS = new Set(["cli", "session"]);
+/**
+ * The reader each known set of session tools works with (ADR 0032). The app registry is the authority on which sets
+ * exist and refuses the unknown ones (`tools-not-registered`), so a set missing here passes; a known one must not be
+ * paired with another reader.
+ */
+const SESSION_TOOLS_READER = new Map([
+  ["argocd", "browser-cookie"],
+  ["slack", "slack-desktop"],
+]);
 
 /**
  * The oldest app version a connection type may declare: the first one after 0.1.167, the last release that does not
@@ -72,6 +81,9 @@ export const SETTLE_MIN_APP_VERSION = "0.1.204";
 
 /** The first app version with `{{stateLabel}}`, `{{failedCount}}`, `{{pendingCount}}`, `ciNamesMax`, `ciMoreText`, `ciStateLabels` and `emptyBodyText` in the review node, and `myReview.include` in the GitHub `poll` trigger. */
 export const REVIEW_TEXT_MIN_APP_VERSION = "0.1.208";
+
+/** The first app version whose schema takes `tools` in the `session` method (ADR 0032, slice S1); older ones show the type as invalid. */
+export const SESSION_MIN_APP_VERSION = "0.1.215";
 
 /** What a template uses that only exists from REVIEW_TEXT_MIN_APP_VERSION on. */
 const REVIEW_TEXT_MARKS = [/\{\{\s*(stateLabel|failedCount|pendingCount)\s*\}\}/, /"(ciNamesMax|ciMoreText|ciStateLabels|emptyBodyText)"\s*:/, /"myReview"\s*:\s*\{[^}]*"include"\s*:/];
@@ -172,6 +184,8 @@ export function itemRules(item, expected) {
       } else if (usesMarkers(item.manifest) && compareVersions(item.minAppVersion, MARKERS_MIN_APP_VERSION) < 0) {
         errors.push({ field: "minAppVersion", message: `servers.remote.path and \${field:<key>} need minAppVersion ${MARKERS_MIN_APP_VERSION} or newer: older apps refuse them` });      } else if (usesPlaceholderOrHealthCheck(item.manifest) && compareVersions(item.minAppVersion, HEALTH_CHECK_MIN_APP_VERSION) < 0) {
         errors.push({ field: "minAppVersion", message: `placeholder and healthCheck need minAppVersion ${HEALTH_CHECK_MIN_APP_VERSION} or newer: older apps refuse them and show the type as invalid` });
+      } else if (usesSession(item.manifest) && compareVersions(item.minAppVersion, SESSION_MIN_APP_VERSION) < 0) {
+        errors.push({ field: "minAppVersion", message: `the session method with tools needs minAppVersion ${SESSION_MIN_APP_VERSION} or newer: older apps refuse it and show the type as invalid` });
       }
     }
     if (isObject(item.name)) {
@@ -230,6 +244,23 @@ function usesMarkers(manifest) {
 }
 
 /** Whether the manifest uses what came into the app catalog schema in 0.1.182: a field placeholder or healthCheck. */
+function usesSession(manifest) {
+  return isObject(manifest) && Array.isArray(manifest.methods) && manifest.methods.some((m) => isObject(m) && m.type === "session");
+}
+
+/**
+ * What the rules only warn about: a set of session tools this validator does not know. The app registry is the
+ * authority and drops the method of a set it lacks, so the item still publishes, but the author should know.
+ */
+export function itemWarnings(item) {
+  const methods = isObject(item?.manifest) && Array.isArray(item.manifest.methods) ? item.manifest.methods : [];
+  return methods.flatMap((m, i) =>
+    isObject(m) && m.type === "session" && typeof m.tools === "string" && !SESSION_TOOLS_READER.has(m.tools)
+      ? [{ field: field("manifest.methods", i, "tools"), message: `the "${m.tools}" session tools are not known to this validator; an app that does not register them drops the method` }]
+      : [],
+  );
+}
+
 function usesPlaceholderOrHealthCheck(manifest) {
   if (!isObject(manifest)) return false;
   if (manifest.healthCheck !== undefined) return true;
@@ -269,6 +300,12 @@ function connectionRules(manifest, id) {
       errors.push({
         field: field("manifest.methods", i),
         message: `the "${method.type}" method reads a credential from another tool or a session on the machine; only official connection types use it`,
+      });
+    }
+    if (method.type === "session" && SESSION_TOOLS_READER.has(method.tools) && SESSION_TOOLS_READER.get(method.tools) !== method.reader) {
+      errors.push({
+        field: field("manifest.methods", i, "tools"),
+        message: `the "${method.tools}" tools work with the "${SESSION_TOOLS_READER.get(method.tools)}" reader, not "${method.reader}"`,
       });
     }
     if (typeof method.env === "string" && RESERVED_ENV.test(method.env)) errors.push(loaderEnvError(field("manifest.methods", i, "env"), method.env));
@@ -332,7 +369,9 @@ function connectionRules(manifest, id) {
   const servers = manifest.servers;
   const triggers = Array.isArray(manifest.triggers) ? manifest.triggers : [];
   const actions = Array.isArray(manifest.actions) ? manifest.actions : [];
-  if (servers === undefined && triggers.length === 0 && actions.length === 0) {
+  // The session tools are the app's own server, so a type whose only method is `session` does something with no `servers` (ADR 0032).
+  const onlySession = methods.length > 0 && methods.every((m) => isObject(m) && m.type === "session");
+  if (servers === undefined && triggers.length === 0 && actions.length === 0 && !onlySession) {
     errors.push({ field: "manifest.servers", message: "a connection type needs servers, triggers or actions; without them it does nothing" });
   }
   if (!isObject(servers)) return errors;

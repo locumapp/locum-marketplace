@@ -64,8 +64,10 @@ app já tem e nunca traz código:
     opcional, onde vai a credencial;
   - `cli` com `reader: "gh"`, a credencial de outra ferramenta de linha de
     comando;
-  - `session` com `reader: "browser-cookie"` ou `"slack-desktop"`, a sessão
-    que a pessoa já tem. Cookie e domínio ficam no leitor, no app;
+  - `session` com `reader: "browser-cookie"` ou `"slack-desktop"` e `tools` (id
+    kebab de um conjunto de ferramentas que o app registra, como `argocd`), a
+    sessão que a pessoa já tem. Cookie, domínio e código ficam no app; o tipo
+    cujo único método é `session` não declara `servers`;
   - `none`.
 
   `cli` e `session` leem credencial da máquina da pessoa, então só tipo
