@@ -54,6 +54,7 @@
         "fields": { "description": "The form an instance fills, besides its name.", "type": "array", "items": { "$ref": "#/$defs/field" } },
         "scopeKeys": { "type": "array", "items": { "$ref": "#/$defs/scopeKey" } },
         "servers": { "$ref": "#/$defs/servers" },
+        "optionalServer": { "$ref": "#/$defs/optionalServer" },
         "healthCheck": {
           "description": "Up to three GETs that the instance test makes on the base of the remote server (the value of urlField, or servers.remote.url), and the fields of the JSON answer to show. Only with servers.remote.",
           "type": "array",
@@ -170,6 +171,17 @@
         "key": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*\\.[a-z][a-zA-Z0-9]*$" },
         "description": { "$ref": "#/$defs/text" },
         "normalize": { "enum": ["lower", "exact"] }
+      }
+    },
+    "optionalServer": {
+      "description": "The MCP server the person may turn on after installing the type, with one click. It is not part of `servers`: it does not make the type a server type, and it registers nothing by itself. The credential goes where the token method says (`header`). The host must be in `hosts`.",
+      "type": "object",
+      "required": ["name", "transport", "url"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "description": "Name the server is registered with.", "$ref": "#/$defs/kebab" },
+        "transport": { "const": "http" },
+        "url": { "description": "Fixed https address on a public host, without markers.", "type": "string", "pattern": "^https://[^\\s$]+$" }
       }
     },
     "servers": {

@@ -1158,5 +1158,40 @@ test("a container image in packages needs minAppVersion 0.1.225 or newer, and th
   assert.match(old[0].message, /container image/);
   const real = JSON.parse(readFileSync(join(root, "connections/github.json"), "utf8"));
   assert.ok(real.manifest.packages.includes("ghcr.io/github/github-mcp-server"));
-  assert.equal(real.minAppVersion, "0.1.225");
+  assert.equal(real.minAppVersion, "0.1.229");
+});
+
+const withOptionalServer = (minAppVersion, change = () => {}) =>
+  connection((item, m) => {
+    item.minAppVersion = minAppVersion;
+    m.optionalServer = { name: "example", transport: "http", url: "https://mcp.example.com/mcp/" };
+    change(item, m);
+  });
+
+test("optionalServer needs minAppVersion 0.1.229 or newer, the first app that reads it", async () => {
+  assert.deepEqual(await validateFile(withOptionalServer("0.1.229").file), []);
+  const old = await validateFile(withOptionalServer("0.1.228").file);
+  assert.deepEqual(fieldsOf(old), ["minAppVersion"]);
+  assert.match(old[0].message, /optionalServer/);
+});
+
+const badOptionalServers = [
+  ["an address without https", (_, m) => (m.optionalServer.url = "http://mcp.example.com/mcp"), "manifest.optionalServer.url", /./],
+  ["an address with a marker", (_, m) => (m.optionalServer.url = "https://mcp.example.com/${credential}"), "manifest.optionalServer.url", /./],
+  ["a name that is not kebab-case", (_, m) => (m.optionalServer.name = "Example Server"), "manifest.optionalServer.name", /./],
+  ["a transport other than http", (_, m) => (m.optionalServer.transport = "stdio"), "manifest.optionalServer.transport", /./],
+  ["a host the type does not declare", (_, m) => (m.optionalServer.url = "https://other.example.org/mcp"), "manifest.optionalServer.url", /not in manifest\.hosts/],
+  ["a key the schema does not know", (_, m) => (m.optionalServer.command = "npx x"), "manifest.optionalServer.command", /./],
+];
+for (const [name, change, field, message] of badOptionalServers) {
+  test(`optionalServer with ${name} fails at ${field}`, async () => {
+    await errorAt(withOptionalServer("0.1.229", change).file, field, message);
+  });
+}
+
+test("the real GitHub type declares the optional server of the official endpoint, from 0.1.229", () => {
+  const real = JSON.parse(readFileSync(join(root, "connections/github.json"), "utf8"));
+  assert.equal(real.version, 3);
+  assert.equal(real.minAppVersion, "0.1.229");
+  assert.deepEqual(real.manifest.optionalServer, { name: "github", transport: "http", url: "https://api.githubcopilot.com/mcp/" });
 });

@@ -88,6 +88,9 @@ export const SESSION_MIN_APP_VERSION = "0.1.215";
 /** The first app version whose schema takes a container image without tag in `packages` (ADR 0018, 4d.4c-5a); older ones show the type as invalid. */
 export const IMAGE_PACKAGE_MIN_APP_VERSION = "0.1.225";
 
+/** The first app version that reads `optionalServer` in the manifest (ADR 0018, 4d.4c-3a); older ones show the type as invalid. */
+export const OPTIONAL_SERVER_MIN_APP_VERSION = "0.1.229";
+
 /** What a template uses that only exists from REVIEW_TEXT_MIN_APP_VERSION on. */
 const REVIEW_TEXT_MARKS = [/\{\{\s*(stateLabel|failedCount|pendingCount)\s*\}\}/, /"(ciNamesMax|ciMoreText|ciStateLabels|emptyBodyText)"\s*:/, /"myReview"\s*:\s*\{[^}]*"include"\s*:/];
 
@@ -191,6 +194,8 @@ export function itemRules(item, expected) {
         errors.push({ field: "minAppVersion", message: `the session method with tools needs minAppVersion ${SESSION_MIN_APP_VERSION} or newer: older apps refuse it and show the type as invalid` });
       } else if (usesImagePackage(item.manifest) && compareVersions(item.minAppVersion, IMAGE_PACKAGE_MIN_APP_VERSION) < 0) {
         errors.push({ field: "minAppVersion", message: `a container image in packages needs minAppVersion ${IMAGE_PACKAGE_MIN_APP_VERSION} or newer: older apps refuse it and show the type as invalid` });
+      } else if (isObject(item.manifest) && item.manifest.optionalServer !== undefined && compareVersions(item.minAppVersion, OPTIONAL_SERVER_MIN_APP_VERSION) < 0) {
+        errors.push({ field: "minAppVersion", message: `optionalServer needs minAppVersion ${OPTIONAL_SERVER_MIN_APP_VERSION} or newer: older apps refuse it and show the type as invalid` });
       }
     }
     if (isObject(item.name)) {
@@ -388,6 +393,7 @@ function connectionRules(manifest, id) {
   if (isObject(servers.remote)) errors.push(...remoteRules(servers.remote, fields));
   if (isObject(servers.local)) errors.push(...localRules(servers.local));
   errors.push(...declaredHostRules(manifest));
+  errors.push(...optionalServerHostRules(manifest));
   return errors;
 }
 
@@ -432,6 +438,15 @@ function declaredHostRules(manifest) {
   const host = new URL(url.replace(MARKER, "x")).hostname;
   if (manifest.hosts.includes(host)) return [];
   return [{ field: "manifest.servers.remote.url", message: `the host "${host}" is not in manifest.hosts: the app does not install a type whose server is on a host it does not declare` }];
+}
+
+/** The host of the optional server among the hosts: the type's token goes only to a host the person saw, as with `servers.remote.url`. */
+function optionalServerHostRules(manifest) {
+  const url = isObject(manifest.optionalServer) ? manifest.optionalServer.url : undefined;
+  if (typeof url !== "string" || !URL.canParse(url)) return [];
+  const host = new URL(url).hostname;
+  if (Array.isArray(manifest.hosts) && manifest.hosts.includes(host)) return [];
+  return [{ field: "manifest.optionalServer.url", message: `the host "${host}" is not in manifest.hosts: the app does not install a type whose server is on a host it does not declare` }];
 }
 
 /** `${credential}` only where it goes to the server and nowhere it is logged: a header or the env of the local server. */

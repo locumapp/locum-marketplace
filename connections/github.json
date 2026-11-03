@@ -1,8 +1,8 @@
 {
   "kind": "connection",
   "id": "github",
-  "version": 2,
-  "minAppVersion": "0.1.225",
+  "version": 3,
+  "minAppVersion": "0.1.229",
   "name": {
     "en": "GitHub",
     "pt-BR": "GitHub"
@@ -29,6 +29,11 @@
       "api.githubcopilot.com",
       "githubcopilot.com"
     ],
+    "optionalServer": {
+      "name": "github",
+      "transport": "http",
+      "url": "https://api.githubcopilot.com/mcp/"
+    },
     "packages": [
       "@modelcontextprotocol/server-github",
       "ghcr.io/github/github-mcp-server"
