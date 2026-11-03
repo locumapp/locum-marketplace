@@ -1,8 +1,8 @@
 {
   "format": "locum-marketplace-index",
   "version": 1,
-  "commit": "408d4c78a4cbf04233b702fffd5cab27831b35b5",
-  "committedAt": 1793424577,
+  "commit": "6f8bd84e6b7bdaef73d1814403dc67b2bc1d7c63",
+  "committedAt": 1793717529,
   "items": [
     {
       "kind": "connection",
@@ -197,10 +197,10 @@
     {
       "kind": "connection",
       "id": "github",
-      "version": 1,
-      "minAppVersion": "0.1.168",
+      "version": 2,
+      "minAppVersion": "0.1.225",
       "path": "connections/github.json",
-      "sha256": "86174143c4c88289dc5fc6d525c0308d37fb571a618a8db339c99f7c0faf53e4",
+      "sha256": "ab5c13a7ae22ae339b51ed5a6dc9346adff5a51e2a07c9c851ac82bf94404ab4",
       "name": {
         "en": "GitHub",
         "pt-BR": "GitHub"
