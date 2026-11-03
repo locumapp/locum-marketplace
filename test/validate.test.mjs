@@ -1158,5 +1158,5 @@ test("a container image in packages needs minAppVersion 0.1.225 or newer, and th
   assert.match(old[0].message, /container image/);
   const real = JSON.parse(readFileSync(join(root, "connections/github.json"), "utf8"));
   assert.ok(real.manifest.packages.includes("ghcr.io/github/github-mcp-server"));
-  assert.equal(real.minAppVersion, "0.1.228");
+  assert.equal(real.minAppVersion, "0.1.225");
 });

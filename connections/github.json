@@ -2,7 +2,7 @@
   "kind": "connection",
   "id": "github",
   "version": 2,
-  "minAppVersion": "0.1.228",
+  "minAppVersion": "0.1.225",
   "name": {
     "en": "GitHub",
     "pt-BR": "GitHub"
