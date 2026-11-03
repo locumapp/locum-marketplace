@@ -95,6 +95,14 @@ has and never brings code:
   goes in one place of each server, a header of the remote one or a variable of
   the local one, and it is the place the `token` method declares in `header` or
   `env`, when it does.
+- `optionalServer`: the MCP server the person may turn on after installing the
+  type, `{ "name", "transport": "http", "url" }` (from app 0.1.229). It is not
+  part of `servers`: it does not make the type a server type, and nothing is
+  registered until the person asks. The host of `url` must be in `hosts`, the
+  `url` carries no user information, and `name` is neither the id nor an alias
+  of another type. Only for an official type whose credential the app reads
+  (it declares `actions` or `triggers` the app reads by the owner of the
+  credential): the app ignores the field on any other.
 - `healthCheck`: the instance test, up to three GETs on the base of the remote
   server (the address in `urlField`, or `servers.remote.url`), each with a
   `path` and the `fields` of the JSON answer to show, from 1 to 10, each with a

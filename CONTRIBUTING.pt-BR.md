@@ -95,6 +95,14 @@ app já tem e nunca traz código:
   `${credential}` vai num lugar só de cada servidor, um cabeçalho do remoto ou
   uma variável do local, e é o lugar que o método `token` declara em `header`
   ou `env`, quando declara.
+- `optionalServer`: o servidor MCP que a pessoa pode ligar depois de instalar
+  o tipo, `{ "name", "transport": "http", "url" }` (a partir do app 0.1.229).
+  Ele não é parte de `servers`: não faz do tipo um tipo de servidor, e nada é
+  cadastrado até a pessoa pedir. O host de `url` precisa estar em `hosts`, a
+  `url` não leva usuário e senha, e `name` não é o id nem um apelido de outro
+  tipo. Só para item oficial cuja credencial o app lê (declara `actions` ou
+  `triggers` que o app lê pela dona da credencial): em qualquer outro o app
+  ignora o campo.
 - `healthCheck`: o teste da instância, até três GETs na base do servidor
   remoto (o endereço do `urlField`, ou o `servers.remote.url`), cada um com um
   `path` e os `fields` da resposta JSON a mostrar, de 1 a 10, cada um com uma
