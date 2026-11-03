@@ -338,6 +338,7 @@ function connectionRules(manifest, id) {
   });
 
   if (Array.isArray(manifest.healthCheck)) errors.push(...healthCheckRules(manifest.healthCheck, manifest.servers));
+  errors.push(...optionalServerHostRules(manifest), ...optionalServerOfficialRules(manifest, id));
 
   const scopeKeys = new Set();
   (Array.isArray(manifest.scopeKeys) ? manifest.scopeKeys : []).forEach((s, i) => {
@@ -393,7 +394,6 @@ function connectionRules(manifest, id) {
   if (isObject(servers.remote)) errors.push(...remoteRules(servers.remote, fields));
   if (isObject(servers.local)) errors.push(...localRules(servers.local));
   errors.push(...declaredHostRules(manifest));
-  errors.push(...optionalServerHostRules(manifest));
   return errors;
 }
 
@@ -438,6 +438,12 @@ function declaredHostRules(manifest) {
   const host = new URL(url.replace(MARKER, "x")).hostname;
   if (manifest.hosts.includes(host)) return [];
   return [{ field: "manifest.servers.remote.url", message: `the host "${host}" is not in manifest.hosts: the app does not install a type whose server is on a host it does not declare` }];
+}
+
+/** The optional server takes the token of the type, which the app only hands to an official type it reads the credential of. */
+function optionalServerOfficialRules(manifest, id) {
+  if (manifest.optionalServer === undefined || OFFICIAL_CONNECTIONS.has(id)) return [];
+  return [{ field: "manifest.optionalServer", message: "optionalServer is only for an official type: the app hands the credential of the type to that server only when it reads the credential itself" }];
 }
 
 /** The host of the optional server among the hosts: the type's token goes only to a host the person saw, as with `servers.remote.url`. */
@@ -756,6 +762,7 @@ export function connectionClaims(item) {
   for (const host of list(m.hosts)) if (URL.canParse(`https://${host}/`)) claims.push({ space: "host", key: canonicalHost(host), field: "manifest.hosts" });
   for (const alias of list(m.aliases)) claims.push({ space: "alias", key: alias, field: "manifest.aliases" });
   for (const pkg of list(m.packages)) claims.push({ space: "package", key: pkg, field: "manifest.packages" });
+  if (isObject(m.optionalServer) && typeof m.optionalServer.name === "string") claims.push({ space: "alias", key: m.optionalServer.name, field: "manifest.optionalServer.name" });
   const local = m.servers?.local?.package?.name;
   if (typeof local === "string" && !list(m.packages).includes(local)) claims.push({ space: "package", key: local, field: "manifest.servers.local.package.name" });
   for (const tracker of list(m.trackers)) claims.push({ space: "tracker", key: tracker, field: "manifest.trackers" });

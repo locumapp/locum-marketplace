@@ -1163,8 +1163,14 @@ test("a container image in packages needs minAppVersion 0.1.225 or newer, and th
 
 const withOptionalServer = (minAppVersion, change = () => {}) =>
   connection((item, m) => {
+    item.id = "github";
     item.minAppVersion = minAppVersion;
-    m.optionalServer = { name: "example", transport: "http", url: "https://mcp.example.com/mcp/" };
+    delete m.servers;
+    delete m.writeTools;
+    m.methods = [{ type: "token", header: "Authorization" }];
+    m.actions = ["github.react"];
+    m.hosts = ["api.githubcopilot.com"];
+    m.optionalServer = { name: "github", transport: "http", url: "https://api.githubcopilot.com/mcp/" };
     change(item, m);
   });
 
@@ -1175,9 +1181,18 @@ test("optionalServer needs minAppVersion 0.1.229 or newer, the first app that re
   assert.match(old[0].message, /optionalServer/);
 });
 
+test("optionalServer is only for an official type: the app reads the credential of no other", async () => {
+  const file = connection((item, m) => {
+    item.minAppVersion = "0.1.229";
+    m.optionalServer = { name: "example-remote", transport: "http", url: "https://mcp.example.com/mcp" };
+  }).file;
+  await errorAt(file, "manifest.optionalServer", /only for an official type/);
+});
+
 const badOptionalServers = [
-  ["an address without https", (_, m) => (m.optionalServer.url = "http://mcp.example.com/mcp"), "manifest.optionalServer.url", /./],
-  ["an address with a marker", (_, m) => (m.optionalServer.url = "https://mcp.example.com/${credential}"), "manifest.optionalServer.url", /./],
+  ["an address without https", (_, m) => (m.optionalServer.url = "http://api.githubcopilot.com/mcp"), "manifest.optionalServer.url", /./],
+  ["an address with a marker", (_, m) => (m.optionalServer.url = "https://api.githubcopilot.com/${credential}"), "manifest.optionalServer.url", /./],
+  ["an address with user information", (_, m) => (m.optionalServer.url = "https://user:pass@api.githubcopilot.com/mcp"), "manifest.optionalServer.url", /./],
   ["a name that is not kebab-case", (_, m) => (m.optionalServer.name = "Example Server"), "manifest.optionalServer.name", /./],
   ["a transport other than http", (_, m) => (m.optionalServer.transport = "stdio"), "manifest.optionalServer.transport", /./],
   ["a host the type does not declare", (_, m) => (m.optionalServer.url = "https://other.example.org/mcp"), "manifest.optionalServer.url", /not in manifest\.hosts/],
@@ -1188,6 +1203,12 @@ for (const [name, change, field, message] of badOptionalServers) {
     await errorAt(withOptionalServer("0.1.229", change).file, field, message);
   });
 }
+
+test("optionalServer name is not the id of another type nor an alias of one", async () => {
+  const outro = withOptionalServer("0.1.229", (_, m) => (m.optionalServer.name = "slack"));
+  const errors = await validateCatalog(outro.catalog);
+  assert.ok(JSON.stringify(errors).includes("is the id of another type"), JSON.stringify(errors));
+});
 
 test("the real GitHub type declares the optional server of the official endpoint, from 0.1.229", () => {
   const real = JSON.parse(readFileSync(join(root, "connections/github.json"), "utf8"));
