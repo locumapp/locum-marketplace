@@ -85,6 +85,9 @@ export const REVIEW_TEXT_MIN_APP_VERSION = "0.1.208";
 /** The first app version whose schema takes `tools` in the `session` method (ADR 0032, slice S1); older ones show the type as invalid. */
 export const SESSION_MIN_APP_VERSION = "0.1.215";
 
+/** The first app version whose schema takes a container image without tag in `packages` (ADR 0018, 4d.4c-5a); older ones show the type as invalid. */
+export const IMAGE_PACKAGE_MIN_APP_VERSION = "0.1.225";
+
 /** What a template uses that only exists from REVIEW_TEXT_MIN_APP_VERSION on. */
 const REVIEW_TEXT_MARKS = [/\{\{\s*(stateLabel|failedCount|pendingCount)\s*\}\}/, /"(ciNamesMax|ciMoreText|ciStateLabels|emptyBodyText)"\s*:/, /"myReview"\s*:\s*\{[^}]*"include"\s*:/];
 
@@ -186,6 +189,8 @@ export function itemRules(item, expected) {
         errors.push({ field: "minAppVersion", message: `placeholder and healthCheck need minAppVersion ${HEALTH_CHECK_MIN_APP_VERSION} or newer: older apps refuse them and show the type as invalid` });
       } else if (usesSession(item.manifest) && compareVersions(item.minAppVersion, SESSION_MIN_APP_VERSION) < 0) {
         errors.push({ field: "minAppVersion", message: `the session method with tools needs minAppVersion ${SESSION_MIN_APP_VERSION} or newer: older apps refuse it and show the type as invalid` });
+      } else if (usesImagePackage(item.manifest) && compareVersions(item.minAppVersion, IMAGE_PACKAGE_MIN_APP_VERSION) < 0) {
+        errors.push({ field: "minAppVersion", message: `a container image in packages needs minAppVersion ${IMAGE_PACKAGE_MIN_APP_VERSION} or newer: older apps refuse it and show the type as invalid` });
       }
     }
     if (isObject(item.name)) {
@@ -243,7 +248,12 @@ function usesMarkers(manifest) {
   return JSON.stringify([servers.remote?.url, servers.remote?.headers, servers.local?.args, servers.local?.env]).includes("${field:");
 }
 
-/** Whether the manifest uses what came into the app catalog schema in 0.1.182: a field placeholder or healthCheck. */
+/** Whether `packages` names a container image, which came into the app catalog schema in 0.1.225. */
+function usesImagePackage(manifest) {
+  return isObject(manifest) && Array.isArray(manifest.packages) && manifest.packages.some((p) => typeof p === "string" && p.includes("/") && !p.startsWith("@"));
+}
+
+/** Whether the manifest uses the session method. */
 function usesSession(manifest) {
   return isObject(manifest) && Array.isArray(manifest.methods) && manifest.methods.some((m) => isObject(m) && m.type === "session");
 }

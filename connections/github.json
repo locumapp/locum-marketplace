@@ -1,8 +1,8 @@
 {
   "kind": "connection",
   "id": "github",
-  "version": 1,
-  "minAppVersion": "0.1.168",
+  "version": 2,
+  "minAppVersion": "0.1.228",
   "name": {
     "en": "GitHub",
     "pt-BR": "GitHub"
@@ -17,7 +17,8 @@
     "color": "181717",
     "methods": [
       {
-        "type": "token"
+        "type": "token",
+        "header": "Authorization"
       },
       {
         "type": "cli",
@@ -27,6 +28,10 @@
     "hosts": [
       "api.githubcopilot.com",
       "githubcopilot.com"
+    ],
+    "packages": [
+      "@modelcontextprotocol/server-github",
+      "ghcr.io/github/github-mcp-server"
     ],
     "triggers": [
       "poll",
