@@ -1144,3 +1144,19 @@ test("a field marker before the path gets only the marker error, not one about a
   assert.equal(atUrl.length, 1, JSON.stringify(atUrl));
   assert.match(atUrl[0].message, /only in the path/);
 });
+
+test("a container image in packages needs minAppVersion 0.1.225 or newer, and the real GitHub type declares it", async () => {
+  const image = (minAppVersion) =>
+    connection((item, m) => {
+      item.id = "github";
+      item.minAppVersion = minAppVersion;
+      m.packages = ["@modelcontextprotocol/server-github", "ghcr.io/github/github-mcp-server"];
+    });
+  assert.deepEqual(await validateFile(image("0.1.225").file), []);
+  const old = await validateFile(image("0.1.224").file);
+  assert.deepEqual(fieldsOf(old), ["minAppVersion"]);
+  assert.match(old[0].message, /container image/);
+  const real = JSON.parse(readFileSync(join(root, "connections/github.json"), "utf8"));
+  assert.ok(real.manifest.packages.includes("ghcr.io/github/github-mcp-server"));
+  assert.equal(real.minAppVersion, "0.1.225");
+});
