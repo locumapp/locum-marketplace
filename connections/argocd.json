@@ -1,0 +1,41 @@
+{
+  "kind": "connection",
+  "id": "argocd",
+  "version": 1,
+  "minAppVersion": "0.1.231",
+  "name": {
+    "en": "Argo CD",
+    "pt-BR": "Argo CD"
+  },
+  "description": {
+    "en": "Reads Argo CD with the session you already have in the browser (Chrome or Arc on macOS). Each instance is one Argo CD address. Nothing is read before you allow it, and writing stops at the approval queue.",
+    "pt-BR": "Lê o Argo CD com a sessão que você já tem no navegador (Chrome ou Arc no macOS). Cada instância é um endereço do Argo CD. Nada é lido antes de você permitir, e a escrita para na Fila de aprovação."
+  },
+  "manifest": {
+    "category": "dev",
+    "logo": "argo",
+    "color": "EF7B4D",
+    "methods": [
+      {
+        "type": "session",
+        "reader": "browser-cookie",
+        "tools": "argocd"
+      }
+    ],
+    "fields": [
+      {
+        "key": "url",
+        "label": {
+          "pt-BR": "Endereço do Argo CD",
+          "en": "Argo CD address"
+        },
+        "placeholder": {
+          "pt-BR": "https://argocd.exemplo.com",
+          "en": "https://argocd.example.com"
+        },
+        "format": "url",
+        "required": true
+      }
+    ]
+  }
+}
