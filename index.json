@@ -1,8 +1,8 @@
 {
   "format": "locum-marketplace-index",
   "version": 1,
-  "commit": "6f7b2eb070c961e43da67da3d6f8f04ed0bca3b3",
-  "committedAt": 1793724838,
+  "commit": "3a2519f77f8b5346ed013027259f6aafd77099d9",
+  "committedAt": 1793766892,
   "items": [
     {
       "kind": "connection",
@@ -36,6 +36,41 @@
         ],
         "scopes": [],
         "fields": [],
+        "triggers": [],
+        "actions": [],
+        "writeTools": []
+      },
+      "official": true
+    },
+    {
+      "kind": "connection",
+      "id": "argocd",
+      "version": 1,
+      "minAppVersion": "0.1.231",
+      "path": "connections/argocd.json",
+      "sha256": "262a011b75253f1f4d8f446c144363887d291c2426e682ac383e23c8c46b9e7c",
+      "name": {
+        "en": "Argo CD",
+        "pt-BR": "Argo CD"
+      },
+      "description": {
+        "en": "Reads Argo CD with the session you already have in the browser (Chrome or Arc on macOS). Each instance is one Argo CD address. Nothing is read before you allow it, and writing stops at the approval queue.",
+        "pt-BR": "Lê o Argo CD com a sessão que você já tem no navegador (Chrome ou Arc no macOS). Cada instância é um endereço do Argo CD. Nada é lido antes de você permitir, e a escrita para na Fila de aprovação."
+      },
+      "tags": [],
+      "requires": {
+        "servers": {},
+        "hosts": [],
+        "methods": [
+          {
+            "type": "session",
+            "reader": "browser-cookie"
+          }
+        ],
+        "scopes": [],
+        "fields": [
+          "url"
+        ],
         "triggers": [],
         "actions": [],
         "writeTools": []
@@ -925,10 +960,10 @@
     {
       "kind": "template",
       "id": "pr-rereview",
-      "version": 7,
-      "minAppVersion": "0.1.213",
+      "version": 8,
+      "minAppVersion": "0.1.231",
       "path": "templates/pr-rereview.json",
-      "sha256": "9c6e0290f7af4d2bd67051fab3a055fd421a45d390fbd057bb5b7bf4e36fab82",
+      "sha256": "7279b9bb7641352d28aa58150b86b36ddcf35364e79dce8fa8a0e8b9fe05e625",
       "name": {
         "en": "PR re-review",
         "pt-BR": "Nova revisão de PR"
