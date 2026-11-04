@@ -1,8 +1,8 @@
 {
   "format": "locum-marketplace-index",
   "version": 1,
-  "commit": "3a2519f77f8b5346ed013027259f6aafd77099d9",
-  "committedAt": 1793766892,
+  "commit": "4e6b77e3c77acd0fca31278ca4beaf0f04ca0d7e",
+  "committedAt": 1793811194,
   "items": [
     {
       "kind": "connection",
@@ -960,10 +960,10 @@
     {
       "kind": "template",
       "id": "pr-rereview",
-      "version": 8,
-      "minAppVersion": "0.1.231",
+      "version": 9,
+      "minAppVersion": "0.1.232",
       "path": "templates/pr-rereview.json",
-      "sha256": "7279b9bb7641352d28aa58150b86b36ddcf35364e79dce8fa8a0e8b9fe05e625",
+      "sha256": "46d94ee414e8c12cfe1d4b753f530775189253e87f24ae89f66e2b16332008f6",
       "name": {
         "en": "PR re-review",
         "pt-BR": "Nova revisão de PR"
