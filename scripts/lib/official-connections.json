@@ -12,7 +12,11 @@
         "Amplitude"
       ]
     },
-    "argocd": {},
+    "argocd": {
+      "names": [
+        "Argo CD"
+      ]
+    },
     "asana": {
       "hosts": [
         "mcp.asana.com"

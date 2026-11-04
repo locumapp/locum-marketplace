@@ -45,7 +45,7 @@ test("the index lists every item sorted, with the hash of the file bytes and the
   assert.deepEqual(Object.keys(index), ["format", "version", "commit", "committedAt", "items"]);
   const kinds = index.items.map((i) => i.kind);
   assert.equal(kinds.lastIndexOf("connection") < kinds.indexOf("template"), true);
-  assert.deepEqual(index.items.filter((i) => i.kind === "connection").map((i) => i.id).slice(0, 3), ["amplitude", "asana", "atlassian"]);
+  assert.deepEqual(index.items.filter((i) => i.kind === "connection").map((i) => i.id).slice(0, 3), ["amplitude", "argocd", "asana"]);
   assert.deepEqual(index.items.filter((i) => i.kind === "template").map((i) => i.id).slice(0, 3), ["inbox-triage", "morning-briefing", "observability-watch"]);
   const review = index.items.find((i) => i.id === "pr-review");
   assert.equal(review.path, "templates/pr-review.json");
@@ -174,6 +174,6 @@ test("the index marks as official the connections on the maintainers' list, and 
   const items = JSON.parse(await buildIndex(root, AT)).items;
   const marked = items.filter((i) => "official" in i);
   assert.ok(marked.every((i) => i.kind === "connection" && i.official === true));
-  assert.deepEqual(marked.map((i) => i.id), ["amplitude", "asana", "atlassian", "canva", "figma", "github", "grafana", "intercom", "linear", "miro", "newrelic", "notion", "posthog", "sentry", "shortcut", "slack", "teams", "vercel", "waroom"]);
+  assert.deepEqual(marked.map((i) => i.id), ["amplitude", "argocd", "asana", "atlassian", "canva", "figma", "github", "grafana", "intercom", "linear", "miro", "newrelic", "notion", "posthog", "sentry", "shortcut", "slack", "teams", "vercel", "waroom"]);
   assert.equal("official" in items.find((i) => i.id === "prelo"), false);
 });
