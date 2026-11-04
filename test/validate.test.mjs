@@ -374,7 +374,14 @@ test("the event grouping needs minAppVersion 0.1.213, the first app with the gro
     "pr-rereview",
   );
   assert.match((await errorAt(trigger, "minAppVersion", /event grouping/)).message, /the event grouping/);
-  const ok = variant((item) => (item.minAppVersion = "0.1.213"), "templates", "pr-rereview");
+  const ok = variant(
+    (item) => {
+      item.minAppVersion = "0.1.213";
+      delete item.package.automacao.spec.initiativeFromEvent;
+    },
+    "templates",
+    "pr-rereview",
+  );
   assert.deepEqual(await validateFile(ok), []);
 });
 
@@ -1215,4 +1222,24 @@ test("the real GitHub type declares the optional server of the official endpoint
   assert.equal(real.version, 3);
   assert.equal(real.minAppVersion, "0.1.229");
   assert.deepEqual(real.manifest.optionalServer, { name: "github", transport: "http", url: "https://api.githubcopilot.com/mcp/" });
+});
+
+test("the initiative from the event needs minAppVersion 0.1.232, the first app that picks the run initiative from the event", async () => {
+  for (const version of [undefined, "0.1.231"]) {
+    const file = variant(
+      (item) => {
+        if (version === undefined) delete item.minAppVersion;
+        else item.minAppVersion = version;
+      },
+      "templates",
+      "pr-rereview",
+    );
+    assert.match((await errorAt(file, "minAppVersion", /initiative from the event/)).message, /needs minAppVersion 0\.1\.232/);
+  }
+  const bad = variant((item) => (item.package.automacao.spec.initiativeFromEvent = "always"), "templates", "pr-rereview");
+  assert.ok((await validateFile(bad)).some((e) => e.field.includes("initiativeFromEvent")));
+  const tuned = variant((item) => (item.package.automacao.spec.initiativeMatchAi = { secondsTotal: 30, concurrency: 2 }), "templates", "pr-rereview");
+  assert.deepEqual(await validateFile(tuned), []);
+  const ok = variant((item) => (item.minAppVersion = "0.1.232"), "templates", "pr-rereview");
+  assert.deepEqual(await validateFile(ok), []);
 });

@@ -339,6 +339,17 @@
         },
         "group": {
           "$ref": "#/$defs/group"
+        },
+        "initiativeFromEvent": {
+          "enum": ["off", "match"]
+        },
+        "initiativeMatchAi": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "secondsTotal": { "type": "integer", "minimum": 5, "maximum": 300 },
+            "concurrency": { "type": "integer", "minimum": 1, "maximum": 10 }
+          }
         }
       }
     },

@@ -97,6 +97,9 @@ const REVIEW_TEXT_MARKS = [/\{\{\s*(stateLabel|failedCount|pendingCount)\s*\}\}/
 /** The first app version with the event grouping (`group` in the spec, `groupKey` in the trigger) and the reread of the main event, with the C1 of ADR 0028 (ADR 0027, slices G1 to G3). */
 export const GROUP_MIN_APP_VERSION = "0.1.213";
 
+/** The first app version that picks the run initiative from the event (`initiativeFromEvent` and `initiativeMatchAi` in the spec, ADR 0037). */
+export const INITIATIVE_MATCH_MIN_APP_VERSION = "0.1.232";
+
 /** A display name as the app compares it with the official ones: without accents or format characters, in lowercase. */
 const normalizedName = (name) => name.normalize("NFKC").normalize("NFD").replace(/[\p{M}\p{Cf}]/gu, "").toLowerCase().trim();
 
@@ -219,6 +222,10 @@ export function itemRules(item, expected) {
   const grouped = item.kind === "template" && (isObject(item.package?.automacao?.spec?.group) || (Array.isArray(item.package?.automacao?.gatilhos) ? item.package.automacao.gatilhos : []).some((t) => isObject(t) && t.groupKey !== undefined));
   if (grouped && (item.minAppVersion === undefined || (typeof item.minAppVersion === "string" && /^\d+\.\d+\.\d+$/.test(item.minAppVersion) && compareVersions(item.minAppVersion, GROUP_MIN_APP_VERSION) < 0))) {
     errors.push({ field: "minAppVersion", message: `the event grouping (group, groupKey) needs minAppVersion ${GROUP_MIN_APP_VERSION} or newer: older apps drop the fields and open one run per event` });
+  }
+  const initiativeMatch = item.kind === "template" && (item.package?.automacao?.spec?.initiativeFromEvent !== undefined || item.package?.automacao?.spec?.initiativeMatchAi !== undefined);
+  if (initiativeMatch && (item.minAppVersion === undefined || (typeof item.minAppVersion === "string" && /^\d+\.\d+\.\d+$/.test(item.minAppVersion) && compareVersions(item.minAppVersion, INITIATIVE_MATCH_MIN_APP_VERSION) < 0))) {
+    errors.push({ field: "minAppVersion", message: `the initiative from the event (initiativeFromEvent, initiativeMatchAi) needs minAppVersion ${INITIATIVE_MATCH_MIN_APP_VERSION} or newer: older apps drop the fields and the run gets no initiative` });
   }
   const reviewText = item.kind === "template" && REVIEW_TEXT_MARKS.some((re) => re.test(JSON.stringify(item.package ?? {}, null, 1)));
   if (reviewText && (item.minAppVersion === undefined || (typeof item.minAppVersion === "string" && /^\d+\.\d+\.\d+$/.test(item.minAppVersion) && compareVersions(item.minAppVersion, REVIEW_TEXT_MIN_APP_VERSION) < 0))) {
