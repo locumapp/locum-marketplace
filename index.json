@@ -1,8 +1,8 @@
 {
   "format": "locum-marketplace-index",
   "version": 1,
-  "commit": "4e6b77e3c77acd0fca31278ca4beaf0f04ca0d7e",
-  "committedAt": 1793811194,
+  "commit": "dcae9c4f9467ca9484547d98f9d11b07ba9208d1",
+  "committedAt": 1794840084,
   "items": [
     {
       "kind": "connection",
@@ -960,10 +960,10 @@
     {
       "kind": "template",
       "id": "pr-rereview",
-      "version": 9,
+      "version": 10,
       "minAppVersion": "0.1.232",
       "path": "templates/pr-rereview.json",
-      "sha256": "46d94ee414e8c12cfe1d4b753f530775189253e87f24ae89f66e2b16332008f6",
+      "sha256": "8c2017b67f84f85eb5f3846b268f06071cf0076317e333c2827e8a215e4415b1",
       "name": {
         "en": "PR re-review",
         "pt-BR": "Nova revisão de PR"
@@ -1015,10 +1015,10 @@
     {
       "kind": "template",
       "id": "pr-review",
-      "version": 5,
+      "version": 6,
       "minAppVersion": "0.1.213",
       "path": "templates/pr-review.json",
-      "sha256": "e83b78ccd47fe913995e091f41c1be7a44c45fd3f0be02c023f2792228dbeaa3",
+      "sha256": "aa64afc419f6a0daa8e9324dafdcffdb3eed2eaeade1c74483ea917ebd46c010",
       "name": {
         "en": "PR review",
         "pt-BR": "Revisão de PR"
